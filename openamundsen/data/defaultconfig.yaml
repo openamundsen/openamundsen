@@ -1,0 +1,85 @@
+domain:
+start_date:
+end_date:
+resolution:
+timestep: 3600
+results_dir:
+crs:
+
+input_data:
+  grids:
+    dir:
+    format: ascii
+  meteo:
+    dir:
+    format: netcdf
+    crs:
+
+meteo:
+  interpolation:
+    temperature:
+      method: regression
+      lapse_rates: [-0.0026, -0.0035, -0.0047, -0.0053, -0.0052, -0.0053, -0.0049, -0.0047, -0.0042, -0.0033, -0.0035, -0.0031]
+      allow_extrapolation: true
+    precipitation:
+      method: regression
+      lapse_rates: [0.00014, 0.00014, 0.00014, 0.00013, 0.00010, 0.00010, 0.00010, 0.00010, 0.00010, 0.00011, 0.00013, 0.00013]
+      allow_extrapolation: true
+    humidity:
+      method: regression
+      lapse_rates: [-0.0044, -0.0046, -0.0049, -0.0048, -0.0046, -0.0047, -0.0043, -0.0042, -0.0045, -0.0044, -0.0047, -0.0046]
+      allow_extrapolation: true
+    windspeed:
+      method: regression
+      allow_extrapolation: true
+
+  precipitation_phase:
+    method: wetbulb
+    threshold: 2.
+
+  precipitation_correction:
+    scf:
+      enabled: false
+      scf: 1.
+    wmo:
+      enabled: false
+      max_scf: 2.
+    wasim:
+      enabled: false
+      liquid_a: 0.
+      liquid_b: 1.
+      solid_a: 0.
+      solid_b: 1.
+
+snow:
+  melt: energy_balance
+
+  albedo:
+    min: 0.55
+    max: 0.85
+    k_pos: 0.12
+    k_neg: 0.05
+
+  slides:
+    enabled: false
+    transport_factor: 0.5
+    min_transport_slope: 39.
+    max_deposition_slope: 39.
+    max_deposition: 655.
+    gamma: 1.
+
+  temperature_index:
+    temperature_factor: 0.05
+    albedo_factor: 0.0094
+    threshold_temperature: 1.
+
+canopy:
+  enabled: false
+
+point_output:
+  format: netcdf
+  points: []
+
+output_fields:
+  format: netcdf
+  fields: []
