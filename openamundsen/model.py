@@ -34,9 +34,15 @@ class Model:
     def __init__(self, config):
         util.initialize_logger(self)
         conf.apply_config(self, config)
+
         self.state = None
+        self._state_variable_definitions = {}
+
+    def add_state_variable(self, category, var_name, definition=None):
+        util.add_state_variable(self, category, var_name, definition=definition)
 
     def initialize(self):
+        util.add_default_state_variables(self)
         util.initialize_model_grid(self)
         util.initialize_state_variables(self)
         dataio.read_input_data(self)
