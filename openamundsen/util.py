@@ -1,12 +1,13 @@
 import copy
 from dataclasses import dataclass
+from . import dataio
 import loguru
 from munch import Munch
 import numpy as np
 from openamundsen import errors
+import pandas as pd
 from ruamel.yaml import YAML
 import sys
-from . import dataio
 
 
 class StateVariableContainer(Munch):
@@ -76,6 +77,27 @@ def initialize_model_grid(model):
     model.config['raster_meta'] = meta
 
     model.logger.info(f'Grid has dimensions {meta["rows"]}x{meta["cols"]}')
+
+
+def prepare_time_steps(config):
+    """
+    Prepare the time steps for a model run according to the run configuration
+    (start date, end date, and time step).
+
+    Parameters
+    ----------
+    config : dict
+        Model run configuration.
+
+    Returns
+    -------
+    dates : pd.DatetimeIndex
+    """
+    return pd.date_range(
+        start=config['start_date'],
+        end=config['end_date'],
+        freq=pd.DateOffset(seconds=config['timestep']),
+    )
 
 
 def add_state_variable(model, category, var_name, definition=None):

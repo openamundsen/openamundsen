@@ -1,20 +1,12 @@
 from . import conf
 from . import dataio
 from . import meteo
-import pandas as pd
 from . import util
 
 
 def time_step_loop(model):
-    dates = pd.date_range(
-        start=model.config['start_date'],
-        end=model.config['end_date'],
-        freq=pd.DateOffset(seconds=model.config['timestep']),
-    )
-
-    for date in dates:
+    for date in model.dates:
         model.logger.info(f'Processing time step {date}')
-
         meteo.interpolate_station_data(model, date)
         meteo.process_meteo_data(model)
         model_interface(model)
@@ -32,19 +24,26 @@ def model_interface(model):
 
 class Model:
     def __init__(self, config):
-        util.initialize_logger(self)
-        conf.apply_config(self, config)
-
+        self.logger = None
+        self.config = None
         self.state = None
         self._state_variable_definitions = {}
+        self.dates = None
+
+        util.initialize_logger(self)
+        conf.apply_config(self, config)
 
     def add_state_variable(self, category, var_name, definition=None):
         util.add_state_variable(self, category, var_name, definition=definition)
 
     def initialize(self):
-        util.add_default_state_variables(self)
+        self.dates = util.prepare_time_steps(self.config)
+
         util.initialize_model_grid(self)
+
+        util.add_default_state_variables(self)
         util.initialize_state_variables(self)
+
         dataio.read_input_data(self)
         self.meteo = dataio.read_meteo_data(self)
 
