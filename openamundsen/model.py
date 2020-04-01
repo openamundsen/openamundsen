@@ -1,6 +1,7 @@
 from . import conf
 from . import dataio
 from . import meteo
+from . import modelinit
 from . import util
 
 
@@ -30,19 +31,19 @@ class Model:
         self._state_variable_definitions = {}
         self.dates = None
 
-        util.initialize_logger(self)
+        modelinit.initialize_logger(self)
         conf.apply_config(self, config)
 
     def add_state_variable(self, category, var_name, definition=None):
         util.add_state_variable(self, category, var_name, definition=definition)
 
     def initialize(self):
-        self.dates = util.prepare_time_steps(self.config)
+        self.dates = modelinit.prepare_time_steps(self.config)
 
-        util.initialize_model_grid(self)
+        modelinit.initialize_model_grid(self)
 
-        util.add_default_state_variables(self)
-        util.initialize_state_variables(self)
+        modelinit.add_default_state_variables(self)
+        modelinit.initialize_state_variables(self)
 
         dataio.read_input_data(self)
         self.meteo = dataio.read_meteo_data(self)
