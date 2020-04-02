@@ -3,6 +3,7 @@ import loguru
 from openamundsen import conf, fileio, meteo, statevars, util
 import pandas as pd
 import sys
+import time
 
 
 class Model:
@@ -97,8 +98,6 @@ class Model:
 
     def read_meteo_data(self):
         self.logger.info('Reading meteo data')
-        for station_num in range(7):
-            self.logger.info(f'Reading station {station_num}')
 
     def initialize(self):
         self._prepare_time_steps()
@@ -109,7 +108,11 @@ class Model:
         self.read_meteo_data()
 
     def run(self):
+        self.logger.info('Starting model run')
+        start_time = time.time()
         self._time_step_loop()
+        time_diff = pd.Timedelta(seconds=(time.time() - start_time))
+        self.logger.success('Model run finished. Runtime: ' + str(time_diff))
 
     def _update_gridded_outputs(self):
         self.logger.debug('Updating gridded outputs')
