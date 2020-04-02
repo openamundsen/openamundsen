@@ -28,21 +28,14 @@ class Model:
         self.logger = None
         self.config = None
         self.state = None
-        self._state_variable_definitions = {}
         self.dates = None
 
         modelinit.initialize_logger(self)
         conf.apply_config(self, config)
 
-    def add_state_variable(self, category, var_name, definition=None):
-        util.add_state_variable(self, category, var_name, definition=definition)
-
     def initialize(self):
         self.dates = modelinit.prepare_time_steps(self.config)
-
         modelinit.initialize_model_grid(self)
-
-        modelinit.add_default_state_variables(self)
         modelinit.initialize_state_variables(self)
 
         dataio.read_input_data(self)

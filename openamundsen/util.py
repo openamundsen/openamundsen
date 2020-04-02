@@ -19,76 +19,6 @@ class StateVariableContainer(Munch):
     pass
 
 
-@dataclass(frozen=True)
-class StateVariableDefinition:
-    """
-    Class for describing metadata of a state variable.
-
-    Parameters
-    ----------
-    dtype : str, default 'float'
-        Data type for the variable values in `np.dtype`-compatible notation.
-
-    standard_name : str, optional
-        Standard name of the variable in CF notation
-        (http://cfconventions.org/standard-names.html).
-
-    long_name : str, optional
-        Long descriptive name of the variable.
-
-    units : str, optional
-        udunits-compatible definition of the units of the given variable.
-
-    Examples
-    --------
-    >>> StateVariableDefinition(
-            standard_name='precipitation_flux',
-            long_name='Total precipitation flux',
-            units='kg m-2 s-1')
-    """
-    dtype: str = 'float'
-    standard_name: str = None
-    long_name: str = None
-    units: str = None
-
-
-def add_state_variable(model, category, var_name, definition=None):
-    """
-    Add a state variable to a Model instance with optional metadata.
-    Each state variable is associated with a category (e.g., 'base', 'meteo',
-    'snow') and is subsequently mapped to the respective `model.state` entries
-    (e.g., `model.state['base']`).
-    The actual arrays are however not created here yet (this is done in
-    `ìnitialize_state_variables`), only the categories, variable names and
-    definitions are stored in the hidden `_state_variable_definitions`
-    attribute of the Model instance.
-
-    Parameters
-    ----------
-    category : str
-        Category to which the variable is associated.
-
-    var_name : str
-        Desired variable name. Since the `model.state` entries are
-        `StateVariableContainer` instances, the variables are later accessible
-        both via dict notation (`model.state['meteo']['temp']`) as well as dot
-        notation (`model.state.meteo.temp`).
-
-    definition : StateVariableDefinition, optional
-        Metadata (e.g., data type, units, CF-compliant standard_name)
-        associated with the variable.
-    """
-    if definition is None:
-        definition = StateVariableDefinition()  # empty definition only specifying the default dtype
-
-    model.logger.debug(f'Adding state variable: category={category} var={var_name} definition={definition}')
-
-    if category not in model._state_variable_definitions:
-        model._state_variable_definitions[category] = {}
-
-    model._state_variable_definitions[category][var_name] = definition
-
-
 def create_empty_array(shape, dtype):
     """
     Create an empty array with a given shape and dtype initialized to "no
@@ -100,7 +30,7 @@ def create_empty_array(shape, dtype):
     shape : int or sequence of ints
         Shape of the new array, e.g. (2, 3).
 
-    dtype : str
+    dtype : type
         The desired data type for the array.
 
     Returns
@@ -108,9 +38,9 @@ def create_empty_array(shape, dtype):
     out : ndarray
     """
     dtype_init_vals = {
-        'float': np.nan,
-        'int': 0,
-        'bool': False,
+        float: np.nan,
+        int: 0,
+        bool: False,
     }
 
     return np.full(shape, dtype_init_vals[dtype], dtype=dtype)

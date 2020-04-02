@@ -3,7 +3,7 @@ import sys
 import loguru
 import pandas as pd
 from . import dataio
-from .util import StateVariableDefinition, StateVariableContainer, create_empty_array
+from .util import StateVariableContainer, create_empty_array
 
 
 def initialize_logger(model):
@@ -54,96 +54,42 @@ def prepare_time_steps(config):
     )
 
 
-def add_default_state_variables(model):
-    """
-    Add all state variables to a Model instance which are required for any
-    model run. Depending on which submodules are activated in the run
-    configuration, further state variables might be added in other locations.
-    """
-    # Base variables
-    model.add_state_variable(
-        'base',
-        'dem',
-        StateVariableDefinition(standard_name='surface_altitude', units='m'),
-    )
-    model.add_state_variable('base', 'slope')
-    model.add_state_variable('base', 'aspect')
-    model.add_state_variable(
-        'base',
-        'roi',
-        StateVariableDefinition(dtype='bool'),
-    )
-
-    # Meteorological variables
-    model.add_state_variable(
-        'meteo',
-        'temp',
-        StateVariableDefinition(standard_name='air_temperature', units='K'),
-    )
-    model.add_state_variable(
-        'meteo',
-        'precip',
-        StateVariableDefinition(standard_name='precipitation_flux', units='kg m-2 s-1'),
-    )
-    model.add_state_variable(
-        'meteo',
-        'hum',
-        StateVariableDefinition(standard_name='relative_humidity', units='%'),
-    )
-    model.add_state_variable(
-        'meteo',
-        'glob',
-        StateVariableDefinition(
-            standard_name='surface_downwelling_shortwave_flux_in_air',
-            units='W m-2',
-        ),
-    )
-    model.add_state_variable(
-        'meteo',
-        'wind_speed',
-        StateVariableDefinition(
-            standard_name='wind_speed',
-            units='m s-1',
-        ),
-    )
-
-    # Snow variables
-    model.add_state_variable(
-        'snow',
-        'swe',
-        StateVariableDefinition(
-            standard_name='liquid_water_content_of_surface_snow',
-            units='kg m-2',
-        ),
-    )
-    model.add_state_variable(
-        'snow',
-        'depth',
-        StateVariableDefinition(
-            standard_name='surface_snow_thickness',
-            units='m',
-        ),
-    )
-
-    # ...
-
-
 def initialize_state_variables(model):
     """
-    Initialize the state variables (i.e., create the actual arrays) of a Model
-    instance. The arrays are created according to the variable names and data
-    types specified in the respective `add_state_variable` calls.
+    Initialize the default state variables (i.e., create empty arrays) of a
+    Model instance. Depending on which submodules are activated in the run
+    configuration, further state variables might be added at other locations.
     """
     model.logger.info('Initializing state variables')
 
     rows = model.config['rows']
     cols = model.config['cols']
-    var_defs = model._state_variable_definitions
+
+    def field(dtype=float):
+        return create_empty_array((rows, cols), dtype)
 
     model.state = StateVariableContainer()
 
-    for category in var_defs.keys():
-        model.state[category] = StateVariableContainer()
+    # Base variables
+    base = StateVariableContainer()
+    base.dem = field()  # terrain elevation (m)
+    base.slope = field()  # terrain slope
+    base.aspect = field()  # terrain aspect
+    base.roi = field(bool)  # region of interest
 
-        for var_name, var_def in var_defs[category].items():
-            model.state[category][var_name] = create_empty_array((rows, cols), var_def.dtype)
+    # Meteorological variables
+    meteo = StateVariableContainer()
+    meteo.temp = field()  # air temperature (K)
+    meteo.precip = field()  # precipitation (kg m-2 s-1)
+    meteo.hum = field()  # relative humidity (%)
+    meteo.glob = field()  # shortwave incoming radiation (W m-2)
+    meteo.wind_speed = field()  # wind speed (m s-1)
+
+    # Snow variables
+    snow = StateVariableContainer()
+    snow.swe = field()
+    snow.depth = field()
+
+    model.state.base = base
+    model.state.meteo = meteo
+    model.state.snow = snow
