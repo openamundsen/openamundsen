@@ -1,22 +1,8 @@
 import copy
-from dataclasses import dataclass
-from . import dataio
-import loguru
-from munch import Munch
 import numpy as np
 from openamundsen import errors
-import pandas as pd
+from pathlib import Path
 from ruamel.yaml import YAML
-import sys
-
-
-class StateVariableContainer(Munch):
-    """
-    Container for storing state variables. This class inherits from `Munch` so
-    that attributes are accessible both using dict notation (`state['temp']`)
-    as well as dot notation (`state.temp`).
-    """
-    pass
 
 
 def create_empty_array(shape, dtype):
@@ -107,3 +93,28 @@ def read_yaml_file(filename):
 
     with open(filename) as f:
         return yaml.load(f.read())
+
+
+def raster_filename(kind, config):
+    """
+    Return the filename of an input raster file for a model run.
+
+    Parameters
+    ----------
+    kind : str
+        Type of input file, e.g. 'dem' or 'roi'.
+
+    config : dict
+        Model run configuration.
+
+    Returns
+    -------
+    file : pathlib.Path
+    """
+    dir = config['input_data']['grids']['dir']
+    domain = config['domain']
+    resolution = config['resolution']
+    extension = 'asc'
+    return Path(f'{dir}/{kind}_{domain}_{resolution}.{extension}')
+
+

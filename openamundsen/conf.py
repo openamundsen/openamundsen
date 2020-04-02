@@ -1,7 +1,7 @@
 import datetime
+from openamundsen import util
 import pandas as pd
 from pathlib import Path
-from . import util
 
 
 def read_config(filename):
