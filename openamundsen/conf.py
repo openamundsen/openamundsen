@@ -36,4 +36,4 @@ def apply_config(model, config):
 
 # read in the default configuration from the module directory
 module_dir = Path(__file__).parent
-DEFAULT_CONFIG = util.read_yaml_file(f'{module_dir}/data/defaultconfig.yaml')
+DEFAULT_CONFIG = util.read_yaml_file(f'{module_dir}/data/defaultconfig.yml')
