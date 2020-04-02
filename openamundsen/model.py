@@ -1,6 +1,7 @@
 import copy
 import loguru
 from openamundsen import conf, fileio, meteo, statevars, util
+from openamundsen import modules
 import pandas as pd
 import sys
 import time
@@ -28,6 +29,11 @@ class Model:
         )
 
     def _time_step_loop(self):
+        """
+        Run the main model loop, i.e. iterate over all time steps and call the
+        methods for preparing the meteorological fields and the interface to
+        the submodules.
+        """
         for date in self.dates:
             self.logger.info(f'Processing time step {date}')
             meteo.interpolate_station_data(self, date)
@@ -37,11 +43,15 @@ class Model:
             self._update_point_outputs()
 
     def _model_interface(self):
-        self.logger.debug('Modifying sub-canopy meteorology')
-        self.logger.debug('Updating snow albedo')
-        self.logger.debug('Adding fresh snow')
-        self.logger.debug('Calculating canopy interception')
-        self.logger.debug('Calculating melt')
+        """
+        Interface for calling the different submodules. This method is called
+        in every time step after preparing the meteorological fields.
+        """
+        modules.radiation.irradiance(self)
+        modules.snow.update_albedo(self)
+        modules.snow.compaction(self)
+        modules.snow.add_fresh_snow(self)
+        modules.snow.energy_balance(self)
 
     def _initialize_logger(self):
         loguru.logger.remove()
@@ -78,6 +88,11 @@ class Model:
         statevars.initialize_state_variables(self)
 
     def read_input_data(self):
+        """
+        Read the input raster files required for the model run including the
+        DEM, ROI (if available), and other files depending on the activated
+        submodules.
+        """
         meta = self.config['raster_meta']
 
         dem_file = util.raster_filename('dem', self.config)
@@ -97,9 +112,17 @@ class Model:
             self.state.base.roi[:] = True
 
     def read_meteo_data(self):
+        """
+        Read the meteorological data files required for the model run.
+        """
         self.logger.info('Reading meteo data')
 
     def initialize(self):
+        """
+        Initialize the model according to the given configuration, i.e. read
+        the required input raster files and meteorological input data,
+        initialize the model grid and all required state variables, etc.
+        """
         self._prepare_time_steps()
         self._initialize_model_grid()
         self._initialize_state_variables()
@@ -108,6 +131,10 @@ class Model:
         self.read_meteo_data()
 
     def run(self):
+        """
+        Start the model run. Before calling this method, the model must be
+        properly initialized using the `initialize` method.
+        """
         self.logger.info('Starting model run')
         start_time = time.time()
         self._time_step_loop()
@@ -115,7 +142,15 @@ class Model:
         self.logger.success('Model run finished. Runtime: ' + str(time_diff))
 
     def _update_gridded_outputs(self):
+        """
+        Update (in the case of aggregated fields) and potentially write the
+        gridded output fields according to the run configuration.
+        """
         self.logger.debug('Updating gridded outputs')
 
     def _update_point_outputs(self):
+        """
+        Update and write the output time series for the selected variables and
+        point locations according to the run configuration.
+        """
         self.logger.debug('Updating point outputs')

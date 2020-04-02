@@ -6,15 +6,7 @@ from pathlib import Path
 
 def read_config(filename):
     """
-    Read a config (YAML) file and return the resulting dict.
-
-    Parameters
-    ----------
-    filename : str
-
-    Returns
-    -------
-    config : dict
+    Read a configuration (YAML) file and return the resulting dict.
     """
     return util.read_yaml_file(filename)
 
@@ -23,14 +15,6 @@ def full_config(config):
     """
     Convert a configuration dict into a "full" configuration, i.e. fill unspecified
     values with the respective values from the default configuration.
-
-    Parameters
-    ----------
-    config : dict
-
-    Returns
-    -------
-    config : dict
     """
     return util.merge_data(DEFAULT_CONFIG, config)
 
