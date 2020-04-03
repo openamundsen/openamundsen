@@ -1,21 +1,33 @@
-domain:
-start_date:
-end_date:
-resolution:
-timestep: 3600
-results_dir:
-crs:
+domain:  # name of the model domain
+start_date:  # start date as YYYY-MM-DD or YYYY-MM-DD HH:MM
+end_date:  # end date as YYYY-MM-DD or YYYY-MM-DD HH:MM
+resolution:  # spatial resolution (m)
+timestep: 3600  # temporal resolution (s)
+results_dir:  # directory for writing the result files
+crs:  # coordinate reference system of the input raster files
 
 input_data:
   grids:
-    dir:
-    format: ascii
+    dir:  # directory containing the input raster files
+    format: ascii  # input raster format
   meteo:
-    dir:
-    format: netcdf
-    crs:
+    dir:  # directory containing the meteorological data
+    format: netcdf  # meteo data format (netcdf or ascii)
+    crs:  # coordinate reference system of the meteorological data
+
+output_data:
+  # parameters for gridded output data (fields)
+  grids:
+    format: netcdf  # netcdf or ascii
+    fields: []  # list of the variables and dates/aggregations for output
+
+  # parameters for point outputs (time series)
+  points:
+    format: netcdf  # netcdf or ascii
+    points: []  # point locations
 
 meteo:
+  # interpolation parameters for the different meteorological variables
   interpolation:
     temperature:
       method: regression
@@ -33,26 +45,29 @@ meteo:
       method: regression
       allow_extrapolation: true
 
+  # parameters for precipitation phase detection
   precipitation_phase:
     method: wetbulb
-    threshold: 2.
+    threshold: 2.  # temperature threshold (°C)
 
+  # parameters for the different precipitation correction methods
   precipitation_correction:
-    scf:
+    scf:  # fixed snow correction factor
       enabled: false
       scf: 1.
-    wmo:
+    wmo:  # WMO method for correcting precipitation based on temperature and wind speed
       enabled: false
       max_scf: 2.
-    wasim:
+    wasim:  # WaSiM method for correcting liquid/solid precipitation based on wind speed
       enabled: false
       liquid_a: 0.
       liquid_b: 1.
       solid_a: 0.
       solid_b: 1.
 
+# parameters for the snow module
 snow:
-  melt: energy_balance
+  melt: energy_balance  # energy_balance or temperature_index
 
   albedo:
     min: 0.55
@@ -72,14 +87,3 @@ snow:
     temperature_factor: 0.05
     albedo_factor: 0.0094
     threshold_temperature: 1.
-
-canopy:
-  enabled: false
-
-point_output:
-  format: netcdf
-  points: []
-
-output_fields:
-  format: netcdf
-  fields: []
