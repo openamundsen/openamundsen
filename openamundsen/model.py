@@ -8,6 +8,22 @@ import time
 
 
 class Model:
+    """
+    Class encapsulating the required data and methods for a single
+    openAMUNDSEN model run.
+
+    Parameters
+    ----------
+    config : dict
+        Model run configuration.
+
+    Examples
+    --------
+    >>> model = oa.Model(oa.read_config('config.yml'))
+    >>> model.initialize()
+    >>> model.run()
+    """
+
     def __init__(self, config):
         self.logger = None
         self.config = None
@@ -45,7 +61,7 @@ class Model:
     def _model_interface(self):
         """
         Interface for calling the different submodules. This method is called
-        in every time step after preparing the meteorological fields.
+        in every time step after the meteorological fields have been prepared.
         """
         modules.radiation.irradiance(self)
         modules.snow.update_albedo(self)
@@ -54,6 +70,9 @@ class Model:
         modules.snow.energy_balance(self)
 
     def _initialize_logger(self):
+        """
+        Initialize the logger for the model instance.
+        """
         loguru.logger.remove()
         logger = copy.deepcopy(loguru.logger)
         log_format = ('<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | ' +
@@ -133,7 +152,7 @@ class Model:
     def run(self):
         """
         Start the model run. Before calling this method, the model must be
-        properly initialized using the `initialize` method.
+        properly initialized by calling `initialize()`.
         """
         self.logger.info('Starting model run')
         start_time = time.time()
