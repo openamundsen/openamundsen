@@ -33,7 +33,8 @@ class Model:
         self._initialize_logger()
 
         self.logger.info('Checking configuration')
-        self.config = conf.parse_config(config)
+        full_config = conf.full_config(config)
+        self.config = conf.parse_config(full_config)
 
     def _prepare_time_steps(self):
         """
