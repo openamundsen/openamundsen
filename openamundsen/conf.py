@@ -2,6 +2,7 @@ import datetime
 from openamundsen import util
 import pandas as pd
 from pathlib import Path
+import re
 
 
 def read_config(filename):
@@ -20,9 +21,19 @@ def full_config(config):
 
 
 def parse_config(config):
-    infer_end_hour = isinstance(config['end_date'], datetime.date)
+    end_date = config['end_date']
+
+    # If end_date is specified without an hour value, the end hour should be inferred
+    # (i.e., set to the latest time step of the end day).
+    if isinstance(end_date, datetime.date):
+        infer_end_hour = True
+    elif isinstance(end_date, str) and re.match(r'^\d\d\d\d-\d\d-\d\d$', end_date.strip()):
+        infer_end_hour = True
+    else:
+        infer_end_hour = False
+
     config['start_date'] = pd.to_datetime(config['start_date'])
-    config['end_date'] = pd.to_datetime(config['end_date'])
+    config['end_date'] = pd.to_datetime(end_date)
 
     # If no end hour is specified (only the date), set it to the last time step of the respective day
     # (for the start date the hour is automatically set to 0 if not explicitly specified)
