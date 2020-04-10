@@ -31,7 +31,9 @@ class Model:
         self.dates = None
 
         self._initialize_logger()
-        conf.apply_config(self, config)
+
+        self.logger.info('Checking configuration')
+        self.config = conf.parse_config(config)
 
     def _prepare_time_steps(self):
         """

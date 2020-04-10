@@ -19,9 +19,7 @@ def full_config(config):
     return util.merge_data(DEFAULT_CONFIG, config)
 
 
-def apply_config(model, config):
-    model.logger.info('Checking configuration')
-
+def parse_config(config):
     infer_end_hour = isinstance(config['end_date'], datetime.date)
     config['start_date'] = pd.to_datetime(config['start_date'])
     config['end_date'] = pd.to_datetime(config['end_date'])
@@ -31,7 +29,7 @@ def apply_config(model, config):
     if infer_end_hour:
         config['end_date'] += pd.Timedelta(hours=24) - pd.Timedelta(seconds=config['timestep'])
 
-    model.config = config
+    return config
 
 
 # read in the default configuration from the module directory
