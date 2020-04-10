@@ -96,3 +96,12 @@ def test_infer_end_date(minimal_config):
 
     config = save_and_parse_config(yaml_str.format(d='"2020-04-30 11:00"'))
     assert config['end_date'].hour == 11
+
+
+def test_missing_parameter(minimal_config):
+    for key in minimal_config.keys():
+        config = minimal_config.copy()
+        del config[key]
+
+        with pytest.raises(errors.ConfigurationError):
+            save_and_parse_config(config)

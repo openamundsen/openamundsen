@@ -1,6 +1,7 @@
 import datetime
 from munch import Munch
 from openamundsen import util
+from openamundsen.errors import ConfigurationError
 import pandas as pd
 from pathlib import Path
 import re
@@ -32,7 +33,19 @@ def full_config(config):
 
 
 def parse_config(config):
-    end_date = config['end_date']
+    if config.domain is None:
+        raise ConfigurationError('Domain not specified')
+
+    if config.start_date is None:
+        raise ConfigurationError('Start date not specified')
+
+    if config.end_date is None:
+        raise ConfigurationError('End date not specified')
+
+    if config.resolution is None:
+        raise ConfigurationError('Resolution not specified')
+
+    end_date = config.end_date
 
     # If end_date is specified without an hour value, the end hour should be inferred
     # (i.e., set to the latest time step of the end day).
@@ -43,13 +56,13 @@ def parse_config(config):
     else:
         infer_end_hour = False
 
-    config['start_date'] = pd.to_datetime(config['start_date'])
-    config['end_date'] = pd.to_datetime(end_date)
+    config.start_date = pd.to_datetime(config.start_date)
+    config.end_date = pd.to_datetime(end_date)
 
     # If no end hour is specified (only the date), set it to the last time step of the respective day
     # (for the start date the hour is automatically set to 0 if not explicitly specified)
     if infer_end_hour:
-        config['end_date'] += pd.Timedelta(hours=24) - pd.Timedelta(seconds=config['timestep'])
+        config.end_date += pd.Timedelta(hours=24) - pd.Timedelta(seconds=config.timestep)
 
     return config
 
