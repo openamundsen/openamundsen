@@ -1,15 +1,26 @@
 import datetime
+from munch import Munch
 from openamundsen import util
 import pandas as pd
 from pathlib import Path
 import re
 
 
+class Configuration(Munch):
+    """
+    Container for storing model configuration. This class inherits from `Munch`
+    so that attributes are accessible both using dict notation
+    (`config['start_date']`) as well as dot notation (`config.end_date`).
+    """
+    pass
+
+
 def read_config(filename):
     """
-    Read a configuration (YAML) file and return the resulting dict.
+    Read a configuration (YAML) file and return the resulting dict as a
+    Configuration object.
     """
-    return util.read_yaml_file(filename)
+    return Configuration(util.read_yaml_file(filename))
 
 
 def full_config(config):
@@ -17,7 +28,7 @@ def full_config(config):
     Convert a configuration dict into a "full" configuration, i.e. fill unspecified
     values with the respective values from the default configuration.
     """
-    return util.merge_data(DEFAULT_CONFIG, config)
+    return Configuration(util.merge_data(DEFAULT_CONFIG, config))
 
 
 def parse_config(config):

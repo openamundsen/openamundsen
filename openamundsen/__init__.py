@@ -1,3 +1,3 @@
-from .conf import read_config, full_config
+from .conf import Configuration, read_config
 from .model import Model
 from . import errors
