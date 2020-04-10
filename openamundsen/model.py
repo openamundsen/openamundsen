@@ -41,11 +41,12 @@ class Model:
         Prepare the time steps for the model run according to the run
         configuration (start date, end date, and time step).
         """
-        self.dates = pd.date_range(
+        dates = pd.date_range(
             start=self.config['start_date'],
             end=self.config['end_date'],
             freq=pd.DateOffset(seconds=self.config['timestep']),
         )
+        self.dates = list(dates.to_pydatetime())
 
     def _time_step_loop(self):
         """
@@ -54,7 +55,7 @@ class Model:
         the submodules.
         """
         for date in self.dates:
-            self.logger.info(f'Processing time step {date}')
+            self.logger.info(f'Processing time step {date:%Y-%m-%d %H:%M}')
             meteo.interpolate_station_data(self, date)
             meteo.process_meteo_data(self)
             self._model_interface()
