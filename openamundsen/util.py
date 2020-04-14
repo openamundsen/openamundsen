@@ -2,6 +2,7 @@ import copy
 import numpy as np
 from openamundsen import errors
 from pathlib import Path
+import pyproj
 from ruamel.yaml import YAML
 
 
@@ -118,3 +119,30 @@ def raster_filename(kind, config):
     return Path(f'{dir}/{kind}_{domain}_{resolution}.{extension}')
 
 
+def transform_coords(x, y, src_crs, dst_crs):
+    """
+    Transform coordinates from one coordinate reference system to another.
+
+    Parameters
+    ----------
+    x : ndarray
+        Source x coordinates or longitude.
+
+    y : ndarray
+        Source y coordinates or latitude.
+
+    src_crs
+        CRS of the original coordinates as a pyproj-compatible input
+        (e.g. a string "epsg:xxxx").
+
+    dst_crs
+        Target CRS.
+
+    Returns
+    -------
+    (x, y) tuple of ndarrays containing the transformed coordinates.
+    """
+    x = np.array(x)
+    y = np.array(y)
+    transformer = pyproj.Transformer.from_crs(src_crs, dst_crs, always_xy=True)
+    return transformer.transform(x, y)

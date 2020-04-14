@@ -1,7 +1,15 @@
 import copy
 import loguru
-from openamundsen import conf, errors, fileio, meteo, statevars, util
-from openamundsen import modules
+from openamundsen import (
+    conf,
+    constants,
+    errors,
+    fileio,
+    meteo,
+    modules,
+    statevars,
+    util,
+)
 import pandas as pd
 from pathlib import Path
 import sys
@@ -102,6 +110,35 @@ class Model:
 
         self.logger.info(f'Grid has dimensions {meta["rows"]}x{meta["cols"]}')
 
+    def _prepare_station_coordinates(self):
+        """
+        Transform the lon/lat coordinates of the meteorological stations to the
+        coordinate system of the model grid. The transformed coordinates are
+        stored in the `x` and `y` variables of the meteo dataset.
+        """
+        ds = self.meteo
+
+        src_crs = 'epsg:4326'  # WGS 84
+        dst_crs = self.config.crs
+        x, y = util.transform_coords(ds.lon, ds.lat, src_crs, dst_crs)
+
+        x_var = ds.lon.copy()
+        x_var.values = x
+        x_var.attrs = {
+            'standard_name': 'projection_x_coordinate',
+            'units': 'm',
+        }
+
+        y_var = ds.lat.copy()
+        y_var.values = y
+        y_var.attrs = {
+            'standard_name': 'projection_y_coordinate',
+            'units': 'm',
+        }
+
+        ds['x'] = x_var
+        ds['y'] = y_var
+
     def _initialize_state_variables(self):
         """
         Initialize the default state variables (i.e., create empty arrays) for
@@ -166,6 +203,11 @@ class Model:
             raise errors.MeteoDataError('No meteo data available for the specified period')
 
         self.meteo = fileio.combine_meteo_datasets(datasets)
+        self._prepare_station_coordinates()
+
+        # reorder variables (only for aesthetic reasons)
+        var_order = ['lon', 'lat', 'alt', 'x', 'y'] + list(constants.METEO_VAR_METADATA.keys())
+        self.meteo = self.meteo[var_order]
 
     def initialize(self):
         """

@@ -1,39 +1,8 @@
 import numpy as np
 import openamundsen as oa
+from openamundsen import constants
 from pathlib import Path
 import xarray as xr
-
-
-VAR_METADATA = {
-    'temp': {
-        'standard_name': 'air_temperature',
-        'units': 'K',
-    },
-    'precip': {
-        'standard_name': 'precipitation_flux',
-        'units': 'kg m-2 s-1',
-    },
-    'rel_hum': {
-        'standard_name': 'relative_humidity',
-        'units': '%',
-    },
-    'shortwave_in': {
-        'standard_name': 'surface_downwelling_shortwave_flux_in_air',
-        'units': 'W m-2',
-    },
-    'wind_speed': {
-        'standard_name': 'wind_speed',
-        'units': 'm s-1',
-    },
-}
-
-NETCDF_VAR_MAPPINGS = {
-    'tas': 'temp',
-    'pr': 'precip',
-    'hurs': 'rel_hum',
-    'rsds': 'shortwave_in',
-    'wss': 'wind_speed',
-}
 
 
 def read_netcdf_meteo_file(filename):
@@ -41,7 +10,7 @@ def read_netcdf_meteo_file(filename):
     Read a meteo data file in NetCDF format and
     - check if the time, lon, lat, and alt variables are included
     - rename the variables according to NETCDF_VAR_MAPPINGS
-    - check if the units are as expected (VAR_METADATA)
+    - check if the units are as expected (METEO_VAR_METADATA)
     - remove all unsupported variables
     - set the station id and name as attributes.
     """
@@ -49,15 +18,15 @@ def read_netcdf_meteo_file(filename):
 
     # rename variables
     ds_vars = list(ds.variables.keys())
-    rename_vars = set(NETCDF_VAR_MAPPINGS.keys()) & set(ds_vars)
-    rename_dict = {v: NETCDF_VAR_MAPPINGS[v] for v in rename_vars}
+    rename_vars = set(constants.NETCDF_VAR_MAPPINGS.keys()) & set(ds_vars)
+    rename_dict = {v: constants.NETCDF_VAR_MAPPINGS[v] for v in rename_vars}
     ds = ds.rename_vars(rename_dict)
 
     for var in ('time', 'lon', 'lat', 'alt'):
         if var not in ds:
             raise oa.errors.MeteoDataError(f'File is missing "{var}" variable: {filename}')
 
-    for var, meta in VAR_METADATA.items():
+    for var, meta in constants.METEO_VAR_METADATA.items():
         units = meta['units']
 
         if var in ds and ds[var].units != units:
@@ -67,7 +36,7 @@ def read_netcdf_meteo_file(filename):
 
     # remove all unsupported variables
     ds_vars = list(ds.variables.keys())
-    allowed_vars = ['time', 'lon', 'lat', 'alt'] + list(NETCDF_VAR_MAPPINGS.values())
+    allowed_vars = ['time', 'lon', 'lat', 'alt'] + list(constants.NETCDF_VAR_MAPPINGS.values())
     drop_vars = list(set(ds_vars) - set(allowed_vars))
     ds = ds.drop_vars(drop_vars)
 
@@ -99,7 +68,7 @@ def combine_meteo_datasets(datasets):
     for ds in datasets:
         ds = ds.copy()
 
-        for var, meta in VAR_METADATA.items():
+        for var, meta in constants.METEO_VAR_METADATA.items():
             # add missing variables to the dataset
             if var not in ds:
                 ds[var] = xr.DataArray(
