@@ -21,7 +21,7 @@ def read_config(filename):
     Read a configuration (YAML) file and return the resulting dict as a
     Configuration object.
     """
-    return Configuration(util.read_yaml_file(filename))
+    return Configuration.fromDict(util.read_yaml_file(filename))
 
 
 def full_config(config):
@@ -29,7 +29,7 @@ def full_config(config):
     Convert a configuration dict into a "full" configuration, i.e. fill unspecified
     values with the respective values from the default configuration.
     """
-    return Configuration(util.merge_data(DEFAULT_CONFIG, config))
+    return Configuration.fromDict(util.merge_data(DEFAULT_CONFIG, config))
 
 
 def parse_config(config):
