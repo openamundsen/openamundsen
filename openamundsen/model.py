@@ -1,8 +1,9 @@
 import copy
 import loguru
-from openamundsen import conf, fileio, meteo, statevars, util
+from openamundsen import conf, errors, fileio, meteo, statevars, util
 from openamundsen import modules
 import pandas as pd
+from pathlib import Path
 import sys
 import time
 
@@ -136,9 +137,35 @@ class Model:
 
     def read_meteo_data(self):
         """
-        Read the meteorological data files required for the model run.
+        Read the meteorological data files required for the model run and store
+        them in the `meteo` variable.
         """
-        self.logger.info('Reading meteo data')
+        if self.config.input_data.meteo.format != 'netcdf':
+            raise NotImplementedError('Only NetCDF meteo input currently supported')
+
+        meteo_data_dir = Path(self.config.input_data.meteo.dir)
+        nc_files = sorted(list(meteo_data_dir.glob('*.nc')))
+
+        if len(nc_files) == 0:
+            raise errors.MeteoDataError('No meteo files found')
+
+        datasets = []
+
+        for nc_file in nc_files:
+            self.logger.info(f'Reading meteo file: {nc_file}')
+
+            ds = fileio.read_netcdf_meteo_file(nc_file)
+            ds = ds.sel(time=slice(self.config.start_date, self.config.end_date))
+
+            if ds.dims['time'] == 0:
+                self.logger.info('File contains no meteo data for the specified period')
+            else:
+                datasets.append(ds)
+
+        if len(datasets) == 0:
+            raise errors.MeteoDataError('No meteo data available for the specified period')
+
+        self.meteo = fileio.combine_meteo_datasets(datasets)
 
     def initialize(self):
         """

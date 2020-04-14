@@ -8,3 +8,7 @@ class ConfigurationError(Exception):
 
 class RasterFileError(Exception):
     pass
+
+
+class MeteoDataError(Exception):
+    pass
