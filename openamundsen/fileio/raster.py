@@ -50,6 +50,15 @@ def read_raster_file(filename, check_meta=None):
     data : np.ndarray
     """
     if check_meta is not None:
+        # compare only rows, cols, resolution and transform and not additional attributes
+        # possibly stored in the check_meta object (such as x and y coordinates, etc.)
+        check_meta = {k: check_meta[k] for k in [
+            'rows',
+            'cols',
+            'resolution',
+            'transform',
+        ]}
+
         meta = read_raster_metadata(filename)
         if meta != check_meta:
             raise RasterFileError(f'Metadata mismatch for {filename}')

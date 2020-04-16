@@ -103,10 +103,10 @@ class Model:
 
         dem_file = util.raster_filename('dem', self.config)
         meta = fileio.read_raster_metadata(dem_file)
-        grid = util.ModelGrid(meta)
         self.logger.info(f'Grid has dimensions {meta["rows"]}x{meta["cols"]}')
 
-
+        grid = util.ModelGrid(meta)
+        grid.prepare_coordinates()
         self.grid = grid
 
     def _prepare_station_coordinates(self):
@@ -168,6 +168,8 @@ class Model:
         else:
             self.logger.debug('No ROI file available, setting ROI to entire grid area')
             self.state.base.roi[:] = True
+
+        self.grid.prepare_roi_coordinates(self.state.base.roi)
 
     def read_meteo_data(self):
         """

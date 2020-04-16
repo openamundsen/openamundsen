@@ -4,6 +4,7 @@ import numpy as np
 from openamundsen import errors
 from pathlib import Path
 import pyproj
+import rasterio
 from ruamel.yaml import YAML
 
 
@@ -150,4 +151,37 @@ def transform_coords(x, y, src_crs, dst_crs):
 
 
 class ModelGrid(Munch):
-    pass
+    """
+    Container for storing model grid related variables.
+    """
+    def prepare_coordinates(self):
+        """
+        Prepare a range of variables related to the grid coordinates:
+        - xs, ys: 1d-arrays containing the x and y coordinates in the grid CRS.
+        - X, Y, 2d-arrays containing the x and y coordinates for each grid point.
+        - all_points: (N, 2)-array containing (x, y) coordinates of all grid points.
+        - roi_points: (N, 2)-array containing (x, y) coordinates of all ROI points.
+        """
+        x_range, y_range = rasterio.transform.xy(
+            self.transform,
+            [0, self.rows - 1],
+            [0, self.cols - 1],
+        )
+        xs = np.linspace(x_range[0], x_range[1], self.cols)
+        ys = np.linspace(y_range[0], y_range[1], self.rows)
+        X, Y = np.meshgrid(xs, ys)
+
+        self.xs = xs
+        self.ys = ys
+        self.X = X
+        self.Y = Y
+        self.all_points = np.column_stack((X.flat, Y.flat))
+        self.roi_points = self.all_points.copy()
+
+    def prepare_roi_coordinates(self, roi):
+        """
+        Update the roi_points variable using a ROI field.
+        """
+        roi_xs = self.X[roi]
+        roi_ys = self.Y[roi]
+        self.roi_points = np.column_stack((roi_xs, roi_ys))
