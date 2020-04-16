@@ -103,12 +103,11 @@ class Model:
 
         dem_file = util.raster_filename('dem', self.config)
         meta = fileio.read_raster_metadata(dem_file)
-
-        self.config['rows'] = meta['rows']
-        self.config['cols'] = meta['cols']
-        self.config['raster_meta'] = meta
-
+        grid = util.ModelGrid(meta)
         self.logger.info(f'Grid has dimensions {meta["rows"]}x{meta["cols"]}')
+
+
+        self.grid = grid
 
     def _prepare_station_coordinates(self):
         """
@@ -154,20 +153,18 @@ class Model:
         DEM, ROI (if available), and other files depending on the activated
         submodules.
         """
-        meta = self.config['raster_meta']
-
         dem_file = util.raster_filename('dem', self.config)
         roi_file = util.raster_filename('roi', self.config)
 
         if dem_file.exists():
             self.logger.info(f'Reading DEM ({dem_file})')
-            self.state.base.dem[:] = fileio.read_raster_file(dem_file, check_meta=meta)
+            self.state.base.dem[:] = fileio.read_raster_file(dem_file, check_meta=self.grid)
         else:
             raise FileNotFoundError(f'DEM file not found: {dem_file}')
 
         if roi_file.exists():
             self.logger.info(f'Reading ROI ({roi_file})')
-            self.state.base.roi[:] = fileio.read_raster_file(roi_file, check_meta=meta)
+            self.state.base.roi[:] = fileio.read_raster_file(roi_file, check_meta=self.grid)
         else:
             self.logger.debug('No ROI file available, setting ROI to entire grid area')
             self.state.base.roi[:] = True

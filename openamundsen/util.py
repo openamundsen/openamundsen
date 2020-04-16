@@ -1,4 +1,5 @@
 import copy
+from munch import Munch
 import numpy as np
 from openamundsen import errors
 from pathlib import Path
@@ -146,3 +147,7 @@ def transform_coords(x, y, src_crs, dst_crs):
     y = np.array(y)
     transformer = pyproj.Transformer.from_crs(src_crs, dst_crs, always_xy=True)
     return transformer.transform(x, y)
+
+
+class ModelGrid(Munch):
+    pass

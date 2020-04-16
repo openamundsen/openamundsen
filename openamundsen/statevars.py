@@ -18,8 +18,8 @@ def initialize_state_variables(model):
     """
     model.logger.info('Initializing state variables')
 
-    rows = model.config['rows']
-    cols = model.config['cols']
+    rows = model.grid['rows']
+    cols = model.grid['cols']
 
     def field(dtype=float):
         return create_empty_array((rows, cols), dtype)

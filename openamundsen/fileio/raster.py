@@ -20,9 +20,12 @@ def read_raster_metadata(filename):
     meta = {}
 
     with rasterio.open(filename) as ds:
+        if not (ds.res[0] == ds.res[1] == abs(ds.res[0])):
+            raise RasterFileError('Raster file must have equal x and y resolution')
+
         meta['rows'] = ds.meta['height']
         meta['cols'] = ds.meta['width']
-        meta['resolution'] = ds.res
+        meta['resolution'] = ds.res[0]
         meta['transform'] = ds.meta['transform']
 
     return meta
