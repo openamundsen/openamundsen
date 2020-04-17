@@ -28,3 +28,11 @@ NETCDF_VAR_MAPPINGS = {
     'rsds': 'shortwave_in',
     'wss': 'wind_speed',
 }
+
+ALLOWED_METEO_VAR_RANGES = {
+    'temp': (-273.15, None),
+    'precip': (0, None),
+    'rel_hum': (0, 100),
+    'shortwave_in': (0, None),
+    'wind_speed': (0, None),
+}
