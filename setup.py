@@ -1,9 +1,15 @@
+from distutils.util import convert_path
 from setuptools import setup, find_packages
 
 
+version_ns = {}
+version_file = convert_path('openamundsen/_version.py')
+with open(version_file) as f:
+    exec(f.read(), version_ns)
+
 setup(
     name='openamundsen',
-    version='0.0.1',
+    version=version_ns['__version__'],
     description='A spatially distributed snow and hydrological modeling framework',
     packages=find_packages(),
     include_package_data=True,
