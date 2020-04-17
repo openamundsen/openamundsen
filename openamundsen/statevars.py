@@ -37,8 +37,8 @@ def initialize_state_variables(model):
     meteo = StateVariableContainer()
     meteo.temp = field()  # air temperature (K)
     meteo.precip = field()  # precipitation (kg m-2 s-1)
-    meteo.hum = field()  # relative humidity (%)
-    meteo.glob = field()  # shortwave incoming radiation (W m-2)
+    meteo.rel_hum = field()  # relative humidity (%)
+    meteo.shortwave_in = field()  # shortwave incoming radiation (W m-2)
     meteo.wind_speed = field()  # wind speed (m s-1)
 
     # Snow variables
