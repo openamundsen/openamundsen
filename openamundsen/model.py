@@ -145,7 +145,9 @@ class Model:
         configuration, further state variables might be added at other
         locations.
         """
-        statevars.initialize_state_variables(self)
+        self.state = statevars.StateVariableManager(self.grid.rows, self.grid.cols)
+        statevars.add_default_state_variables(self)
+        self.state.initialize()
 
     def read_input_data(self):
         """

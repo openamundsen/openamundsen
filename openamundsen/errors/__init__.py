@@ -12,3 +12,7 @@ class RasterFileError(Exception):
 
 class MeteoDataError(Exception):
     pass
+
+
+class CategoryError(Exception):
+    pass
