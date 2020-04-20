@@ -110,12 +110,32 @@ def add_default_state_variables(model):
 
     # Meteorological variables
     meteo = state.add_category('meteo')
-    meteo.add_variable('temp', standard_name='air_temperature', units='K')
-    meteo.add_variable('precip', standard_name='precipitation_flux', units='kg m-2 s-1')
-    meteo.add_variable('rel_hum', standard_name='relative_humidity', units='%')
+    meteo.add_variable(
+        'temp',
+        standard_name='air_temperature',
+        units='K',
+        long_name='Air Temperature')
+    meteo.add_variable(
+        'precip',
+        standard_name='precipitation_flux',
+        units='kg m-2 s-1',
+        long_name='Precipitation Flux',
+    )
+    meteo.add_variable(
+        'rel_hum',
+        standard_name='relative_humidity',
+        units='%',
+        long_name='Relative Humidity',
+    )
     meteo.add_variable(
         'short_in',
         standard_name='surface_downwelling_shortwave_flux_in_air',
         units='W m-2',
+        long_name='Downwelling Shortwave Radiation',
     )
-    meteo.add_variable('wind_speed', standard_name='wind_speed', units='m s-1')
+    meteo.add_variable(
+        'wind_speed',
+        standard_name='wind_speed',
+        units='m s-1',
+        long_name='Wind Speed',
+    )
