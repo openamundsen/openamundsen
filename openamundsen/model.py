@@ -5,6 +5,7 @@ from openamundsen import (
     constants,
     errors,
     fileio,
+    liveview,
     meteo,
     modules,
     statevars,
@@ -70,6 +71,9 @@ class Model:
             self._model_interface()
             self._update_gridded_outputs()
             self._update_point_outputs()
+
+            if self.config.liveview.enabled:
+                self.liveview.update(date)
 
     def _model_interface(self):
         """
@@ -228,6 +232,12 @@ class Model:
         Start the model run. Before calling this method, the model must be
         properly initialized by calling `initialize()`.
         """
+        if self.config.liveview.enabled:
+            self.logger.info('Creating live view window')
+            lv = liveview.LiveView(self.config.liveview, self.state)
+            lv.create_window()
+            self.liveview = lv
+
         self.logger.info('Starting model run')
         start_time = time.time()
         self._time_step_loop()

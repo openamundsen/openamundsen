@@ -87,3 +87,8 @@ snow:
     temperature_factor: 0.05
     albedo_factor: 0.0094
     threshold_temperature: 1.
+
+liveview:
+  enabled: False
+  cols: 4
+  fields: []
