@@ -14,6 +14,12 @@ import numpy as np
     ),
 )
 def _idw(x_points, y_points, z_points, x_targets, y_targets, power, smoothing):
+    """
+    Interpolate a set or irregularly distributed points using inverse distance
+    weighting.
+    This function performs the actual interpolation; for the parameters see the
+    documentation of `idw` (which is only a wrapper for this function).
+    """
     num_points = len(x_points)
     num_targets = len(x_targets)
     data = np.zeros(num_targets)
@@ -47,7 +53,32 @@ def _idw(x_points, y_points, z_points, x_targets, y_targets, power, smoothing):
 
 def idw(x, y, z, x_targets, y_targets, power=2, smoothing=0):
     """
-    Wrapper function for _idw to ensure correct data types.
+    Interpolate a set or irregularly distributed points using inverse distance
+    weighting.
+
+    Parameters
+    ----------
+    x, y : ndarray
+        x and y coordinates of the known points.
+
+    z : ndarray
+        Values to be interpolated.
+
+    x_targets, y_targets : ndarray
+        x and y coordinates of the interpolation targets.
+
+    power : float, default 2
+        Weighting power. The default value of 2 corresponds to the classic
+        inverse distance squared weighting.
+
+    smoothing : float, default 0
+        Smoothing parameter. Increasing this value will produce smoother
+        results, but means that the interpolation is no longer exact.
+
+    Returns
+    -------
+    data : ndarray
+        Interpolated values for the target locations.
     """
     assert len(x) == len(y) == len(z)
 
