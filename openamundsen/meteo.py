@@ -1,6 +1,5 @@
 import numpy as np
 from openamundsen import constants, interpolation
-import scipy.stats
 
 
 def _param_station_data(ds, param, date):
@@ -12,7 +11,7 @@ def _param_station_data(ds, param, date):
 
 
 def _linear_fit(x, y):
-    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(x, y)
+    slope, intercept = np.polyfit(x, y, 1)
     return slope
 
 
