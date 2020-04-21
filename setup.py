@@ -27,4 +27,10 @@ setup(
         'rasterio>=1.1.0',
         'xarray>=0.14.0',
     ],
+    extras_require={
+        'liveview': [
+            'PyQt5>=5.12',
+            'pyqtgraph @ git+https://github.com/pyqtgraph/pyqtgraph@develop',
+        ],
+    },
 )
