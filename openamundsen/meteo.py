@@ -12,7 +12,7 @@ def _param_station_data(ds, param, date):
 
 def _linear_fit(x, y):
     slope, intercept = np.polyfit(x, y, 1)
-    return slope
+    return slope, intercept
 
 
 def _detrend(data, elevs, factor, method='linear'):
@@ -40,7 +40,7 @@ def interpolate_station_data(model, date):
 
     for param in ('temp', 'precip', 'rel_hum', 'wind_speed'):
         data, xs, ys, zs = _param_station_data(model.meteo, param, date)
-        slope = _linear_fit(zs, data)
+        slope, _ = _linear_fit(zs, data)
         data_detrended = _detrend(data, zs, slope)
         data_detrended_interpol = interpolation.idw(
             xs,
