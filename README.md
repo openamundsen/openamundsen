@@ -8,17 +8,32 @@ line utility.
 
  1. Clone the git repository to your local hard disk, either using `git clone
     https://git.uibk.ac.at/c716657/openamundsen.git` or using a GUI tool such
-    as SourceTree.
+    as SourceTree or GitHub Desktop.
  2. Install the required dependencies. This can be done either globally or in a
-    virtualenv or a conda environment. For Anaconda, a global install of the
-    missing dependencies (most of the required packages such as numpy, pandas and
-    xarray are already included in Anacondy by default) can be done via `conda
-    install -c conda-forge munch ruamel.yaml loguru rasterio`.[^1] 
+    virtualenv or a conda environment. For Anaconda/Miniconda, a global install of the
+    missing dependencies can be done using the following command[^1]:
+
+        conda install -c conda-forge \
+            munch                    \
+            loguru                   \
+            netCDF4                  \
+            numba                    \
+            numpy                    \
+            pandas                   \
+            pyproj                   \
+            pyqt                     \
+            pyqtgraph=0.11.0rc0      \
+            ruamel.yaml              \
+            rasterio                 \
+            xarray
  3. Run the included sample model setup for the Rofental domain, either by
     running `./bin/openamundsen examples/rofental.yml` from the main
     openamundsen directory, or by running the rofental_test.py script located in
     the examples directory (if you are running the script from an IDE, make sure
     that the working directory is set to the main openamundsen directory).
+
+[^1]: In case of dependency resolving problems, a `conda update --all` might be
+  necessary before the `conda install`.
 
 ## Overview
 
@@ -89,15 +104,27 @@ individual submodules are plugged in. After `_model_interface()` returns, the
 grid and point outputs are updated and potentially written, before proceeding
 to the next time step.
 
-## Status
+## Release Notes/Changelog
 
-What is working at the moment:
+### v0.0.2 (2020-04-22)
 
- - Basic model structure has been established
- - Utility functions (reading config file, reading raster files, preparing time
-   steps, …) have been created
- - DEM and ROI are read in
- - Some modules have been created and filled with dummy functions
+- Meteorological station data in NetCDF format can be read in.
+- IDW interpolation function has been implemented.
+- Air temperature, precipitation, humidity and wind speed measurements are
+  interpolated to the model grid using IDW with elevation detrending (with
+  automatic calculation of lapse rates in each time step).
+- Live view window for showing state variable fields during a model run has
+  been implemented.
+- Metadata for state variables ([CF](http://cfconventions.org)-compliant
+  attributes `standard_name`, `long_name`, `units`) can be specified (used e.g.
+  for labeling plots in the live view window and subsequently for annotating
+  output data).
+- Some first unit tests have been created.
 
-[^1]: In case of dependency resolving problems, a `conda update --all` might be
-  necessary before the `conda install`.
+### v0.0.1 (2020-04-06)
+
+- Basic model structure has been established.
+- Utility functions (reading config file, reading raster files, preparing time
+  steps, …) have been created.
+- DEM and ROI are read in.
+- Some modules have been created and filled with dummy functions.
