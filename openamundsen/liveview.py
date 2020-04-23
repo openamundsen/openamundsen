@@ -32,6 +32,10 @@ class LiveView:
         self.config = config
         self.state = state
 
+        self.img_height, self.img_width = self.state.base.dem.shape
+        self.cbar_width = 20
+        self.cbar_spacing = 30  # spacing between image and colorbar
+
     def create_window(self):
         """
         Prepare and open the live view window.
@@ -41,6 +45,9 @@ class LiveView:
         # Create remote process
         proc = mp.QtProcess()
         rpg = proc._import('pyqtgraph')
+
+        self.proc = proc
+        self.rpg = rpg
 
         # Interpret image data as row-major instead of col-major
         rpg.setConfigOptions(imageAxisOrder='row-major')
@@ -54,10 +61,10 @@ class LiveView:
         gei = rpg.GradientEditorItem()
         gei.loadPreset('viridis')
         lut = gei.getLookupTable(50)
+        self.cmap = gei.colorMap()
 
-        plot_items = []
         imgs = []
-        labels = []
+        cb_labels = []
 
         for field_num, field in enumerate(self.config.fields):
             if field_num % self.config.cols == 0:
@@ -66,7 +73,8 @@ class LiveView:
             vb = rpg.ViewBox(enableMouse=False, enableMenu=False, lockAspect=True)
             vb.invertY(True)  # y axis points downward (otherwise images are plotted upside down)
 
-            pi = rpg.PlotItem(viewBox=vb)
+            pi = rpg.PlotItem(title=self._var_label(field), viewBox=vb)
+
             for ax in ('left', 'right', 'top', 'bottom'):
                 pi.hideAxis(ax)
 
@@ -76,17 +84,18 @@ class LiveView:
             pi.addItem(img)
             win.addItem(pi)
 
-            plot_items.append(pi)
-            imgs.append(img)
-            labels.append(self._var_label(field))
+            cbar, label_min, label_max = self._colorbar()
+            vb.addItem(cbar)
+            vb.addItem(label_min)
+            vb.addItem(label_max)
 
-        self.proc = proc
-        self.rpg = rpg
+            cb_labels.append((label_min, label_max))
+            imgs.append(img)
+
         self.win = win
         self.time_label = time_label
         self.imgs = imgs
-        self.plot_items = plot_items
-        self.labels = labels
+        self.cb_labels = cb_labels
 
         win.show()
 
@@ -102,14 +111,16 @@ class LiveView:
         """
         self.time_label.setText(f'{date:%Y-%m-%d %H:%M}')
 
-        for field, pi, img, label in zip(self.config.fields, self.plot_items, self.imgs, self.labels):
+        for field, img, labels in zip(self.config.fields, self.imgs, self.cb_labels):
             data = self.state[field]
             img.setImage(data)
 
             data_min = np.nanmin(data)
             data_max = np.nanmax(data)
-            label += f'<br>(min={data_min:g} max={data_max:g})'
-            pi.setTitle(label)
+
+            label_min, label_max = labels
+            label_min.setText(f'{data_min:g}')
+            label_max.setText(f'{data_max:g}')
 
     def close(self):
         """
@@ -150,3 +161,33 @@ class LiveView:
             label += f' ({meta.units})'
 
         return label
+
+    def _colorbar(self):
+        rpg = self.rpg
+
+        gradient = self.cmap.getGradient()
+        gradient.setStart(self.img_width + self.cbar_spacing, 0 + self.img_height)
+        gradient.setFinalStop(self.img_width + self.cbar_spacing, 0)
+
+        rect = rpg.QtGui.QGraphicsRectItem(
+            self.img_width + self.cbar_spacing,
+            0,
+            self.cbar_width,
+            self.img_height,
+        )
+        rect.setPen(rpg.mkPen('w'))
+        rect.setBrush(rpg.QtGui.QBrush(gradient))
+
+        label_min = rpg.TextItem('min', anchor=(0.5, 0))
+        label_min.setPos(
+            self.img_width + self.cbar_spacing + self.cbar_width / 2.,
+            self.img_height,
+        )
+
+        label_max = rpg.TextItem('max', anchor=(0.5, 1))
+        label_max.setPos(
+            self.img_width + self.cbar_spacing + self.cbar_width / 2.,
+            0,
+        )
+
+        return rect, label_min, label_max
