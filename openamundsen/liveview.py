@@ -1,11 +1,9 @@
 import openamundsen as oa
-import numpy as np
 
 
 try:
     import pyqtgraph as pg
     import pyqtgraph.multiprocess as mp
-    from PyQt5 import QtCore, QtGui, QtWidgets
     pg_available = True
 except ModuleNotFoundError:
     pg_available = False
@@ -63,10 +61,14 @@ class LiveView:
         lut = gei.getLookupTable(50)
         self.cmap = gei.colorMap()
 
+        fields = []
         imgs = []
-        cb_labels = []
 
-        for field_num, field in enumerate(self.config.fields):
+        for field_num, d in enumerate(self.config.fields):
+            field = d['var']
+            min_range = d['min']
+            max_range = d['max']
+
             if field_num % self.config.cols == 0:
                 win.nextRow()
 
@@ -78,24 +80,22 @@ class LiveView:
             for ax in ('left', 'right', 'top', 'bottom'):
                 pi.hideAxis(ax)
 
-            img = rpg.ImageItem()
-            img.setLookupTable(lut)
+            img = rpg.ImageItem(lut=lut, levels=(min_range, max_range))
 
             pi.addItem(img)
             win.addItem(pi)
 
-            cbar, label_min, label_max = self._colorbar()
-            vb.addItem(cbar)
-            vb.addItem(label_min)
-            vb.addItem(label_max)
+            min_label = f'{min_range:g}'
+            max_label = f'{max_range:g}'
+            self._colorbar(vb, min_label, max_label)
 
-            cb_labels.append((label_min, label_max))
             imgs.append(img)
+            fields.append(field)
 
+        self.fields = fields
         self.win = win
         self.time_label = time_label
         self.imgs = imgs
-        self.cb_labels = cb_labels
 
         win.show()
 
@@ -111,16 +111,9 @@ class LiveView:
         """
         self.time_label.setText(f'{date:%Y-%m-%d %H:%M}')
 
-        for field, img, labels in zip(self.config.fields, self.imgs, self.cb_labels):
+        for field, img in zip(self.fields, self.imgs):
             data = self.state[field]
-            img.setImage(data)
-
-            data_min = np.nanmin(data)
-            data_max = np.nanmax(data)
-
-            label_min, label_max = labels
-            label_min.setText(f'{data_min:g}')
-            label_max.setText(f'{data_max:g}')
+            img.setImage(data, autoLevels=False)
 
     def close(self):
         """
@@ -162,7 +155,7 @@ class LiveView:
 
         return label
 
-    def _colorbar(self):
+    def _colorbar(self, vb, min_label, max_label):
         rpg = self.rpg
 
         gradient = self.cmap.getGradient()
@@ -178,16 +171,20 @@ class LiveView:
         rect.setPen(rpg.mkPen('w'))
         rect.setBrush(rpg.QtGui.QBrush(gradient))
 
-        label_min = rpg.TextItem('min', anchor=(0.5, 0))
-        label_min.setPos(
+        label_html = '<span style="color: #CCC; font-size: 10pt;">{}</span>'
+
+        ti_min = rpg.TextItem(html=label_html.format(min_label), anchor=(0.5, 0))
+        ti_min.setPos(
             self.img_width + self.cbar_spacing + self.cbar_width / 2.,
             self.img_height,
         )
 
-        label_max = rpg.TextItem('max', anchor=(0.5, 1))
-        label_max.setPos(
+        ti_max = rpg.TextItem(html=label_html.format(max_label), anchor=(0.5, 1))
+        ti_max.setPos(
             self.img_width + self.cbar_spacing + self.cbar_width / 2.,
             0,
         )
 
-        return rect, label_min, label_max
+        vb.addItem(rect)
+        vb.addItem(ti_min)
+        vb.addItem(ti_max)
