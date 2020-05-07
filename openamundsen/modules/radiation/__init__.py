@@ -7,3 +7,4 @@ from .sunparams import (
     sun_vector,
     sun_parameters,
 )
+from .shadows import shadows
