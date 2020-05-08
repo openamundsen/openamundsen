@@ -12,6 +12,7 @@ import numpy as np
         numba.double,
         numba.double,
     ),
+    parallel=True,
 )
 def _idw(x_points, y_points, z_points, x_targets, y_targets, power, smoothing):
     """
@@ -24,7 +25,7 @@ def _idw(x_points, y_points, z_points, x_targets, y_targets, power, smoothing):
     num_targets = len(x_targets)
     data = np.zeros(num_targets)
 
-    for target_num in range(num_targets):
+    for target_num in numba.prange(num_targets):
         x = x_targets[target_num]
         y = y_targets[target_num]
         w = 0.0
