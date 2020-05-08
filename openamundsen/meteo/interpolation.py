@@ -148,7 +148,3 @@ def interpolate_station_data(model, date):
         data_interpol_clipped = np.clip(data_interpol, min_range, max_range)
 
         model.state.meteo[param][roi] = data_interpol_clipped[:]
-
-
-def process_meteo_data(model):
-    model.logger.debug('Processing meteorological fields')

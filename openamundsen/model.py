@@ -67,7 +67,7 @@ class Model:
         for date in self.dates:
             self.logger.info(f'Processing time step {date:%Y-%m-%d %H:%M}')
             meteo.interpolate_station_data(self, date)
-            meteo.process_meteo_data(self)
+            # meteo.process_meteo_data(self)
             self._model_interface()
             self._update_gridded_outputs()
             self._update_point_outputs()
