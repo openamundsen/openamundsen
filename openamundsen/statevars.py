@@ -116,7 +116,7 @@ class StateVariableContainer(Munch):
         self._manager = manager
         self._meta = {}
 
-    def add_variable(self, name, dtype=float, standard_name=None, long_name=None, units=None):
+    def add_variable(self, name, units=None, long_name=None, standard_name=None, dtype=float):
         """
         Add a variable along with optional metadata.
         Note that the variable itself is not yet created here (this is done in
@@ -128,24 +128,24 @@ class StateVariableContainer(Munch):
         name : str
             Name of the variable to be created. Must be a valid Python identifier.
 
-        dtype : type, default float
-            Data type for the variable values.
+        units : str, optional
+            udunits-compatible definition of the units of the given variable.
+
+        long_name : str, optional
+            Long descriptive name of the variable.
 
         standard_name : str, optional
             Standard name of the variable in CF notation
             (http://cfconventions.org/standard-names.html).
 
-        long_name : str, optional
-            Long descriptive name of the variable.
-
-        units : str, optional
-            udunits-compatible definition of the units of the given variable.
+        dtype : type, default float
+            Data type for the variable values.
         """
         definition = StateVariableDefinition(
-            dtype=dtype,
-            standard_name=standard_name,
-            long_name=long_name,
             units=units,
+            long_name=long_name,
+            standard_name=standard_name,
+            dtype=dtype,
         )
 
         self._meta[name] = definition
@@ -158,18 +158,18 @@ class StateVariableDefinition:
 
     Parameters
     ----------
-    dtype : type, default float
-        Data type for the variable values.
+    units : str, optional
+        udunits-compatible definition of the units of the given variable.
+
+    long_name : str, optional
+        Long descriptive name of the variable.
 
     standard_name : str, optional
         Standard name of the variable in CF notation
         (http://cfconventions.org/standard-names.html).
 
-    long_name : str, optional
-        Long descriptive name of the variable.
-
-    units : str, optional
-        udunits-compatible definition of the units of the given variable.
+    dtype : type, default float
+        Data type for the variable values.
 
     Examples
     --------
@@ -178,10 +178,10 @@ class StateVariableDefinition:
             long_name='Total precipitation flux',
             units='kg m-2 s-1')
     """
-    dtype: type = float
-    standard_name: str = None
-    long_name: str = None
     units: str = None
+    long_name: str = None
+    standard_name: str = None
+    dtype: type = float
 
 
 def add_default_state_variables(model):
@@ -194,39 +194,15 @@ def add_default_state_variables(model):
 
     # Base variables
     base = state.add_category('base')
-    base.add_variable('dem', standard_name='surface_altitude', units='m')
+    base.add_variable('dem', 'm', 'Surface Altitude', 'surface_altitude')
     base.add_variable('slope')
     base.add_variable('aspect')
-    base.add_variable('roi', dtype=bool)
+    base.add_variable('roi', long_name='Region of Interest', dtype=bool)
 
     # Meteorological variables
     meteo = state.add_category('meteo')
-    meteo.add_variable(
-        'temp',
-        standard_name='air_temperature',
-        units='K',
-        long_name='Air Temperature')
-    meteo.add_variable(
-        'precip',
-        standard_name='precipitation_flux',
-        units='kg m-2 s-1',
-        long_name='Precipitation Flux',
-    )
-    meteo.add_variable(
-        'rel_hum',
-        standard_name='relative_humidity',
-        units='%',
-        long_name='Relative Humidity',
-    )
-    meteo.add_variable(
-        'short_in',
-        standard_name='surface_downwelling_shortwave_flux_in_air',
-        units='W m-2',
-        long_name='Downwelling Shortwave Radiation',
-    )
-    meteo.add_variable(
-        'wind_speed',
-        standard_name='wind_speed',
-        units='m s-1',
-        long_name='Wind Speed',
-    )
+    meteo.add_variable('temp', 'K', 'Air Temperature', 'air_temperature')
+    meteo.add_variable('precip', 'kg m-2 s-1', 'Precipitation Flux', 'precipitation_flux')
+    meteo.add_variable('rel_hum', '%', 'Relative Humidity', 'relative_humidity')
+    meteo.add_variable('short_in', 'W m-2', 'Downwelling Shortwave Radiation', 'surface_downwelling_shortwave_flux_in_air')
+    meteo.add_variable('wind_speed', 'm s-1', 'Wind Speed', 'wind_speed')
