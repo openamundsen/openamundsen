@@ -197,7 +197,6 @@ def add_default_state_variables(model):
     base.add_variable('dem', 'm', 'Surface Altitude', 'surface_altitude')
     base.add_variable('slope')
     base.add_variable('aspect')
-    base.add_variable('roi', long_name='Region of Interest', dtype=bool)
 
     # Meteorological variables
     meteo = state.add_category('meteo')

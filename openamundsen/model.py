@@ -170,12 +170,12 @@ class Model:
 
         if roi_file.exists():
             self.logger.info(f'Reading ROI ({roi_file})')
-            self.state.base.roi[:] = fileio.read_raster_file(roi_file, check_meta=self.grid)
+            self.grid.roi[:] = fileio.read_raster_file(roi_file, check_meta=self.grid)
         else:
             self.logger.debug('No ROI file available, setting ROI to entire grid area')
-            self.state.base.roi[:] = True
+            self.grid.roi[:] = True
 
-        self.grid.prepare_roi_coordinates(self.state.base.roi)
+        self.grid.prepare_roi_coordinates()
 
     def read_meteo_data(self):
         """

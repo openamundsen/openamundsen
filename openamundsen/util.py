@@ -176,12 +176,15 @@ class ModelGrid(Munch):
         self.X = X
         self.Y = Y
         self.all_points = np.column_stack((X.flat, Y.flat))
-        self.roi_points = self.all_points.copy()
+        self.prepare_roi_coordinates()
 
-    def prepare_roi_coordinates(self, roi):
+    def prepare_roi_coordinates(self):
         """
-        Update the roi_points variable using a ROI field.
+        Update the roi_points variable using the ROI field.
         """
-        roi_xs = self.X[roi]
-        roi_ys = self.Y[roi]
+        if 'roi' not in self:
+            self.roi = np.ones((self.rows, self.cols), dtype=bool)
+
+        roi_xs = self.X[self.roi]
+        roi_ys = self.Y[self.roi]
         self.roi_points = np.column_stack((roi_xs, roi_ys))

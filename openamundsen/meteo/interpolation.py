@@ -143,7 +143,7 @@ def interpolate_station_data(model, date):
     """
     model.logger.debug('Interpolating station data')
 
-    roi = model.state.base.roi
+    roi = model.grid.roi
 
     target_xs = model.grid.roi_points[:, 0]
     target_ys = model.grid.roi_points[:, 1]
