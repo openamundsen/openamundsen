@@ -162,7 +162,7 @@ class Model:
         self.state.base.aspect[:] = aspect
         self.state.base.normal_vec[:] = normal_vec
 
-    def read_input_data(self):
+    def _read_input_data(self):
         """
         Read the input raster files required for the model run including the
         DEM, ROI (if available), and other files depending on the activated
@@ -186,7 +186,7 @@ class Model:
 
         self.grid.prepare_roi_coordinates()
 
-    def read_meteo_data(self):
+    def _read_meteo_data(self):
         """
         Read the meteorological data files required for the model run and store
         them in the `meteo` variable.
@@ -233,8 +233,8 @@ class Model:
         self._initialize_model_grid()
         self._initialize_state_variables()
 
-        self.read_input_data()
-        self.read_meteo_data()
+        self._read_input_data()
+        self._read_meteo_data()
         self._calculate_terrain_parameters()
 
     def run(self):
