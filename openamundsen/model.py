@@ -9,6 +9,7 @@ from openamundsen import (
     meteo,
     modules,
     statevars,
+    terrain,
     util,
 )
 import pandas as pd
@@ -153,6 +154,14 @@ class Model:
         statevars.add_default_state_variables(self)
         self.state.initialize()
 
+    def _calculate_terrain_parameters(self):
+        self.logger.info('Calculating terrain parameters')
+        slope, aspect = terrain.slope_aspect(self.state.base.dem, self.grid.resolution)
+        normal_vec = terrain.normal_vector(self.state.base.dem, self.grid.resolution)
+        self.state.base.slope[:] = slope
+        self.state.base.aspect[:] = aspect
+        self.state.base.normal_vec[:] = normal_vec
+
     def read_input_data(self):
         """
         Read the input raster files required for the model run including the
@@ -226,6 +235,7 @@ class Model:
 
         self.read_input_data()
         self.read_meteo_data()
+        self._calculate_terrain_parameters()
 
     def run(self):
         """

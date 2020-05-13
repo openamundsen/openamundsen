@@ -216,8 +216,9 @@ def add_default_state_variables(model):
     # Base variables
     base = state.add_category('base')
     base.add_variable('dem', 'm', 'Surface Altitude', 'surface_altitude')
-    base.add_variable('slope')
-    base.add_variable('aspect')
+    base.add_variable('slope', 'degree', 'Terrain Slope')
+    base.add_variable('aspect', 'degree', 'Terrain Aspect')
+    base.add_variable('normal_vec', long_name='Vector Normal to the Surface', dim3=3)
 
     # Meteorological variables
     meteo = state.add_category('meteo')
