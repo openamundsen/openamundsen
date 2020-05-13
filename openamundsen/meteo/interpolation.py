@@ -154,7 +154,7 @@ def interpolate_station_data(model, date):
         data_interpol = _detrend_and_interpolate(xs, ys, zs, data, target_xs, target_ys, target_zs)
         model.state.meteo[param][roi] = data_interpol[:]
 
-    # Interpolate absolute humidity, convert back to relative humidity
+    # For humidity interpolate dewpoint temperature and convert back to relative humidity
     ds = model.meteo[['temp', 'rel_hum', 'x', 'y', 'alt']].sel(time=date).dropna(dim='station')
     xs = ds.x.values
     ys = ds.y.values
@@ -162,10 +162,19 @@ def interpolate_station_data(model, date):
     temps = ds.temp.values
     rel_hums = ds.rel_hum.values
     vapor_pressures = meteo.vapor_pressure(temps, rel_hums)
-    abs_hums = meteo.absolute_humidity(temps, vapor_pressures)
-    abs_hum_interpol = _detrend_and_interpolate(xs, ys, zs, abs_hums, target_xs, target_ys, target_zs)
-    rel_hum_interpol = meteo.relative_humidity(model.state.meteo['temp'][roi], abs_hum_interpol)
-    model.state.meteo['rel_hum'][roi] = rel_hum_interpol[:]
+    dewpoint_temps = meteo.dew_point_temperature(vapor_pressures)
+    dewpoint_temp_interpol = _detrend_and_interpolate(
+        xs,
+        ys,
+        zs,
+        dewpoint_temps,
+        target_xs,
+        target_ys,
+        target_zs,
+    )
+    vapor_press_roi = meteo.vapor_pressure(dewpoint_temp_interpol, 100)
+    sat_vapor_press_roi = meteo.saturation_vapor_pressure(model.state.meteo['temp'][roi])
+    model.state.meteo['rel_hum'][roi] = 100 * vapor_press_roi / sat_vapor_press_roi
 
     for param in ('temp', 'precip', 'rel_hum', 'wind_speed'):
         data = model.state.meteo[param]
