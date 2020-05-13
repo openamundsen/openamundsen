@@ -98,7 +98,12 @@ class StateVariableManager:
             svc = self[category]
 
             for var_name, var_def in svc._meta.items():
-                svc[var_name] = create_empty_array((self._rows, self._cols), var_def.dtype)
+                if var_def.dim3 == 0:
+                    arr = create_empty_array((self._rows, self._cols), var_def.dtype)
+                else:
+                    arr = create_empty_array((var_def.dim3, self._rows, self._cols), var_def.dtype)
+
+                svc[var_name] = arr
 
 
 class StateVariableContainer(Munch):
@@ -116,7 +121,15 @@ class StateVariableContainer(Munch):
         self._manager = manager
         self._meta = {}
 
-    def add_variable(self, name, units=None, long_name=None, standard_name=None, dtype=float):
+    def add_variable(
+            self,
+            name,
+            units=None,
+            long_name=None,
+            standard_name=None,
+            dtype=float,
+            dim3=0,
+    ):
         """
         Add a variable along with optional metadata.
         Note that the variable itself is not yet created here (this is done in
@@ -140,12 +153,16 @@ class StateVariableContainer(Munch):
 
         dtype : type, default float
             Data type for the variable values.
+
+        dim3 : int, default 0
+            Size of an optional third dimension of the field.
         """
         definition = StateVariableDefinition(
             units=units,
             long_name=long_name,
             standard_name=standard_name,
             dtype=dtype,
+            dim3=dim3,
         )
 
         self._meta[name] = definition
@@ -171,6 +188,9 @@ class StateVariableDefinition:
     dtype : type, default float
         Data type for the variable values.
 
+    dim3 : int, default 0
+        Size of an optional third dimension of the field.
+
     Examples
     --------
     >>> StateVariableDefinition(
@@ -182,6 +202,7 @@ class StateVariableDefinition:
     long_name: str = None
     standard_name: str = None
     dtype: type = float
+    dim3: int = 0
 
 
 def add_default_state_variables(model):
