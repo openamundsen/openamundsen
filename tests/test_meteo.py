@@ -88,3 +88,16 @@ def test_relative_humidity():
         meteo.relative_humidity(temps, abs_hums),
         atol=1e-6,
     )
+
+
+def test_dew_point_temperature():
+    temps = np.array([15, 20, 25, 30, 35]) + 273.15
+    rel_hums = np.array([50, 70, 90, 100, 30])
+    tds = np.array([4.65, 14.36, 23.24, 30, 14.84]) + 273.15
+    vapor_pressures = meteo.vapor_pressure(temps, rel_hums)
+
+    assert_allclose(
+        meteo.dew_point_temperature(vapor_pressures),
+        tds,
+        atol=5e-2,
+    )

@@ -2,6 +2,11 @@ from openamundsen import constants as c
 import numpy as np
 
 
+# Magnus formula coefficients a (Pa), b, and c (°C)
+VAPOR_PRESSURE_COEFFS_ICE = (610.71, 22.44, 272.44)
+VAPOR_PRESSURE_COEFFS_WATER = (610.78, 17.08, 234.18)
+
+
 def atmospheric_pressure(elev):
     """
     Calculate atmospheric pressure.
@@ -78,12 +83,11 @@ def saturation_vapor_pressure(temp):
     temp_c = np.asarray(temp) - c.T0
     ix = (temp_c >= 0.).astype(int)  # contains 1 for indexes with positive temperatures, and 0 otherwise
 
-    # Magnus formula coefficients (first value is for T < 0 °C, second for T >= 0 °C):
-    c0 = np.array([610.71, 610.78])
-    c1 = np.array([22.44, 17.08])
-    c2 = np.array([272.44, 234.18])
+    ca = np.array([VAPOR_PRESSURE_COEFFS_ICE[0], VAPOR_PRESSURE_COEFFS_WATER[0]])
+    cb = np.array([VAPOR_PRESSURE_COEFFS_ICE[1], VAPOR_PRESSURE_COEFFS_WATER[1]])
+    cc = np.array([VAPOR_PRESSURE_COEFFS_ICE[2], VAPOR_PRESSURE_COEFFS_WATER[2]])
 
-    return c0[ix] * np.exp(c1[ix] * temp_c / (c2[ix] + temp_c))
+    return ca[ix] * np.exp(cb[ix] * temp_c / (cc[ix] + temp_c))
 
 
 def vapor_pressure(temp, rel_hum):
@@ -294,3 +298,23 @@ def wet_bulb_temperature(temp, rel_hum, vap_press, psych_const):
         )
 
     return xk
+
+
+def dew_point_temperature(vap_press):
+    """
+    Calculate dew point temperature.
+
+    Parameters
+    ----------
+    vap_press : numeric
+        Vapor pressure (Pa).
+
+    Returns
+    -------
+    dew_point_temp : numeric
+        Dew point temperature (K).
+    """
+    ca, cb, cc = VAPOR_PRESSURE_COEFFS_WATER
+    vap_press = np.asarray(vap_press)
+    td_c = cc * np.log(vap_press / ca) / (cb - np.log(vap_press / ca))
+    return td_c + c.T0
