@@ -68,7 +68,7 @@ class Model:
         for date in self.dates:
             self.logger.info(f'Processing time step {date:%Y-%m-%d %H:%M}')
             meteo.interpolate_station_data(self, date)
-            # meteo.process_meteo_data(self)
+            self._process_meteo_data()
             self._model_interface()
             self._update_gridded_outputs()
             self._update_point_outputs()
@@ -222,6 +222,34 @@ class Model:
         # reorder variables (only for aesthetic reasons)
         var_order = ['lon', 'lat', 'alt', 'x', 'y'] + list(constants.METEO_VAR_METADATA.keys())
         self.meteo = self.meteo[var_order]
+
+    def _process_meteo_data(self):
+        """
+        Calculate derived meteorological variables from the interpolated fields.
+        """
+        self.logger.debug('Calculating derived meteorological variables')
+
+        m = self.state.meteo
+        roi = self.grid.roi
+
+        m.atmos_press[roi] = meteo.atmospheric_pressure(self.state.base.dem[roi])
+        m.sat_vap_press[roi] = meteo.saturation_vapor_pressure(m.temp[roi])
+        m.vap_press[roi] = meteo.vapor_pressure(m.temp[roi], m.rel_hum[roi])
+        m.spec_hum[roi] = meteo.specific_humidity(m.atmos_press[roi], m.vap_press[roi])
+        m.spec_heat_cap_moist_air[roi] = meteo.specific_heat_capacity_moist_air(m.spec_hum[roi])
+        m.lat_heat_vap[roi] = meteo.latent_heat_of_vaporization(m.temp[roi])
+        m.psych_const[roi] = meteo.psychrometric_constant(
+            m.atmos_press[roi],
+            m.spec_heat_cap_moist_air[roi],
+            m.lat_heat_vap[roi],
+        )
+        m.wetbulb_temp[roi] = meteo.wet_bulb_temperature(
+            m.temp[roi],
+            m.rel_hum[roi],
+            m.vap_press[roi],
+            m.psych_const[roi],
+        )
+        m.dewpoint_temp[roi] = meteo.dew_point_temperature(m.vap_press[roi])
 
     def initialize(self):
         """
