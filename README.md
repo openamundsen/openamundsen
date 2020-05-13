@@ -25,6 +25,7 @@ line utility.
             pyqtgraph=0.11.0rc0      \
             ruamel.yaml              \
             rasterio                 \
+            scipy                    \
             xarray
  3. Run the included sample model setup for the Rofental domain, either by
     running `./bin/openamundsen examples/rofental.yml` from the main
