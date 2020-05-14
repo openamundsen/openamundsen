@@ -67,3 +67,32 @@ def read_raster_file(filename, check_meta=None):
         data = ds.read(1)
 
     return data
+
+
+def write_raster_file(filename, data, transform):
+    """
+    Write a raster file.
+
+    Parameters
+    ----------
+    filename : str or pathlib.Path
+
+    data : ndarray
+        Array to be written.
+
+    transform : rasterio.Affine
+        Georeferencing transformation parameters.
+    """
+    meta = {
+        'driver': 'AAIGrid',
+        'dtype': data.dtype,
+        'nodata': None,
+        'width': data.shape[1],
+        'height': data.shape[0],
+        'count': 1,
+        'crs': None,
+        'transform': transform,
+    }
+
+    with rasterio.open(filename, 'w', **meta) as ds:
+        ds.write(data, 1)
