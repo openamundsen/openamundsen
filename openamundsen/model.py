@@ -98,7 +98,7 @@ class Model:
         logger.add(sys.stderr, format=log_format, filter='openamundsen', level='DEBUG')
         self.logger = logger
 
-    def _initialize_model_grid(self):
+    def _initialize_grid(self):
         """
         Initialize the grid parameters (number of rows and columns, transformation
         parameters) for the Model instance by reading the DEM file associated to the
@@ -258,7 +258,7 @@ class Model:
         initialize the model grid and all required state variables, etc.
         """
         self._prepare_time_steps()
-        self._initialize_model_grid()
+        self._initialize_grid()
         self._initialize_state_variables()
 
         self._read_input_data()
