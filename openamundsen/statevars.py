@@ -219,6 +219,7 @@ def add_default_state_variables(model):
     base.add_variable('slope', 'degree', 'Terrain Slope')
     base.add_variable('aspect', 'degree', 'Terrain Aspect')
     base.add_variable('normal_vec', long_name='Vector Normal to the Surface', dim3=3)
+    base.add_variable('svf', long_name='Sky-View Factor')
 
     # Meteorological variables
     meteo = state.add_category('meteo')

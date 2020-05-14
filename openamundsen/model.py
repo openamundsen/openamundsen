@@ -170,6 +170,7 @@ class Model:
         """
         dem_file = util.raster_filename('dem', self.config)
         roi_file = util.raster_filename('roi', self.config)
+        svf_file = util.raster_filename('svf', self.config)
 
         if dem_file.exists():
             self.logger.info(f'Reading DEM ({dem_file})')
@@ -183,6 +184,21 @@ class Model:
         else:
             self.logger.debug('No ROI file available, setting ROI to entire grid area')
             self.grid.roi[:] = True
+
+        if svf_file.exists():
+            self.logger.info(f'Reading sky view factor ({svf_file})')
+            self.state.base.svf[:] = fileio.read_raster_file(svf_file, check_meta=self.grid)
+        else:
+            self.logger.info('Calculating sky view factor')
+            svf = terrain.sky_view_factor(
+                self.state.base.dem,
+                self.grid.resolution,
+                logger=self.logger,
+            )
+            self.state.base.svf[:] = svf
+
+            self.logger.debug(f'Writing sky view factor file ({svf_file})')
+            fileio.write_raster_file(svf_file, svf, self.grid.transform)
 
         self.grid.prepare_roi_coordinates()
 
