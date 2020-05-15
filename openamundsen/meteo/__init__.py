@@ -4,6 +4,7 @@ from .atmosphere import (
     dew_point_temperature,
     dry_air_density,
     latent_heat_of_vaporization,
+    precipitable_water,
     psychrometric_constant,
     relative_humidity,
     saturation_vapor_pressure,

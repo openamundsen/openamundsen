@@ -237,3 +237,4 @@ def add_default_state_variables(model):
     meteo.add_variable('spec_heat_cap_moist_air', 'J kg-1 K-1', 'Specific Heat Capacity of Moist Air')
     meteo.add_variable('psych_const', 'Pa K-1', 'Psychrometric Constant')
     meteo.add_variable('lat_heat_vap', 'J kg-1', 'Latent Heat of Vaporization')
+    meteo.add_variable('precipitable_water', 'kg m-2', 'Precipitable Water')

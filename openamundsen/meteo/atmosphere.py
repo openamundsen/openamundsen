@@ -318,3 +318,31 @@ def dew_point_temperature(vap_press):
     vap_press = np.asarray(vap_press)
     td_c = cc * np.log(vap_press / ca) / (cb - np.log(vap_press / ca))
     return td_c + c.T0
+
+
+def precipitable_water(temp, vap_press):
+    """
+    Calculate precipitable water after Prata (1996).
+
+    Parameters
+    ----------
+    temp : numeric
+        Air temperature (K).
+
+    vap_press : numeric
+        Vapor pressure (Pa).
+
+    Returns
+    -------
+    precipitable_water : numeric
+        Precipitable water (kg m-2).
+
+    References
+    ----------
+    .. [1] Prata, A. J. (1996). A new long-wave formula for estimating downward
+       clear-sky radiation at the surface. Quarterly Journal of the Royal
+       Meteorological Society, 122(533), 1127–1151. doi:10.1002/qj.49712253306
+    """
+    vap_press_hpa = vap_press / 100
+    u = 46.5 * vap_press_hpa / temp  # in g cm-2
+    return u * (1e-3 * 1e4)  # in kg m-2

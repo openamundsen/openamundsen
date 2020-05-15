@@ -266,6 +266,10 @@ class Model:
             m.psych_const[roi],
         )
         m.dewpoint_temp[roi] = meteo.dew_point_temperature(m.vap_press[roi])
+        m.precipitable_water[roi] = meteo.precipitable_water(
+            m.temp[roi],
+            m.vap_press[roi],
+        )
 
     def initialize(self):
         """
