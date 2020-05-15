@@ -1,4 +1,6 @@
 from .irradiance import irradiance
+from .potential import potential_irradiance
+from .shadows import shadows
 from .sunparams import (
     day_angle,
     declination_angle,
@@ -7,4 +9,3 @@ from .sunparams import (
     sun_vector,
     sun_parameters,
 )
-from .shadows import shadows
