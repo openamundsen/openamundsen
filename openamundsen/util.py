@@ -171,11 +171,22 @@ class ModelGrid(Munch):
         ys = np.linspace(y_range[0], y_range[1], self.rows)
         X, Y = np.meshgrid(xs, ys)
 
+        center_x = xs.mean()
+        center_y = ys.mean()
+        center_lon, center_lat = transform_coords(
+            center_x,
+            center_y,
+            self.crs,
+            'epsg:4326',
+        )
+
         self.xs = xs
         self.ys = ys
         self.X = X
         self.Y = Y
         self.all_points = np.column_stack((X.flat, Y.flat))
+        self.center_lon = center_lon
+        self.center_lat = center_lat
         self.prepare_roi_coordinates()
 
     def prepare_roi_coordinates(self):

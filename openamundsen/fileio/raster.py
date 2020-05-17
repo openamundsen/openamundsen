@@ -2,7 +2,7 @@ from openamundsen.errors import RasterFileError
 import rasterio
 
 
-def read_raster_metadata(filename):
+def read_raster_metadata(filename, crs=None):
     """
     Return metadata for a raster file.
 
@@ -10,12 +10,20 @@ def read_raster_metadata(filename):
     ----------
     filename : str or pathlib.Path
 
+    crs : str, default None
+        CRS to be set in the returned dict if the raster file does not contain
+        CRS information. Must be a string parsable by rasterio.crs.CRS.from_string
+        (e.g. "epsg:32632").
+
     Returns
     -------
     meta : dict
-        Dictionary containing the following keys 'rows' (number of rows),
-        'cols' (number of columns), 'resolution' ((width, height) tuple), and
-        'transform' (georeferencing transformation parameters).
+        Dictionary containing the following keys:
+        - 'rows' (number of rows),
+        - 'cols' (number of columns)
+        - 'resolution' ((width, height) tuple)
+        - 'crs': coordinate reference system
+        - 'transform' (georeferencing transformation parameters)
     """
     meta = {}
 
@@ -26,7 +34,11 @@ def read_raster_metadata(filename):
         meta['rows'] = ds.meta['height']
         meta['cols'] = ds.meta['width']
         meta['resolution'] = ds.res[0]
+        meta['crs'] = ds.crs
         meta['transform'] = ds.meta['transform']
+
+        if meta['crs'] is None and crs is not None:
+            meta['crs'] = rasterio.crs.CRS.from_string(crs)
 
     return meta
 
@@ -51,16 +63,20 @@ def read_raster_file(filename, check_meta=None):
     """
     if check_meta is not None:
         # compare only rows, cols, resolution and transform and not additional attributes
-        # possibly stored in the check_meta object (such as x and y coordinates, etc.)
-        check_meta = {k: check_meta[k] for k in [
+        # possibly stored in the check_meta object (such as x and y coordinates, CRS, etc.)
+        cmp_keys = [
             'rows',
             'cols',
             'resolution',
             'transform',
-        ]}
+        ]
 
         meta = read_raster_metadata(filename)
-        if meta != check_meta:
+
+        d1 = {k: meta[k] for k in cmp_keys}
+        d2 = {k: check_meta[k] for k in cmp_keys}
+
+        if d1 != d2:
             raise RasterFileError(f'Metadata mismatch for {filename}')
 
     with rasterio.open(filename) as ds:

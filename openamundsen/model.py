@@ -107,7 +107,7 @@ class Model:
         self.logger.info('Initializing model grid')
 
         dem_file = util.raster_filename('dem', self.config)
-        meta = fileio.read_raster_metadata(dem_file)
+        meta = fileio.read_raster_metadata(dem_file, crs=self.config.crs)
         self.logger.info(f'Grid has dimensions {meta["rows"]}x{meta["cols"]}')
 
         grid = util.ModelGrid(meta)
