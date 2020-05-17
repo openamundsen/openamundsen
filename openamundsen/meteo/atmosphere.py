@@ -64,16 +64,19 @@ def latent_heat_of_vaporization(temp):
     return c.LATENT_HEAT_OF_VAPORIZATION - 2.361e3 * (np.asarray(temp) - c.T0)
 
 
-def saturation_vapor_pressure(temp):
+def saturation_vapor_pressure(temp, over=None):
     """
     Calculate saturation vapor pressure for a given temperature.
-    Depending on the temperature, the formulations for vapor pressure over ice
-    (T < 0 °C) or over water (T >= 0 °C) are used.
 
     Parameters
     ----------
     temp : numeric
         Air temperature (K).
+
+    over : str, default None
+        Can be 'water' (to calculate vapor pressure over water), 'ice' (to
+        calculate vapor pressure over ice), or None (to decide depending on
+        temperature).
 
     Returns
     -------
@@ -81,7 +84,15 @@ def saturation_vapor_pressure(temp):
         Saturation vapor pressure (Pa).
     """
     temp_c = np.asarray(temp) - c.T0
-    ix = (temp_c >= 0.).astype(int)  # contains 1 for indexes with positive temperatures, and 0 otherwise
+
+    if over is None:
+        ix = (temp_c >= 0.).astype(int)  # contains 1 for indexes with positive temperatures, and 0 otherwise
+    elif over == 'water':
+        ix = np.full(temp_c.shape, 1)
+    elif over == 'ice':
+        ix = np.full(temp_c.shape, 0)
+    else:
+        raise NotImplementedError
 
     ca = np.array([VAPOR_PRESSURE_COEFFS_ICE[0], VAPOR_PRESSURE_COEFFS_WATER[0]])
     cb = np.array([VAPOR_PRESSURE_COEFFS_ICE[1], VAPOR_PRESSURE_COEFFS_WATER[1]])
@@ -90,7 +101,7 @@ def saturation_vapor_pressure(temp):
     return ca[ix] * np.exp(cb[ix] * temp_c / (cc[ix] + temp_c))
 
 
-def vapor_pressure(temp, rel_hum):
+def vapor_pressure(temp, rel_hum, over=None):
     """
     Calculate vapor pressure.
 
@@ -102,12 +113,17 @@ def vapor_pressure(temp, rel_hum):
     rel_hum : numeric
         Relative humidity (%).
 
+    over : str, default None
+        Can be 'water' (to calculate vapor pressure over water), 'ice' (to
+        calculate vapor pressure over ice), or None (to decide depending on
+        temperature).
+
     Returns
     -------
     vapor_pressure : numeric
         Vapor pressure (Pa).
     """
-    return saturation_vapor_pressure(temp) * np.asarray(rel_hum) / 100
+    return saturation_vapor_pressure(temp, over=over) * np.asarray(rel_hum) / 100
 
 
 def specific_humidity(atmospheric_pressure, vapor_pressure):
