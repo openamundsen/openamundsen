@@ -93,7 +93,7 @@ def declination_angle(doy):
     return declination
 
 
-def hour_angle(date, time_zone, lon, eot):
+def hour_angle(date, timezone, lon, eot):
     """
     Calculate the hour angle, i.e., the angular displacement of the sun east or
     west of the local meridian due to rotation of the earth on its axis at
@@ -101,8 +101,8 @@ def hour_angle(date, time_zone, lon, eot):
 
     Parameters
     ----------
-    time_zone : int
-        Time zone, e.g. 1 for CET.
+    timezone : int
+        Timezone, e.g. 1 for CET.
 
     lon : float
         Longitude.
@@ -118,7 +118,7 @@ def hour_angle(date, time_zone, lon, eot):
     date = pd.to_datetime(date)
     hour = (date - date.normalize()).total_seconds() / c.SECONDS_PER_HOUR  # fractional hour of the day
 
-    lstm = c.STANDARD_TIME_ZONE_WIDTH * time_zone  # local standard time meridian
+    lstm = c.STANDARD_TIMEZONE_WIDTH * timezone  # local standard time meridian
     tc = c.MINUTES_PER_DEGREE_OF_EARTH_ROTATION * (lon - lstm) + eot  # time correction (minutes)
     lst = hour + tc / c.MINUTES_PER_HOUR  # local solar time
     ha = c.SUN_DEGREES_PER_HOUR * (lst - 12)
@@ -165,7 +165,7 @@ def sun_vector(lat, ha, dec):
     ])
 
 
-def sun_parameters(date, lon, lat, time_zone):
+def sun_parameters(date, lon, lat, timezone):
     """
     Calculate sun related parameters for a specified date and position.
 
@@ -180,8 +180,8 @@ def sun_parameters(date, lon, lat, time_zone):
     lat : float
         Latitude (degrees).
 
-    time_zone : int
-        Time zone, e.g. 1 for CET.
+    timezone : int
+        Timezone, e.g. 1 for CET.
 
     Returns
     -------
@@ -196,7 +196,7 @@ def sun_parameters(date, lon, lat, time_zone):
     date = pd.to_datetime(date)
     eot = equation_of_time(date.dayofyear)
     da = day_angle(date.dayofyear)
-    ha = hour_angle(date, time_zone, lon, eot)
+    ha = hour_angle(date, timezone, lon, eot)
     dec = declination_angle(date.dayofyear)
     sv = sun_vector(lat, ha, dec)
 

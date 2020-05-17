@@ -21,7 +21,7 @@ def test_declination_angle():
 
 def test_hour_angle():
     lon = 11.400375
-    time_zone = 1
+    timezone = 1
 
     dates = pd.DatetimeIndex([
         '2020-01-02 08:43:37',
@@ -29,11 +29,11 @@ def test_hour_angle():
         '2020-09-01 12:23:11',
         '2020-11-15 23:40:00',
         '2020-12-24 15:34:11',
-    ]).tz_localize(f'Etc/GMT-{time_zone}')
+    ]).tz_localize(f'Etc/GMT-{timezone}')
     # (Etc/GMT-1 corresponds to GMT+1 in the traditional sense
     # (https://stackoverflow.com/questions/4008960/pytz-and-etc-gmt-5))
 
     eots = rad.equation_of_time(np.array([date.dayofyear for date in dates]))
-    has_oa = rad.hour_angle(dates, time_zone, lon, eots)
+    has_oa = rad.hour_angle(dates, timezone, lon, eots)
     has_pv = solarposition.hour_angle(dates, lon, eots)
     assert_allclose(has_pv, has_oa, atol=0.01)
