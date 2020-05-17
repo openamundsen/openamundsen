@@ -23,6 +23,8 @@ STANDARD_SEA_LEVEL_TEMPERATURE = 15 + T0  # K
 
 LATENT_HEAT_OF_VAPORIZATION = 2.501e6  # J kg-1
 
+SNOWFREE_ALBEDO = 0.15
+
 METEO_VAR_METADATA = {
     'temp': {
         'standard_name': 'air_temperature',

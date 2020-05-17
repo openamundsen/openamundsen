@@ -228,6 +228,9 @@ def add_default_state_variables(model):
     meteo.add_variable('rel_hum', '%', 'Relative Humidity', 'relative_humidity')
     meteo.add_variable('short_in', 'W m-2', 'Downwelling Shortwave Radiation', 'surface_downwelling_shortwave_flux_in_air')
     meteo.add_variable('wind_speed', 'm s-1', 'Wind Speed', 'wind_speed')
+    meteo.add_variable('pot_short_in', 'W m-2', 'Potential Shortwave Radiation')
+    meteo.add_variable('pot_dir_in', 'W m-2', 'Potential Direct Shortwave Radiation')
+    meteo.add_variable('pot_diff_in', 'W m-2', 'Potential Diffuse Shortwave Radiation')
     meteo.add_variable('wetbulb_temp', 'K', 'Wet-Bulb Temperature', 'wet_bulb_temperature')
     meteo.add_variable('dewpoint_temp', 'K', 'Dew Point Temperature', 'dew_point_temperature')
     meteo.add_variable('atmos_press', 'Pa', 'Atmospheric Pressure', 'air_pressure')
@@ -238,3 +241,7 @@ def add_default_state_variables(model):
     meteo.add_variable('psych_const', 'Pa K-1', 'Psychrometric Constant')
     meteo.add_variable('lat_heat_vap', 'J kg-1', 'Latent Heat of Vaporization')
     meteo.add_variable('precipitable_water', 'kg m-2', 'Precipitable Water')
+
+    # Surface variables
+    surf = state.add_category('surface')
+    surf.add_variable('albedo', '1', 'Surface Albedo', 'surface_albedo')

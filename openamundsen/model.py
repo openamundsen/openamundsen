@@ -12,6 +12,7 @@ from openamundsen import (
     terrain,
     util,
 )
+import numpy as np
 import pandas as pd
 from pathlib import Path
 import sys
@@ -69,6 +70,7 @@ class Model:
             self.logger.info(f'Processing time step {date:%Y-%m-%d %H:%M}')
             meteo.interpolate_station_data(self, date)
             self._process_meteo_data()
+            self._calculate_irradiance(date)
             self._model_interface()
             self._update_gridded_outputs()
             self._update_point_outputs()
@@ -153,6 +155,8 @@ class Model:
         self.state = statevars.StateVariableManager(self.grid.rows, self.grid.cols)
         statevars.add_default_state_variables(self)
         self.state.initialize()
+
+        self.state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO  # TODO replace this eventually
 
     def _calculate_terrain_parameters(self):
         self.logger.info('Calculating terrain parameters')
@@ -270,6 +274,51 @@ class Model:
             m.temp[roi],
             m.vap_press[roi],
         )
+
+    def _calculate_irradiance(self, date):
+        roi = self.grid.roi
+
+        sun_params = modules.radiation.sun_parameters(
+            date,
+            self.grid.center_lon,
+            self.grid.center_lat,
+            self.config.timezone,
+        )
+
+        sun_vec = sun_params['sun_vector']
+        zenith_angle = np.rad2deg(np.arccos(sun_vec[2]))
+        sun_over_horizon = zenith_angle < 90
+        mean_surface_albedo = self.state.surface.albedo[roi].mean()
+
+        if sun_over_horizon:
+            self.logger.debug('Calculating shadows')
+            shadows = modules.radiation.shadows(
+                self.state.base.dem,
+                self.grid.resolution,
+                sun_vec,
+            )
+
+            self.logger.debug('Calculating potential irradiance')
+            dir_irr, diff_irr = modules.radiation.potential_irradiance(
+                sun_params['day_angle'],
+                sun_vec,
+                shadows,
+                self.state.base.dem,
+                self.state.base.svf,
+                self.state.base.normal_vec,
+                self.state.meteo.atmos_press,
+                self.state.meteo.precipitable_water,
+                mean_surface_albedo,
+                roi=roi,
+            )
+        else:
+            dir_irr = np.zeros((self.grid.rows, self.grid.cols))
+            diff_irr = np.zeros((self.grid.rows, self.grid.cols))
+
+        pot_irr = dir_irr + diff_irr
+        self.state.meteo.pot_short_in[roi] = pot_irr[roi]
+        self.state.meteo.pot_dir_in[roi] = dir_irr[roi]
+        self.state.meteo.pot_diff_in[roi] = diff_irr[roi]
 
     def initialize(self):
         """
