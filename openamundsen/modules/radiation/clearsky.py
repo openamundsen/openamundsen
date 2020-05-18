@@ -3,7 +3,7 @@ import openamundsen.constants as c
 import openamundsen.modules.radiation as rad
 
 
-def potential_irradiance(
+def clear_sky_shortwave_irradiance(
     day_angle,
     sun_vec,
     shadows,

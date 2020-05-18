@@ -299,7 +299,7 @@ class Model:
             )
 
             self.logger.debug('Calculating potential irradiance')
-            dir_irr, diff_irr = modules.radiation.potential_irradiance(
+            dir_irr, diff_irr = modules.radiation.clear_sky_shortwave_irradiance(
                 sun_params['day_angle'],
                 sun_vec,
                 shadows,
@@ -316,9 +316,9 @@ class Model:
             diff_irr = np.zeros((self.grid.rows, self.grid.cols))
 
         pot_irr = dir_irr + diff_irr
-        self.state.meteo.pot_short_in[roi] = pot_irr[roi]
-        self.state.meteo.pot_dir_in[roi] = dir_irr[roi]
-        self.state.meteo.pot_diff_in[roi] = diff_irr[roi]
+        self.state.meteo.short_in_clearsky[roi] = pot_irr[roi]
+        self.state.meteo.dir_in_clearsky[roi] = dir_irr[roi]
+        self.state.meteo.diff_in_clearsky[roi] = diff_irr[roi]
 
     def initialize(self):
         """

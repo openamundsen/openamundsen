@@ -1,5 +1,5 @@
 from .irradiance import irradiance
-from .potential import potential_irradiance
+from .clearsky import clear_sky_shortwave_irradiance
 from .shadows import shadows
 from .sunparams import (
     day_angle,
