@@ -162,6 +162,15 @@ class ModelGrid(Munch):
         - all_points: (N, 2)-array containing (x, y) coordinates of all grid points.
         - roi_points: (N, 2)-array containing (x, y) coordinates of all ROI points.
         """
+        transform = self.transform
+        if transform.a < 0 or transform.e > 0:
+            raise NotImplementedError  # we only allow left-right and top-down oriented grids
+
+        x_min = transform.xoff
+        x_max = x_min + self.cols * self.resolution
+        y_max = transform.yoff
+        y_min = y_max - self.rows * self.resolution
+
         x_range, y_range = rasterio.transform.xy(
             self.transform,
             [0, self.rows - 1],
@@ -180,6 +189,10 @@ class ModelGrid(Munch):
             'epsg:4326',
         )
 
+        self.x_min = x_min
+        self.x_max = x_max
+        self.y_min = y_min
+        self.y_max = y_max
         self.xs = xs
         self.ys = ys
         self.X = X
