@@ -193,7 +193,10 @@ class Model:
         statevars.add_default_state_variables(self)
         self.state.initialize()
 
-        self.state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO  # TODO replace this eventually
+        # TODO replace this eventually
+        self.state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO
+        self.state.surface.temp[self.grid.roi] = constants.T0
+        self.state.snow.swe[self.grid.roi] = 0
 
     def _calculate_terrain_parameters(self):
         self.logger.info('Calculating terrain parameters')
@@ -337,6 +340,7 @@ class Model:
 
         self._calculate_clear_sky_shortwave_irradiance(day_angle, sun_vec, sun_over_horizon)
         self._calculate_shortwave_irradiance(date, sun_over_horizon)
+        self._calculate_longwave_irradiance()
 
     def _calculate_clear_sky_shortwave_irradiance(self, day_angle, sun_vec, sun_over_horizon):
         roi = self.grid.roi
@@ -455,8 +459,53 @@ class Model:
             )
             m.cloud_factor[roi] = cloud_factor_interpol.clip(0, 1)
 
+        m.cloud_fraction[roi] = meteo.cloud_fraction_from_cloud_factor(m.cloud_factor[roi])
         m.short_in[roi] = m.short_in_clearsky[roi] * m.cloud_factor[roi]
         m.short_out[roi] = self.state.surface.albedo[roi] * m.short_in[roi]
+
+    def _calculate_longwave_irradiance(self):
+        self.logger.debug('Calculating longwave irradiance')
+        roi = self.grid.roi
+        m = self.state.meteo
+        clear_sky_emissivity = meteo.clear_sky_emissivity(m.precipitable_water[roi])
+
+        # TODO these are parameters
+        snow_emissivity = 0.99
+        cloud_emissivity = 0.976  # emissivity of totally overcast skies (Greuell et al., 1997)
+        rock_emission_factor = 0.01  # (K W-1 m2) temperature of emitting rocks during daytime is assumed to be higher than the air temperature by this factor multiplied by the incoming shortwave radiation (Greuell et al., 1997)
+
+        # Incoming longwave radiation from the clear sky
+        long_in_clearsky = (
+            clear_sky_emissivity
+            * constants.STEFAN_BOLTZMANN
+            * m.temp[roi]**4
+            * self.state.base.svf[roi]
+            * (1 - m.cloud_fraction[roi]**2)
+        )
+
+        # Incoming longwave radiation from clouds
+        long_in_clouds = (
+            cloud_emissivity
+            * constants.STEFAN_BOLTZMANN
+            * m.temp[roi]**4
+            * self.state.base.svf[roi]
+            * m.cloud_fraction[roi]**2
+        )
+
+        # Incoming longwave radiation from surrounding slopes
+        snowfree_count = (self.state.snow.swe[roi] == 0).sum()
+        rock_fraction = snowfree_count / self.grid.roi.sum()
+        long_in_slopes = (
+            constants.STEFAN_BOLTZMANN
+            * (1 - self.state.base.svf[roi]) * (
+                rock_fraction * (m.temp[roi] + rock_emission_factor * m.short_in[roi])**4
+                + (1 - rock_fraction) * self.state.surface.temp[roi]**4
+            )
+        )
+
+        # Total incoming/outgoing longwave radiation
+        m.long_in[roi] = long_in_clearsky + long_in_clouds + long_in_slopes
+        m.long_out[roi] = snow_emissivity * constants.STEFAN_BOLTZMANN * self.state.surface.temp[roi]**4
 
     def initialize(self):
         """

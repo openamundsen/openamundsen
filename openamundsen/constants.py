@@ -25,6 +25,8 @@ LATENT_HEAT_OF_VAPORIZATION = 2.501e6  # J kg-1
 
 SNOWFREE_ALBEDO = 0.15
 
+STEFAN_BOLTZMANN = 5.670374419e-8  # Stefan-Boltzmann constant (W m-2 K-4)
+
 METEO_VAR_METADATA = {
     'temp': {
         'standard_name': 'air_temperature',

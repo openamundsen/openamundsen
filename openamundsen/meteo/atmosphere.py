@@ -443,3 +443,55 @@ def cloud_factor_from_cloud_fraction(cloud_fraction):
     cloud_fraction = np.asarray(cloud_fraction)
     cloud_factor = 1 - 0.233 * cloud_fraction - 0.415 * cloud_fraction**2
     return cloud_factor.clip(0, 1)
+
+
+def cloud_fraction_from_cloud_factor(cloud_factor):
+    """
+    Calculate cloud fraction from cloud factor after Greuell et al. (1997),
+    inverted fit function.
+
+    Parameters
+    ----------
+    cloud_factor : numeric
+        Cloud factor (0-1).
+
+    Returns
+    -------
+    cloud_fraction : numeric
+        Cloud fraction (0-1).
+
+    References
+    ----------
+    .. [1] Greuell, W., Knap, W. H., & Smeets, P. C. (1997). Elevational
+       changes in meteorological variables along a midlatitude glacier during
+       summer. Journal of Geophysical Research, 102(D22), 25941–25954.
+       https://doi.org/10.1029/97JD02083
+    """
+    cloud_factor = np.asarray(cloud_factor)
+    cloud_fraction = -1.4059 * cloud_factor**2 + 0.4473 * cloud_factor + 0.997
+    return cloud_fraction.clip(0, 1)
+
+
+def clear_sky_emissivity(prec_wat):
+    """
+    Calculate emissivity of the atmosphere under clear-sky conditions after
+    Prata (1996).
+
+    Parameters
+    ----------
+    prec_wat : numeric
+        Precipitable water (kg m-2).
+
+    Returns
+    -------
+    emissivity : numeric
+        Emissivity (0-1).
+
+    References
+    ----------
+    .. [1] Prata, A. J. (1996). A new long-wave formula for estimating downward
+       clear-sky radiation at the surface. Quarterly Journal of the Royal
+       Meteorological Society, 122(533), 1127–1151. doi:10.1002/qj.49712253306
+    """
+    prec_wat_cm = np.asarray(prec_wat) / 10  # kg m-2 (= mm) to g cm-2 (= cm)
+    return 1 - (1 + prec_wat_cm) * np.exp(-np.sqrt(1.2 + 3 * prec_wat_cm))

@@ -232,7 +232,10 @@ def add_default_state_variables(model):
     meteo.add_variable('dir_in_clearsky', 'W m-2', 'Clear-Sky Direct Incoming Shortwave Radiation')
     meteo.add_variable('diff_in_clearsky', 'W m-2', 'Clear-Sky Diffuse Incoming Shortwave Radiation', 'surface_diffuse_downwelling_shortwave_flux_in_air_assuming_clear_sky')
     meteo.add_variable('short_out', 'W m-2', 'Outgoing Shortwave Radiation', 'surface_upwelling_shortwave_flux_in_air')
+    meteo.add_variable('long_in', 'W m-2', 'Incoming Longwave Radiation', 'downwelling_longwave_flux_in_air')
+    meteo.add_variable('long_out', 'W m-2', 'Outgoing Longwave Radiation', 'surface_upwelling_longwave_flux_in_air')
     meteo.add_variable('cloud_factor', '1', 'Cloud Factor')
+    meteo.add_variable('cloud_fraction', '1', 'Cloud Fraction', 'cloud_area_fraction')
     meteo.add_variable('wetbulb_temp', 'K', 'Wet-Bulb Temperature', 'wet_bulb_temperature')
     meteo.add_variable('dewpoint_temp', 'K', 'Dew Point Temperature', 'dew_point_temperature')
     meteo.add_variable('atmos_press', 'Pa', 'Atmospheric Pressure', 'air_pressure')
@@ -246,4 +249,9 @@ def add_default_state_variables(model):
 
     # Surface variables
     surf = state.add_category('surface')
+    surf.add_variable('temp', 'K', 'Surface Temperature', 'surface_temperature')
     surf.add_variable('albedo', '1', 'Surface Albedo', 'surface_albedo')
+
+    # Snow variables
+    snow = state.add_category('snow')
+    snow.add_variable('swe', 'kg m-2', 'Snow Water Equivalent', 'liquid_water_content_of_surface_snow')
