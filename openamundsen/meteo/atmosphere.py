@@ -316,14 +316,17 @@ def wet_bulb_temperature(temp, rel_hum, vap_press, psych_const):
     return xk
 
 
-def dew_point_temperature(vap_press):
+def dew_point_temperature(temp, rel_hum):
     """
     Calculate dew point temperature.
 
     Parameters
     ----------
-    vap_press : numeric
-        Vapor pressure (Pa).
+    temp : numeric
+        Air temperature (K).
+
+    rel_hum : numeric
+        Relative humidity (%).
 
     Returns
     -------
@@ -331,8 +334,8 @@ def dew_point_temperature(vap_press):
         Dew point temperature (K).
     """
     ca, cb, cc = VAPOR_PRESSURE_COEFFS_WATER
-    vap_press = np.asarray(vap_press)
-    td_c = cc * np.log(vap_press / ca) / (cb - np.log(vap_press / ca))
+    vap_press_water = vapor_pressure(temp, rel_hum, 'water')
+    td_c = cc * np.log(vap_press_water / ca) / (cb - np.log(vap_press_water / ca))
     return td_c + c.T0
 
 

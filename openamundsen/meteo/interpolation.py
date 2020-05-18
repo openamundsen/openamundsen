@@ -161,8 +161,7 @@ def interpolate_station_data(model, date):
     zs = ds.alt.values
     temps = ds.temp.values
     rel_hums = ds.rel_hum.values
-    vapor_pressures = meteo.vapor_pressure(temps, rel_hums)
-    dewpoint_temps = meteo.dew_point_temperature(vapor_pressures)
+    dewpoint_temps = meteo.dew_point_temperature(temps, rel_hums)
     dewpoint_temp_interpol = _detrend_and_interpolate(
         xs,
         ys,
@@ -172,8 +171,8 @@ def interpolate_station_data(model, date):
         target_ys,
         target_zs,
     )
-    vapor_press_roi = meteo.vapor_pressure(dewpoint_temp_interpol, 100)
-    sat_vapor_press_roi = meteo.saturation_vapor_pressure(model.state.meteo['temp'][roi])
+    vapor_press_roi = meteo.saturation_vapor_pressure(dewpoint_temp_interpol, 'water')
+    sat_vapor_press_roi = meteo.saturation_vapor_pressure(model.state.meteo['temp'][roi], 'water')
     model.state.meteo['rel_hum'][roi] = 100 * vapor_press_roi / sat_vapor_press_roi
 
     for param in ('temp', 'precip', 'rel_hum', 'wind_speed'):

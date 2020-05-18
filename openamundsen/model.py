@@ -269,7 +269,7 @@ class Model:
             m.vap_press[roi],
             m.psych_const[roi],
         )
-        m.dewpoint_temp[roi] = meteo.dew_point_temperature(m.vap_press[roi])
+        m.dewpoint_temp[roi] = meteo.dew_point_temperature(m.temp[roi], m.rel_hum[roi])
         m.precipitable_water[roi] = meteo.precipitable_water(
             m.temp[roi],
             m.vap_press[roi],
