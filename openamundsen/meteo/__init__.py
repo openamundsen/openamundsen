@@ -1,6 +1,7 @@
 from .atmosphere import (
     absolute_humidity,
     atmospheric_pressure,
+    cloud_fraction_from_humidity,
     dew_point_temperature,
     dry_air_density,
     latent_heat_of_vaporization,

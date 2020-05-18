@@ -365,3 +365,53 @@ def precipitable_water(temp, vap_press):
     vap_press_hpa = vap_press / 100
     u = 46.5 * vap_press_hpa / temp  # in g cm-2
     return u * (1e-3 * 1e4)  # in kg m-2
+
+
+def cloud_fraction_from_humidity(temp, rel_hum, elev, temp_lapse_rate, dew_point_temp_lapse_rate):
+    """
+    Calculate cloud fraction from relative humidity at the 700 hPa level
+    following Liston and Elder (2006).
+
+    Parameters
+    ----------
+    temp : numeric
+        Air temperature (K).
+
+    rel_hum : numeric
+        Relative humidity (%).
+
+    elev : numeric
+        Elevation (m).
+
+    temp_lapse_rate : numeric
+        Temperature lapse rate (K m-1).
+
+    dew_point_temp_lapse_rate : numeric
+        Dew point temperature lapse rate (K m-1).
+
+    Returns
+    -------
+    cloud_fraction : numeric
+        Cloud fraction (0-1).
+
+    References
+    ----------
+    .. [1] Liston, G. E., & Elder, K. (2006). A Meteorological Distribution
+       System for High-Resolution Terrestrial Modeling (MicroMet). Journal of
+       Hydrometeorology, 7(2), 217–234. https://doi.org/10.1175/JHM486.1
+    """
+    temp = np.asarray(temp)
+    rel_hum = np.asarray(rel_hum)
+    elev = np.asarray(elev)
+
+    td = dew_point_temperature(temp, rel_hum)
+    elev_diff = elev - 3000  # 700 hPa = 3000 m in a standard atmosphere
+
+    temp700 = temp - (temp_lapse_rate * elev_diff)  # T in 700 hPa
+    td700 = td - (dew_point_temp_lapse_rate * elev_diff)  # Td in 700 hPa
+    sat_vap_press700 = saturation_vapor_pressure(temp700)
+    vap_press700 = saturation_vapor_pressure(td700)
+    rel_hum700 = 100 * vap_press700 / sat_vap_press700  # RH in 700 hPa
+
+    cloud_frac = 0.832 * np.exp((rel_hum700 - 100) / 41.6)
+    return cloud_frac.clip(0, 1)

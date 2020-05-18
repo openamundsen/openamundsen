@@ -100,4 +100,21 @@ def test_dew_point_temperature():
         tds,
         atol=0.1,
     )
+
+
+def test_cloud_fraction():
+    temps = [285, 277, 260.3, 268]
+    rel_hums = [70, 0.1, 100, 33.77]
+    elevs = [100, 500, 3000, 1400]
+
+    cf = meteo.cloud_fraction_from_humidity(
+        temps,
+        rel_hums,
+        elevs,
+        -0.0026,
+        -0.0044,
     )
+
+    assert cf.min() >= 0
+    assert cf.max() <= 1
+    assert_allclose(cf[[1, 2]], [0.0752, 0.832], atol=1e-3)
