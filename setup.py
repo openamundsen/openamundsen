@@ -22,6 +22,7 @@ setup(
         'numpy>=1.17.2',
         'pandas>=0.25.1',
         'pyproj>=2.4.0',
+        'scipy>=1.2.0',
         'ruamel.yaml>=0.15.0',
         'rasterio>=1.1.0',
         'xarray>=0.14.0',
