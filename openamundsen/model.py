@@ -15,6 +15,7 @@ from openamundsen import (
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import rasterio
 import sys
 import time
 
@@ -121,6 +122,10 @@ class Model:
         Transform the lon/lat coordinates of the meteorological stations to the
         coordinate system of the model grid. The transformed coordinates are
         stored in the `x` and `y` variables of the meteo dataset.
+        Additionally, the row and column indices of the stations within the
+        model grid are stored in the `row` and `col` variables, and two boolean
+        variables `within_grid_extent` and `within_roi` indicate whether the
+        stations lie within the model grid extent and the ROI, respectively.
         """
         ds = self.meteo
 
@@ -144,6 +149,41 @@ class Model:
 
         ds['x'] = x_var
         ds['y'] = y_var
+
+        bool_var = ds.x.copy().astype(bool)
+        bool_var[:] = False
+        bool_var.attrs = {}
+
+        rows, cols = rasterio.transform.rowcol(self.grid.transform, x, y)
+        row_var = bool_var.copy()
+        col_var = bool_var.copy()
+        row_var.values = rows
+        col_var.values = cols
+        ds['col'] = col_var
+        ds['row'] = row_var
+
+        grid = self.grid
+        ds['within_grid_extent'] = (
+            (x_var >= grid.x_min)
+            & (x_var <= grid.x_max)
+            & (y_var >= grid.y_min)
+            & (y_var <= grid.y_max)
+        )
+
+        within_roi_var = bool_var.copy()
+        ds['within_roi'] = within_roi_var
+        # for station_num, (row, col) in enumerate(zip(rows, cols)):
+        for station in ds.indexes['station']:
+            dss = ds.sel(station=station)
+
+            if dss.within_grid_extent:
+                row = int(dss.row)
+                col = int(dss.col)
+                within_roi_var.loc[station] = self.grid.roi[row, col]
+
+                # if self.grid.roi
+            # print(row, col)
+        # within_roi_var.values = self.grid.roi[ds.row[ds.within_grid_extent], ds.col[ds.within_grid_extent]]
 
     def _initialize_state_variables(self):
         """
@@ -240,7 +280,17 @@ class Model:
         self._prepare_station_coordinates()
 
         # reorder variables (only for aesthetic reasons)
-        var_order = ['lon', 'lat', 'alt', 'x', 'y'] + list(constants.METEO_VAR_METADATA.keys())
+        var_order = [
+            'lon',
+            'lat',
+            'alt',
+            'x',
+            'y',
+            'col',
+            'row',
+            'within_grid_extent',
+            'within_roi',
+        ] + list(constants.METEO_VAR_METADATA.keys())
         self.meteo = self.meteo[var_order]
 
     def _process_meteo_data(self):
