@@ -415,3 +415,31 @@ def cloud_fraction_from_humidity(temp, rel_hum, elev, temp_lapse_rate, dew_point
 
     cloud_frac = 0.832 * np.exp((rel_hum700 - 100) / 41.6)
     return cloud_frac.clip(0, 1)
+
+
+def cloud_factor_from_cloud_fraction(cloud_fraction):
+    """
+    Calculate the cloud factor (i.e., the ratio of the actual global radiation
+    and the clear-sky global radiation) from the cloud fraction after Greuell
+    et al. (1997).
+
+    Parameters
+    ----------
+    cloud_fraction : numeric
+        Cloud fraction (0-1).
+
+    Returns
+    -------
+    cloud_factor : numeric
+        Cloud factor (0-1).
+
+    References
+    ----------
+    .. [1] Greuell, W., Knap, W. H., & Smeets, P. C. (1997). Elevational
+       changes in meteorological variables along a midlatitude glacier during
+       summer. Journal of Geophysical Research, 102(D22), 25941–25954.
+       https://doi.org/10.1029/97JD02083
+    """
+    cloud_fraction = np.asarray(cloud_fraction)
+    cloud_factor = 1 - 0.233 * cloud_fraction - 0.415 * cloud_fraction**2
+    return cloud_factor.clip(0, 1)

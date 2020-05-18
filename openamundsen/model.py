@@ -5,6 +5,7 @@ from openamundsen import (
     constants,
     errors,
     fileio,
+    interpolation,
     liveview,
     meteo,
     modules,
@@ -172,7 +173,7 @@ class Model:
 
         within_roi_var = bool_var.copy()
         ds['within_roi'] = within_roi_var
-        # for station_num, (row, col) in enumerate(zip(rows, cols)):
+
         for station in ds.indexes['station']:
             dss = ds.sel(station=station)
 
@@ -180,10 +181,6 @@ class Model:
                 row = int(dss.row)
                 col = int(dss.col)
                 within_roi_var.loc[station] = self.grid.roi[row, col]
-
-                # if self.grid.roi
-            # print(row, col)
-        # within_roi_var.values = self.grid.roi[ds.row[ds.within_grid_extent], ds.col[ds.within_grid_extent]]
 
     def _initialize_state_variables(self):
         """
@@ -326,8 +323,6 @@ class Model:
         )
 
     def _calculate_irradiance(self, date):
-        roi = self.grid.roi
-
         sun_params = modules.radiation.sun_parameters(
             date,
             self.grid.center_lon,
@@ -335,9 +330,17 @@ class Model:
             self.config.timezone,
         )
 
+        day_angle = sun_params['day_angle']
         sun_vec = sun_params['sun_vector']
         zenith_angle = np.rad2deg(np.arccos(sun_vec[2]))
         sun_over_horizon = zenith_angle < 90
+
+        self._calculate_clear_sky_shortwave_irradiance(day_angle, sun_vec, sun_over_horizon)
+        self._calculate_shortwave_irradiance(date, sun_over_horizon)
+
+    def _calculate_clear_sky_shortwave_irradiance(self, day_angle, sun_vec, sun_over_horizon):
+        roi = self.grid.roi
+
         mean_surface_albedo = self.state.surface.albedo[roi].mean()
 
         if sun_over_horizon:
@@ -348,9 +351,9 @@ class Model:
                 sun_vec,
             )
 
-            self.logger.debug('Calculating potential irradiance')
+            self.logger.debug('Calculating clear-sky shortwave irradiance')
             dir_irr, diff_irr = modules.radiation.clear_sky_shortwave_irradiance(
-                sun_params['day_angle'],
+                day_angle,
                 sun_vec,
                 shadows,
                 self.state.base.dem,
@@ -369,6 +372,91 @@ class Model:
         self.state.meteo.short_in_clearsky[roi] = pot_irr[roi]
         self.state.meteo.dir_in_clearsky[roi] = dir_irr[roi]
         self.state.meteo.diff_in_clearsky[roi] = diff_irr[roi]
+
+    def _calculate_shortwave_irradiance(self, date, sun_over_horizon):
+        self.logger.debug('Calculating actual shortwave irradiance')
+        cloud_config = self.config.meteo.interpolation.cloudiness
+        roi = self.grid.roi
+        m = self.state.meteo
+
+        # Select stations within the grid extent and with shortwave radiation measurements
+        # for the current time step
+        ds_rad = (
+            self.meteo
+            .isel(station=self.meteo.within_grid_extent)
+            .sel(time=date)
+            .dropna('station', subset=['shortwave_in'])
+        )
+        num_rad_stations = len(ds_rad.station)
+
+        # Select stations with temperature and humidity measurements for the current time step
+        ds_temp_hum = (
+            self.meteo
+            .sel(time=date)
+            .dropna('station', how='any', subset=['temp', 'rel_hum'])
+        )
+        num_temp_hum_stations = len(ds_temp_hum.station)
+
+        method = 'constant'
+        if sun_over_horizon:
+            if cloud_config['day_method'] == 'clear_sky_fraction':
+                if num_rad_stations > 0:
+                    method = 'clear_sky_fraction'
+                else:
+                    if cloud_config['allow_fallback'] and num_temp_hum_stations > 0:
+                        self.logger.debug('No radiation measurements available, falling back '
+                                          'to humidity-based cloudiness calculation')
+                        method = 'humidity'
+                    else:
+                        self.logger.debug('No radiation measurements available, using cloudiness '
+                                          'from previous time step')
+                        method = 'constant'
+            else:
+                method = cloud_config['day_method']
+        else:
+            if cloud_config['night_method'] == 'humidity':
+                if num_temp_hum_stations > 0:
+                    method = 'humidity'
+                else:
+                    self.logger.debug('No temperature and humidity measurements available, using '
+                                      'cloudiness from previous time step')
+                    method = 'constant'
+
+        if method == 'constant':
+            pass  # use cloudiness from previous time step, i.e., do nothing
+        elif method == 'humidity':
+            lr_t = self.config.meteo.interpolation.temperature.lapse_rates[date.month - 1]
+            lr_td = self.config.meteo.interpolation.humidity.lapse_rates[date.month - 1]
+            # TODO use here also the same settings for regression/fixed gradients as for the interpolation
+            cloud_fracs = meteo.cloud_fraction_from_humidity(
+                ds_temp_hum.temp,
+                ds_temp_hum.rel_hum,
+                ds_temp_hum.alt,
+                lr_t,
+                lr_td,
+            )
+            cloud_factors = meteo.cloud_factor_from_cloud_fraction(cloud_fracs)
+            cloud_factor_interpol = interpolation.idw(
+                ds_temp_hum.x,
+                ds_temp_hum.y,
+                cloud_factors,
+                self.grid.roi_points[:, 0],
+                self.grid.roi_points[:, 1],
+            )
+            m.cloud_factor[roi] = cloud_factor_interpol.clip(0, 1)
+        elif method == 'clear_sky_fraction':
+            cloud_factors = ds_rad.short_in.values / m.short_in_clearsky[ds_rad.row, ds_rad.col]
+            cloud_factor_interpol = interpolation.idw(
+                ds_rad.x,
+                ds_rad.y,
+                cloud_factors,
+                self.grid.roi_points[:, 0],
+                self.grid.roi_points[:, 1],
+            )
+            m.cloud_factor[roi] = cloud_factor_interpol.clip(0, 1)
+
+        m.short_in[roi] = m.short_in_clearsky[roi] * m.cloud_factor[roi]
+        m.short_out[roi] = self.state.surface.albedo[roi] * m.short_in[roi]
 
     def initialize(self):
         """

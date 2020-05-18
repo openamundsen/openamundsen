@@ -1,6 +1,7 @@
 from .atmosphere import (
     absolute_humidity,
     atmospheric_pressure,
+    cloud_factor_from_cloud_fraction,
     cloud_fraction_from_humidity,
     dew_point_temperature,
     dry_air_density,

@@ -45,6 +45,10 @@ meteo:
     windspeed:
       method: regression
       allow_extrapolation: true
+    cloudiness:
+      day_method: clear_sky_fraction  # clear_sky_fraction or humidity
+      night_method: humidity  # humidity or constant
+      allow_fallback: true  # allow to fall back to calculate cloud fraction from humidity if no radiation measurements are available
 
   # parameters for precipitation phase detection
   precipitation_phase:
