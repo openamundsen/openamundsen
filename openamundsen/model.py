@@ -249,32 +249,25 @@ class Model:
         Read the meteorological data files required for the model run and store
         them in the `meteo` variable.
         """
-        if self.config.input_data.meteo.format != 'netcdf':
-            raise NotImplementedError('Only NetCDF meteo input currently supported')
+        meteo_format = self.config.input_data.meteo.format
+        if meteo_format == 'netcdf':
+            self.meteo = fileio.read_meteo_data_netcdf(
+                self.config.input_data.meteo.dir,
+                self.config.start_date,
+                self.config.end_date,
+                logger=self.logger,
+            )
+        elif meteo_format == 'csv':
+            self.meteo = fileio.read_meteo_data_csv(
+                self.config.input_data.meteo.dir,
+                self.config.start_date,
+                self.config.end_date,
+                self.config.input_data.meteo.crs,
+                logger=self.logger,
+            )
+        else:
+            raise NotImplementedError('Unsupported meteo format')
 
-        meteo_data_dir = Path(self.config.input_data.meteo.dir)
-        nc_files = sorted(list(meteo_data_dir.glob('*.nc')))
-
-        if len(nc_files) == 0:
-            raise errors.MeteoDataError('No meteo files found')
-
-        datasets = []
-
-        for nc_file in nc_files:
-            self.logger.info(f'Reading meteo file: {nc_file}')
-
-            ds = fileio.read_netcdf_meteo_file(nc_file)
-            ds = ds.sel(time=slice(self.config.start_date, self.config.end_date))
-
-            if ds.dims['time'] == 0:
-                self.logger.info('File contains no meteo data for the specified period')
-            else:
-                datasets.append(ds)
-
-        if len(datasets) == 0:
-            raise errors.MeteoDataError('No meteo data available for the specified period')
-
-        self.meteo = fileio.combine_meteo_datasets(datasets)
         self._prepare_station_coordinates()
 
         # reorder variables (only for aesthetic reasons)
