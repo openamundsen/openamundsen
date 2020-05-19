@@ -447,7 +447,7 @@ class Model:
             )
             m.cloud_factor[roi] = cloud_factor_interpol.clip(0, 1)
         elif method == 'clear_sky_fraction':
-            cloud_factors = ds_rad.short_in.values / m.short_in_clearsky[ds_rad.row, ds_rad.col]
+            cloud_factors = ds_rad.shortwave_in.values / m.short_in_clearsky[ds_rad.row, ds_rad.col]
             cloud_factor_interpol = interpolation.idw(
                 ds_rad.x,
                 ds_rad.y,
