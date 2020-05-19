@@ -364,7 +364,7 @@ class Model:
             diff_irr = np.zeros((self.grid.rows, self.grid.cols))
 
         pot_irr = dir_irr + diff_irr
-        self.state.meteo.short_in_clearsky[roi] = pot_irr[roi]
+        self.state.meteo.sw_in_clearsky[roi] = pot_irr[roi]
         self.state.meteo.dir_in_clearsky[roi] = dir_irr[roi]
         self.state.meteo.diff_in_clearsky[roi] = diff_irr[roi]
 
@@ -380,7 +380,7 @@ class Model:
             self.meteo
             .isel(station=self.meteo.within_grid_extent)
             .sel(time=date)
-            .dropna('station', subset=['shortwave_in'])
+            .dropna('station', subset=['sw_in'])
         )
         num_rad_stations = len(ds_rad.station)
 
@@ -440,7 +440,7 @@ class Model:
             )
             m.cloud_factor[roi] = cloud_factor_interpol.clip(0, 1)
         elif method == 'clear_sky_fraction':
-            cloud_factors = ds_rad.shortwave_in.values / m.short_in_clearsky[ds_rad.row, ds_rad.col]
+            cloud_factors = ds_rad.sw_in.values / m.sw_in_clearsky[ds_rad.row, ds_rad.col]
             cloud_factor_interpol = interpolation.idw(
                 ds_rad.x,
                 ds_rad.y,
@@ -451,8 +451,8 @@ class Model:
             m.cloud_factor[roi] = cloud_factor_interpol.clip(0, 1)
 
         m.cloud_fraction[roi] = meteo.cloud_fraction_from_cloud_factor(m.cloud_factor[roi])
-        m.short_in[roi] = m.short_in_clearsky[roi] * m.cloud_factor[roi]
-        m.short_out[roi] = self.state.surface.albedo[roi] * m.short_in[roi]
+        m.sw_in[roi] = m.sw_in_clearsky[roi] * m.cloud_factor[roi]
+        m.sw_out[roi] = self.state.surface.albedo[roi] * m.sw_in[roi]
 
     def _calculate_longwave_irradiance(self):
         self.logger.debug('Calculating longwave irradiance')
@@ -466,7 +466,7 @@ class Model:
         rock_emission_factor = 0.01  # (K W-1 m2) temperature of emitting rocks during daytime is assumed to be higher than the air temperature by this factor multiplied by the incoming shortwave radiation (Greuell et al., 1997)
 
         # Incoming longwave radiation from the clear sky
-        long_in_clearsky = (
+        lw_in_clearsky = (
             clear_sky_emissivity
             * constants.STEFAN_BOLTZMANN
             * m.temp[roi]**4
@@ -475,7 +475,7 @@ class Model:
         )
 
         # Incoming longwave radiation from clouds
-        long_in_clouds = (
+        lw_in_clouds = (
             cloud_emissivity
             * constants.STEFAN_BOLTZMANN
             * m.temp[roi]**4
@@ -486,17 +486,17 @@ class Model:
         # Incoming longwave radiation from surrounding slopes
         snowfree_count = (self.state.snow.swe[roi] == 0).sum()
         rock_fraction = snowfree_count / self.grid.roi.sum()
-        long_in_slopes = (
+        lw_in_slopes = (
             constants.STEFAN_BOLTZMANN
             * (1 - self.state.base.svf[roi]) * (
-                rock_fraction * (m.temp[roi] + rock_emission_factor * m.short_in[roi])**4
+                rock_fraction * (m.temp[roi] + rock_emission_factor * m.sw_in[roi])**4
                 + (1 - rock_fraction) * self.state.surface.temp[roi]**4
             )
         )
 
         # Total incoming/outgoing longwave radiation
-        m.long_in[roi] = long_in_clearsky + long_in_clouds + long_in_slopes
-        m.long_out[roi] = snow_emissivity * constants.STEFAN_BOLTZMANN * self.state.surface.temp[roi]**4
+        m.lw_in[roi] = lw_in_clearsky + lw_in_clouds + lw_in_slopes
+        m.lw_out[roi] = snow_emissivity * constants.STEFAN_BOLTZMANN * self.state.surface.temp[roi]**4
 
     def initialize(self):
         """

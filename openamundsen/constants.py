@@ -42,7 +42,7 @@ METEO_VAR_METADATA = {
         'standard_name': 'relative_humidity',
         'units': '%',
     },
-    'shortwave_in': {
+    'sw_in': {
         'standard_name': 'surface_downwelling_shortwave_flux_in_air',
         'units': 'W m-2',
     },
@@ -56,7 +56,7 @@ NETCDF_VAR_MAPPINGS = {
     'tas': 'temp',
     'pr': 'precip',
     'hurs': 'rel_hum',
-    'rsds': 'shortwave_in',
+    'rsds': 'sw_in',
     'wss': 'wind_speed',
 }
 
@@ -64,6 +64,6 @@ ALLOWED_METEO_VAR_RANGES = {
     'temp': (-273.15, None),
     'precip': (0, None),
     'rel_hum': (0, 100),
-    'shortwave_in': (0, None),
+    'sw_in': (0, None),
     'wind_speed': (0, None),
 }

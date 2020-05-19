@@ -222,7 +222,7 @@ def read_csv_meteo_file(filename, station_id, station_name, x, y, alt, crs):
         'temp': 'temp',
         'precip': 'precip',
         'rel_hum': 'rel_hum',
-        'short_in': 'shortwave_in',
+        'sw_in': 'sw_in',
         'wind_speed': 'wind_speed',
     }
 
