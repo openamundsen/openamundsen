@@ -130,9 +130,7 @@ class Model:
         """
         ds = self.meteo
 
-        src_crs = 'epsg:4326'  # WGS 84
-        dst_crs = self.config.crs
-        x, y = util.transform_coords(ds.lon, ds.lat, src_crs, dst_crs)
+        x, y = util.transform_coords(ds.lon, ds.lat, constants.CRS_WGS84, self.config.crs)
 
         x_var = ds.lon.copy()
         x_var.values = x

@@ -1,7 +1,7 @@
 import copy
 from munch import Munch
 import numpy as np
-from openamundsen import errors
+from openamundsen import constants, errors
 from pathlib import Path
 import pyproj
 import rasterio
@@ -186,7 +186,7 @@ class ModelGrid(Munch):
             center_x,
             center_y,
             self.crs,
-            'epsg:4326',
+            constants.CRS_WGS84,
         )
 
         self.x_min = x_min

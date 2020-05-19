@@ -27,6 +27,8 @@ SNOWFREE_ALBEDO = 0.15
 
 STEFAN_BOLTZMANN = 5.670374419e-8  # Stefan-Boltzmann constant (W m-2 K-4)
 
+CRS_WGS84 = 'epsg:4326'
+
 METEO_VAR_METADATA = {
     'temp': {
         'standard_name': 'air_temperature',
