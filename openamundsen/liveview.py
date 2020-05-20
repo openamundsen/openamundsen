@@ -81,6 +81,7 @@ class LiveView:
                 pi.hideAxis(ax)
 
             img = rpg.ImageItem(lut=lut, levels=(min_range, max_range))
+            img.setAutoDownsample(True)
 
             pi.addItem(img)
             win.addItem(pi)

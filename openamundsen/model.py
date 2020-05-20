@@ -78,6 +78,7 @@ class Model:
             self._update_point_outputs()
 
             if self.config.liveview.enabled:
+                self.logger.debug('Updating live view window')
                 self.liveview.update(date)
 
     def _model_interface(self):
