@@ -107,6 +107,20 @@ to the next time step.
 
 ## Release Notes/Changelog
 
+### v0.0.3 (2020-05-20)
+
+- Show color bars in live view, allow to set min/max range for each variable.
+- Calculate atmospheric variables (atmospheric pressure, vapor pressure,
+  absolute/specific humidity, wet-bulb/dew point temperature, cloud fraction,
+  etc.).
+- Calculate sun-related parameters (day angle, hour angle, declination angle,
+  equation of time, sun vector).
+- Calculate terrain parameters (slope, aspect, normal vector, sky view
+  factor).
+- Calculate shortwave and longwave irradiance.
+- Interpolate relative humidity not directly but via dew point temperature.
+- Added CSV meteo data reader.
+
 ### v0.0.2 (2020-04-22)
 
 - Meteorological station data in NetCDF format can be read in.
