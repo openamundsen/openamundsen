@@ -225,6 +225,8 @@ def add_default_state_variables(model):
     meteo = state.add_category('meteo')
     meteo.add_variable('temp', 'K', 'Air Temperature', 'air_temperature')
     meteo.add_variable('precip', 'kg m-2 s-1', 'Precipitation Flux', 'precipitation_flux')
+    meteo.add_variable('snow', 'kg m-2 s-1', 'Snowfall Flux', 'snowfall_flux')
+    meteo.add_variable('rain', 'kg m-2 s-1', 'Rainfall Flux', 'rainfall_flux')
     meteo.add_variable('rel_hum', '%', 'Relative Humidity', 'relative_humidity')
     meteo.add_variable('wind_speed', 'm s-1', 'Wind Speed', 'wind_speed')
     meteo.add_variable('sw_in', 'W m-2', 'Incoming Shortwave Radiation', 'surface_downwelling_shortwave_flux_in_air')

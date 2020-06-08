@@ -317,6 +317,21 @@ class Model:
             m.vap_press[roi],
         )
 
+        # Calculate precipitation phase
+        precip_phase_method = self.config.meteo.precipitation_phase.method
+        if precip_phase_method == 'temp':
+            pp_temp = m.temp
+        elif precip_phase_method == 'wet_bulb_temp':
+            pp_temp = m.wetbulb_temp
+
+        snowfall_frac = meteo.precipitation_phase(
+            pp_temp[roi],
+            threshold_temp=self.config.meteo.precipitation_phase.threshold_temp + constants.T0,
+            temp_range=self.config.meteo.precipitation_phase.temp_range,
+        )
+        m.snow[roi] = snowfall_frac * m.precip[roi]
+        m.rain[roi] = (1 - snowfall_frac) * m.precip[roi]
+
     def _calculate_irradiance(self, date):
         sun_params = modules.radiation.sun_parameters(
             date,

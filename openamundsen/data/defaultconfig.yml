@@ -52,8 +52,9 @@ meteo:
 
   # parameters for precipitation phase detection
   precipitation_phase:
-    method: wetbulb
-    threshold: 2.  # temperature threshold (°C)
+    method: wet_bulb_temp
+    threshold_temp: 2.  # temperature threshold (°C)
+    temp_range: 0.  # temperature range for mixed precipitation (°C)
 
   # parameters for the different precipitation correction methods
   precipitation_correction:
