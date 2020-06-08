@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 import openamundsen.meteo as meteo
 import pandas as pd
 
@@ -118,3 +118,13 @@ def test_cloud_fraction():
     assert cf.min() >= 0
     assert cf.max() <= 1
     assert_allclose(cf[[1, 2]], [0.0752, 0.832], atol=1e-3)
+
+
+def test_precipitation_phase():
+    temps = np.array([-2, 4, -1.2, 0, 23.4, -24.5, -0.01, 0.01]) + 273.15
+    sf = meteo.precipitation_phase(temps, threshold_temp=273.15)
+    assert_array_equal(sf, [1, 0, 1, 0, 0, 1, 1, 0])
+
+    temps = np.array([-0.99, -1.01, -1.0, 0., 1., 2.99, 3.01, 3.]) + 273.15
+    sf = meteo.precipitation_phase(temps, threshold_temp=1 + 273.15, temp_range=4)
+    assert_allclose(sf, [0.9975, 1, 1, 0.75, 0.5, 0.0025, 0, 0], atol=1e-10)

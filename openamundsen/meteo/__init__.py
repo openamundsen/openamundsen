@@ -9,6 +9,7 @@ from .atmosphere import (
     dry_air_density,
     latent_heat_of_vaporization,
     precipitable_water,
+    precipitation_phase,
     psychrometric_constant,
     relative_humidity,
     saturation_vapor_pressure,

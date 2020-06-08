@@ -495,3 +495,48 @@ def clear_sky_emissivity(prec_wat):
     """
     prec_wat_cm = np.asarray(prec_wat) / 10  # kg m-2 (= mm) to g cm-2 (= cm)
     return 1 - (1 + prec_wat_cm) * np.exp(-np.sqrt(1.2 + 3 * prec_wat_cm))
+
+
+def precipitation_phase(temp, threshold_temp=c.T0, temp_range=0., method='linear'):
+    """
+    Calculate precipitation phase.
+
+    Parameters
+    ----------
+    temp : numeric
+        Temperature (in K) on which to perform the partitioning (e.g., air
+        temperature or wet-bulb temperature).
+
+    threshold_temp : float, default 273.15
+        Threshold temperature (in K) at which 50% of precipitation falls as
+        snow.
+
+    temp_range : float, default 0
+        Temperature range in which mixed precipitation can occur. If 0,
+        precipitation can only be either rain or snow.
+
+    method : str, default 'linear'
+        Method for interpolating precipitation phase within the
+        (threshold_temp - temp_range/2, threshold_temp + temp_range/2) range.
+
+    Returns
+    -------
+    snowfall_fraction : numeric
+        Fraction of precipitation falling as snow (0-1).
+    """
+
+    if method != 'linear':
+        raise NotImplementedError
+
+    temp = np.asarray(temp)
+
+    if temp_range < 0:
+        raise ValueError('temp_range must be positive')
+    elif temp_range == 0:
+        snowfall_frac = (temp < threshold_temp) * 1.
+    else:
+        t1 = threshold_temp - temp_range / 2.
+        t2 = threshold_temp + temp_range / 2.
+        snowfall_frac = (1 - (temp - t1) / (t2 - t1)).clip(0, 1)
+
+    return snowfall_frac
