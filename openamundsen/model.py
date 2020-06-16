@@ -70,9 +70,10 @@ class Model:
         """
         for date in self.dates:
             self.logger.info(f'Processing time step {date:%Y-%m-%d %H:%M}')
+            self.date = date
             meteo.interpolate_station_data(self, date)
             self._process_meteo_data()
-            self._calculate_irradiance(date)
+            self._calculate_irradiance()
             self._model_interface()
             self._update_gridded_outputs()
             self._update_point_outputs()
@@ -332,9 +333,9 @@ class Model:
         m.snow[roi] = snowfall_frac * m.precip[roi]
         m.rain[roi] = (1 - snowfall_frac) * m.precip[roi]
 
-    def _calculate_irradiance(self, date):
+    def _calculate_irradiance(self):
         sun_params = modules.radiation.sun_parameters(
-            date,
+            self.date,
             self.grid.center_lon,
             self.grid.center_lat,
             self.config.timezone,
@@ -346,7 +347,7 @@ class Model:
         sun_over_horizon = zenith_angle < 90
 
         self._calculate_clear_sky_shortwave_irradiance(day_angle, sun_vec, sun_over_horizon)
-        self._calculate_shortwave_irradiance(date, sun_over_horizon)
+        self._calculate_shortwave_irradiance(sun_over_horizon)
         self._calculate_longwave_irradiance()
 
     def _calculate_clear_sky_shortwave_irradiance(self, day_angle, sun_vec, sun_over_horizon):
@@ -384,7 +385,7 @@ class Model:
         self.state.meteo.dir_in_clearsky[roi] = dir_irr[roi]
         self.state.meteo.diff_in_clearsky[roi] = diff_irr[roi]
 
-    def _calculate_shortwave_irradiance(self, date, sun_over_horizon):
+    def _calculate_shortwave_irradiance(self, sun_over_horizon):
         self.logger.debug('Calculating actual shortwave irradiance')
         cloud_config = self.config.meteo.interpolation.cloudiness
         roi = self.grid.roi
@@ -395,7 +396,7 @@ class Model:
         ds_rad = (
             self.meteo
             .isel(station=self.meteo.within_grid_extent)
-            .sel(time=date)
+            .sel(time=self.date)
             .dropna('station', subset=['sw_in'])
         )
         num_rad_stations = len(ds_rad.station)
@@ -403,7 +404,7 @@ class Model:
         # Select stations with temperature and humidity measurements for the current time step
         ds_temp_hum = (
             self.meteo
-            .sel(time=date)
+            .sel(time=self.date)
             .dropna('station', how='any', subset=['temp', 'rel_hum'])
         )
         num_temp_hum_stations = len(ds_temp_hum.station)
@@ -436,8 +437,8 @@ class Model:
         if method == 'constant':
             pass  # use cloudiness from previous time step, i.e., do nothing
         elif method == 'humidity':
-            lr_t = self.config.meteo.interpolation.temperature.lapse_rates[date.month - 1]
-            lr_td = self.config.meteo.interpolation.humidity.lapse_rates[date.month - 1]
+            lr_t = self.config.meteo.interpolation.temperature.lapse_rates[self.date.month - 1]
+            lr_td = self.config.meteo.interpolation.humidity.lapse_rates[self.date.month - 1]
             # TODO use here also the same settings for regression/fixed gradients as for the interpolation
             cloud_fracs = meteo.cloud_fraction_from_humidity(
                 ds_temp_hum.temp,
