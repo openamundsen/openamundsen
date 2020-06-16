@@ -60,7 +60,7 @@ class Model:
             end=self.config['end_date'],
             freq=pd.DateOffset(seconds=self.config['timestep']),
         )
-        self.dates = list(dates.to_pydatetime())
+        self.dates = dates
 
     def _time_step_loop(self):
         """
