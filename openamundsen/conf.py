@@ -64,6 +64,11 @@ def parse_config(config):
     if infer_end_hour:
         config.end_date += pd.Timedelta(hours=24) - pd.Timedelta(seconds=config.timestep)
 
+    if config.results_dir is None:
+        config.results_dir = Path('.')
+    else:
+        config.results_dir = Path(config.results_dir)
+
     return config
 
 
