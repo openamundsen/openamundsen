@@ -6,6 +6,8 @@ from .meteo import (
     read_netcdf_meteo_file,
 )
 
+from .pointoutput import PointOutputManager
+
 from .raster import (
     read_raster_metadata,
     read_raster_file,

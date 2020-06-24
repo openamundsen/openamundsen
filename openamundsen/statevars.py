@@ -105,6 +105,22 @@ class StateVariableManager:
 
                 svc[var_name] = arr
 
+    def meta(self, var):
+        """
+        Return metadata of a state variable.
+
+        Parameters
+        ----------
+        var : str
+            Variable name, e.g. "meteo.temp".
+
+        Returns
+        -------
+        StateVariableDefinition
+        """
+        category, var_name = self.parse(var)
+        return self[category]._meta[var_name]
+
 
 class StateVariableContainer(Munch):
     """

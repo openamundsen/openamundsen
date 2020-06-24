@@ -25,6 +25,8 @@ output_data:
   # parameters for point outputs (time series)
   points:
     format: netcdf  # netcdf or ascii
+    write_freq: M
+    add_default_points: true
     points: []  # point locations
 
 meteo:

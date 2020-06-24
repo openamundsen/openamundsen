@@ -76,7 +76,7 @@ class Model:
             self._calculate_irradiance()
             self._model_interface()
             self._update_gridded_outputs()
-            self._update_point_outputs()
+            self.point_outputs.update()
 
             if self.config.liveview.enabled:
                 self.logger.debug('Updating live view window')
@@ -197,6 +197,9 @@ class Model:
         self.state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO
         self.state.surface.temp[self.grid.roi] = constants.T0
         self.state.snow.swe[self.grid.roi] = 0
+
+    def _initialize_point_outputs(self):
+        self.point_outputs = fileio.PointOutputManager(self)
 
     def _calculate_terrain_parameters(self):
         self.logger.info('Calculating terrain parameters')
@@ -529,6 +532,8 @@ class Model:
         self._read_meteo_data()
         self._calculate_terrain_parameters()
 
+        self._initialize_point_outputs()
+
     def run(self):
         """
         Start the model run. Before calling this method, the model must be
@@ -552,10 +557,3 @@ class Model:
         gridded output fields according to the run configuration.
         """
         self.logger.debug('Updating gridded outputs')
-
-    def _update_point_outputs(self):
-        """
-        Update and write the output time series for the selected variables and
-        point locations according to the run configuration.
-        """
-        self.logger.debug('Updating point outputs')
