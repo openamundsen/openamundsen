@@ -58,7 +58,7 @@ class Model:
         dates = pd.date_range(
             start=self.config['start_date'],
             end=self.config['end_date'],
-            freq=pd.DateOffset(seconds=self.config['timestep']),
+            freq=self.config['timestep'],
         )
         self.dates = dates
 

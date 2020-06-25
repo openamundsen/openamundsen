@@ -2,7 +2,7 @@ domain:  # name of the model domain
 start_date:  # start date as YYYY-MM-DD or YYYY-MM-DD HH:MM
 end_date:  # end date as YYYY-MM-DD or YYYY-MM-DD HH:MM
 resolution:  # spatial resolution (m)
-timestep: 3600  # temporal resolution (s)
+timestep: H  # temporal resolution
 results_dir:  # directory for writing the result files
 crs:  # coordinate reference system of the input raster files
 timezone:  # timezone (difference of local time to UTC in hours)

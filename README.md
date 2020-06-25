@@ -50,7 +50,7 @@ domain: rofental
 start_date: 2019-11-01
 end_date: 2020-04-30
 resolution: 50
-timestep: 3600
+timestep: H
 
 input_data:
   grids:
