@@ -75,8 +75,8 @@ class Model:
             self._process_meteo_data()
             self._calculate_irradiance()
             self._model_interface()
-            self._update_gridded_outputs()
             self.point_outputs.update()
+            self.field_outputs.update()
 
             if self.config.liveview.enabled:
                 self.logger.debug('Updating live view window')
@@ -200,6 +200,9 @@ class Model:
 
     def _initialize_point_outputs(self):
         self.point_outputs = fileio.PointOutputManager(self)
+
+    def _initialize_field_outputs(self):
+        self.field_outputs = fileio.FieldOutputManager(self)
 
     def _calculate_terrain_parameters(self):
         self.logger.info('Calculating terrain parameters')
@@ -534,6 +537,7 @@ class Model:
 
         self.config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
         self._initialize_point_outputs()
+        self._initialize_field_outputs()
 
     def run(self):
         """
@@ -551,10 +555,3 @@ class Model:
         self._time_step_loop()
         time_diff = pd.Timedelta(seconds=(time.time() - start_time))
         self.logger.success('Model run finished. Runtime: ' + str(time_diff))
-
-    def _update_gridded_outputs(self):
-        """
-        Update (in the case of aggregated fields) and potentially write the
-        gridded output fields according to the run configuration.
-        """
-        self.logger.debug('Updating gridded outputs')

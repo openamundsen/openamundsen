@@ -18,7 +18,7 @@ input_data:
 
 output_data:
   # parameters for gridded output data (fields)
-  grids:
+  fields:
     format: netcdf  # netcdf or ascii
     fields: []  # list of the variables and dates/aggregations for output
 
