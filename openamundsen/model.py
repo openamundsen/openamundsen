@@ -532,6 +532,7 @@ class Model:
         self._read_meteo_data()
         self._calculate_terrain_parameters()
 
+        self.config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
         self._initialize_point_outputs()
 
     def run(self):
