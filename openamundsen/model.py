@@ -381,6 +381,10 @@ class Model:
                 self.state.meteo.precipitable_water,
                 mean_surface_albedo,
                 roi=roi,
+                ozone_layer_thickness=self.config.meteo.radiation.ozone_layer_thickness,
+                atmospheric_visibility=self.config.meteo.radiation.atmospheric_visibility,
+                single_scattering_albedo=self.config.meteo.radiation.single_scattering_albedo,
+                clear_sky_albedo=self.config.meteo.radiation.clear_sky_albedo,
             )
         else:
             dir_irr = np.zeros((self.grid.rows, self.grid.cols))

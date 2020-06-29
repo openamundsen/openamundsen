@@ -73,6 +73,15 @@ meteo:
       solid_a: 0.
       solid_b: 1.
 
+  radiation:
+    snow_emissivity: 0.99
+    cloud_emissivity: 0.976  # emissivity of totally overcast skies (Greuell et al., 1997)
+    rock_emission_factor: 0.01  # (K W-1 m2) temperature of emitting rocks during daytime is assumed to be higher than the air temperature by this factor multiplied by the incoming shortwave radiation (Greuell et al., 1997)
+    ozone_layer_thickness: 0.0035  # vertical ozone layer thickness (m)
+    atmospheric_visibility: 25000.  # m
+    single_scattering_albedo: 0.9
+    clear_sky_albedo: 0.0685
+
 # parameters for the snow module
 snow:
   melt: energy_balance  # energy_balance or temperature_index

@@ -14,6 +14,10 @@ def clear_sky_shortwave_irradiance(
     precipitable_water,
     ground_albedo,
     roi=None,
+    ozone_layer_thickness=0.0035,
+    atmospheric_visibility=25000.,
+    single_scattering_albedo=0.9,
+    clear_sky_albedo=0.0685,
 ):
     """
     Calculate potential direct and diffuse shortwave irradiance for a given DEM
@@ -51,6 +55,18 @@ def clear_sky_shortwave_irradiance(
     roi : ndarray, default None
         Boolean array specifying the region of interest.
 
+    ozone_layer_thickness : float, default 0.0035
+        Ozone layer thickness (m).
+
+    visibility : float, default 25000
+        Atmospheric visibility (m).
+
+    single_scattering_albedo : float, default 0.9
+        Single scattering albedo.
+
+    clear_sky_albedo : float, default 0.0685
+        Clear sky albedo.
+
     Returns
     -------
     dir_irr : ndarray
@@ -66,8 +82,6 @@ def clear_sky_shortwave_irradiance(
        Edinburgh.
     """
     zenith_angle = np.arccos(sun_vec[2])
-
-    clear_sky_albedo = 0.0685  # TODO this should be a parameter
 
     if roi is None:
         roi = np.ones(dem.shape, dtype=bool)
@@ -105,6 +119,9 @@ def clear_sky_shortwave_irradiance(
         atmos_press,
         precipitable_water,
         rel_opt_air_mass,
+        ozone_layer_thickness,
+        atmospheric_visibility,
+        single_scattering_albedo,
     )
 
     trans_dir = (
@@ -198,6 +215,9 @@ def _transmittances(
     atmos_press,
     precipitable_water,
     rel_opt_air_mass,
+    ozone_layer_thickness,
+    visibility,
+    single_scattering_albedo,
 ):
     """
     Calculate atmospheric transmittances after Corripio (2002).
@@ -215,6 +235,15 @@ def _transmittances(
 
     rel_opt_air_mass : ndarray
         Relative optical air mass for standard pressure.
+
+    ozone_layer_thickness : float
+        Ozone layer thickness (m).
+
+    visibility : float
+        Atmospheric visibility (m).
+
+    single_scattering_albedo : float
+        Single scattering albedo.
 
     Returns
     -------
@@ -236,10 +265,8 @@ def _transmittances(
        altitude glacierised basins in the Central Andes. PhD thesis, University of
        Edinburgh.
     """
-    # TODO these should be model parameters
-    ozone_layer_thickness = 0.35  # vertical ozone layer thickness (cm)
-    visibility = 25.  # km
-    single_scattering_albedo = 0.9
+    ozone_layer_thickness_cm = ozone_layer_thickness * 100.
+    visibility_km = visibility / 1000.
 
     # Relative optical air mass pressure corrected
     rel_opt_air_mass_press_corr = rel_opt_air_mass * atmos_press / c.STANDARD_ATMOSPHERE
@@ -251,7 +278,7 @@ def _transmittances(
     )
 
     # Transmittance by ozone (constant for the entire area)
-    lm = ozone_layer_thickness * rel_opt_air_mass
+    lm = ozone_layer_thickness_cm * rel_opt_air_mass
     trans_ozone = (
         1 - (
             0.1611 * lm * (1 + 139.48 * lm)**(-0.3035)  # -0.3035 seems to be the correct value (in eq. 3.13 in Corripio (2002) the value is -0.035)
@@ -272,7 +299,7 @@ def _transmittances(
     )
 
     # Transmittance by aerosols
-    trans_aerosols = (0.97 - 1.265 * visibility**(-0.66))**(rel_opt_air_mass_press_corr**0.9)
+    trans_aerosols = (0.97 - 1.265 * visibility_km**(-0.66))**(rel_opt_air_mass_press_corr**0.9)
 
     # Correction of atmospheric transmittances for altitude after Bintanja (1996)
     elev_corr = 2.2e-5 * elev.clip(max=3000)
