@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from munch import Munch
+import numba
+from numba.experimental import jitclass
 from openamundsen import errors
 from openamundsen.util import create_empty_array
 
@@ -273,3 +275,101 @@ def add_default_state_variables(model):
     # Snow variables
     snow = state.add_category('snow')
     snow.add_variable('swe', 'kg m-2', 'Snow water equivalent', 'liquid_water_content_of_surface_snow')
+
+
+def _jitclass_spec(svc):
+    """
+    For a given state variable container, create the spec list that must be
+    provided to the @jitclass decorator containing the (name, numba-type)
+    tuples of the individual fields.
+
+    Parameters
+    ----------
+    svc : StateVariableContainer
+
+    Returns
+    -------
+    spec : list
+        List of (name, numba-type) tuples.
+    """
+    spec = []
+
+    for var in svc._meta:
+        spec.append((var, numba.typeof(svc[var])))
+
+    return spec
+
+
+def _add_jitclass_vars(obj, svc):
+    """
+    For a given jitclass, add the variables of the associated state variable
+    container as attributes.
+
+    Parameters
+    ----------
+    obj : jitclass
+
+    svc : StateVariableContainer
+    """
+    for var in svc._meta:
+        setattr(obj, var, svc[var])
+
+
+def create_state_var_jitclasses(state):
+    """
+    Create numba jitclasses of the state variable containers in order to allow
+    passing them to numba functions with nopython=True.
+
+    Parameters
+    ----------
+    state : StateVariableManager
+
+    Returns
+    -------
+    state_jit : Munch
+        Munch object containing the jitclasses (e.g., state_jit['meteo'] is a
+        jitclass containing references to the state variables in
+        state['meteo']).
+    """
+    spec_base = _jitclass_spec(state.base)
+    spec_meteo = _jitclass_spec(state.meteo)
+    spec_surface = _jitclass_spec(state.surface)
+    spec_snow = _jitclass_spec(state.snow)
+
+    @jitclass(spec_base)
+    class BaseStateJitclass:
+        def __init__(self):
+            pass
+
+    @jitclass(spec_meteo)
+    class MeteoStateJitclass:
+        def __init__(self):
+            pass
+
+    @jitclass(spec_surface)
+    class SurfaceStateJitclass:
+        def __init__(self):
+            pass
+
+    @jitclass(spec_snow)
+    class SnowStateJitclass:
+        def __init__(self):
+            pass
+
+    base = BaseStateJitclass()
+    meteo = MeteoStateJitclass()
+    surface = SurfaceStateJitclass()
+    snow = SnowStateJitclass()
+
+    _add_jitclass_vars(base, state.base)
+    _add_jitclass_vars(meteo, state.meteo)
+    _add_jitclass_vars(surface, state.surface)
+    _add_jitclass_vars(snow, state.snow)
+
+    state_jit = Munch()
+    state_jit.base = base
+    state_jit.meteo = meteo
+    state_jit.surface = surface
+    state_jit.snow = snow
+
+    return state_jit
