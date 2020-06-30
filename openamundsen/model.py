@@ -189,13 +189,9 @@ class Model:
         configuration, further state variables might be added at other
         locations.
         """
-        self.logger.info('Initializing state variables')
-
         self.state = statevars.StateVariableManager(self.grid.rows, self.grid.cols)
         statevars.add_default_state_variables(self)
         self.state.initialize()
-
-        self.state_jit = statevars.create_state_var_jitclasses(self.state)
 
         # TODO replace this eventually
         self.state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO
