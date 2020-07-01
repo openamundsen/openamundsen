@@ -84,7 +84,15 @@ meteo:
 
 # parameters for the snow module
 snow:
+  model: layers  # layers, bulk, bulk_layers
   melt: energy_balance  # energy_balance or temperature_index
+
+  min_layer_thicknesses:  # minimum snow layer thicknesses (m)
+    - 0.1
+    - 0.2
+    - 0.4
+
+  thermal_conductivity: 0.24  # W m-1 K-1
 
   albedo:
     min: 0.55

@@ -187,19 +187,29 @@ class Model:
 
     def _initialize_state_variables(self):
         """
-        Initialize the default state variables (i.e., create empty arrays) for
-        the model run. Depending on which submodules are activated in the run
-        configuration, further state variables might be added at other
-        locations.
+        Initialize the default state variables (i.e., create the arrays and -
+        where required - fill them with initial values) for the model run.
         """
-        self.state = statevars.StateVariableManager(self.grid.rows, self.grid.cols)
+        state = statevars.StateVariableManager(self.grid.rows, self.grid.cols)
+        self.state = state
         statevars.add_default_state_variables(self)
         self.state.initialize()
 
+        roi = self.grid.roi
+
+        # Initialize snow variables
+        state.snow.swe[roi] = 0
+        if self.config.snow.model == 'layers':
+            state.snow.num_layers[roi] = 0
+            state.snow.therm_cond[:, roi] = self.config.snow.thermal_conductivity
+            state.snow.thickness[:, roi] = 0
+            state.snow.ice_content[:, roi] = 0
+            state.snow.liquid_water_content[:, roi] = 0
+            state.snow.temp[:, roi] = constants.T0
+
         # TODO replace this eventually
-        self.state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO
-        self.state.surface.temp[self.grid.roi] = constants.T0
-        self.state.snow.swe[self.grid.roi] = 0
+        state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO
+        state.surface.temp[self.grid.roi] = constants.T0
 
     def _initialize_point_outputs(self):
         self.point_outputs = fileio.PointOutputManager(self)
