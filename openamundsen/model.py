@@ -195,17 +195,9 @@ class Model:
         statevars.add_default_state_variables(self)
         self.state.initialize()
 
-        roi = self.grid.roi
-
         # Initialize snow variables
-        state.snow.swe[roi] = 0
         if self.config.snow.model == 'layers':
-            state.snow.num_layers[roi] = 0
-            state.snow.therm_cond[:, roi] = self.config.snow.thermal_conductivity
-            state.snow.thickness[:, roi] = 0
-            state.snow.ice_content[:, roi] = 0
-            state.snow.liquid_water_content[:, roi] = 0
-            state.snow.temp[:, roi] = constants.T0
+            modules.snow.initialize(self)
 
         # TODO replace this eventually
         state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO
