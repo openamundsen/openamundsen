@@ -23,6 +23,12 @@ def slope_aspect(dem, res):
         Aspect (degrees) in azimuth direction, i.e., 0° means North-facing, 90°
         East-facing, 180° South-facing, and 270° West-facing.
     """
+    # TODO check/improve calculation for small DEMs
+    if any(np.array(dem.shape) < (3, 3)):
+        slope = np.full(dem.shape, 0)
+        aspect = np.full(dem.shape, np.nan)
+        return slope, aspect
+
     # 3x3 window around cell e is labeled as follows:
     # [ a b c ]
     # [ d e f ]
@@ -90,11 +96,20 @@ def normal_vector(dem, res):
        terrain. International Journal of Geographical Information Science, 17(1),
        1–23. https://doi.org/10.1080/13658810210157796
     """
+    normal_vec = np.full((3, dem.shape[0], dem.shape[1]), np.nan)
+
+    # TODO check/improve calculation for small DEMs
+    # Here it is assumed that the DEM is flat
+    if any(np.array(dem.shape) < (3, 3)):
+        normal_vec[0, :, :] = 0
+        normal_vec[1, :, :] = 0
+        normal_vec[2, :, :] = 1
+        return normal_vec
+
     right = np.roll(dem, -1, axis=1)
     up = np.roll(dem, 1, axis=0)
     diag = np.roll(dem, (1, -1), axis=(0, 1))
 
-    normal_vec = np.full((3, dem.shape[0], dem.shape[1]), np.nan)
     normal_vec[0, :, :] = 0.5 * res * (dem - right + up - diag)
     normal_vec[1, :, :] = 0.5 * res * (dem + right - up - diag)
     normal_vec[2, :, :] = res**2
