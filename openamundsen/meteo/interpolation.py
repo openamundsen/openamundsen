@@ -45,7 +45,12 @@ def _linear_fit(x, y):
     -------
     slope, intercept : float
     """
-    slope, intercept = np.polyfit(x, y, 1)
+    if len(x) < 2:
+        slope = 0
+        intercept = 0
+    else:
+        slope, intercept = np.polyfit(x, y, 1)
+
     return slope, intercept
 
 
