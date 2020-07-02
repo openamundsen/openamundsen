@@ -199,6 +199,8 @@ class Model:
         if self.config.snow.model == 'layers':
             modules.snow.initialize(self)
 
+        modules.soil.initialize(self)
+
         # TODO replace this eventually
         state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO
         state.surface.temp[self.grid.roi] = constants.T0

@@ -27,6 +27,17 @@ SNOWFREE_ALBEDO = 0.15
 
 STEFAN_BOLTZMANN = 5.670374419e-8  # Stefan-Boltzmann constant (W m-2 K-4)
 
+# Soil constants
+VOL_HEAT_CAP_SAND = 2.128e6  # volumetric heat capacity of sand (J m-3 K-1)
+VOL_HEAT_CAP_CLAY = 2.385e6  # volumetric heat capacity of clay (J m-3 K-1)
+
+# Thermal conductivities
+THERM_COND_AIR = 0.025  # thermal conductivity of air (W m-1 K-1)
+THERM_COND_CLAY = 1.16  # thermal conductivity of clay (W m-1 K-1)
+THERM_COND_ICE = 2.24  # thermal conducivity of ice (W m-1 K-1)
+THERM_COND_SAND = 1.57  # thermal conductivity of sand (W m-1 K-1)
+THERM_COND_WATER = 0.56  # thermal conductivity of water (W m-1 K-1)
+
 CRS_WGS84 = 'epsg:4326'
 
 METEO_VAR_METADATA = {

@@ -113,6 +113,19 @@ snow:
     albedo_factor: 0.0094
     threshold_temperature: 1.
 
+soil:
+  layer_thicknesses:
+    - 0.1
+    - 0.2
+    - 0.4
+    - 0.8
+
+  sand_fraction: 0.6
+  clay_fraction: 0.3
+
+  init_moisture_content: 0.5  # initial soil moisture content (fraction of moisture content at saturation)
+  init_temp: 285.  # initial soil temperature (K)
+
 liveview:
   enabled: False
   cols: 4
