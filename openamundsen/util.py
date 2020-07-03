@@ -161,6 +161,7 @@ class ModelGrid(Munch):
         - X, Y, 2d-arrays containing the x and y coordinates for each grid point.
         - all_points: (N, 2)-array containing (x, y) coordinates of all grid points.
         - roi_points: (N, 2)-array containing (x, y) coordinates of all ROI points.
+        - roi_idxs: (N, 2)-array containing (row, col) indexes of all ROI points.
         """
         transform = self.transform
         if transform.a < 0 or transform.e > 0:
@@ -204,7 +205,7 @@ class ModelGrid(Munch):
 
     def prepare_roi_coordinates(self):
         """
-        Update the roi_points variable using the ROI field.
+        Update the roi_points and roi_idxs variables using the ROI field.
         """
         if 'roi' not in self:
             self.roi = np.ones((self.rows, self.cols), dtype=bool)
@@ -212,3 +213,4 @@ class ModelGrid(Munch):
         roi_xs = self.X[self.roi]
         roi_ys = self.Y[self.roi]
         self.roi_points = np.column_stack((roi_xs, roi_ys))
+        self.roi_idxs = np.array(np.where(self.roi)).T
