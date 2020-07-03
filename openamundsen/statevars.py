@@ -269,6 +269,12 @@ def add_default_state_variables(model):
     surf = state.add_category('surface')
     surf.add_variable('temp', 'K', 'Surface temperature', 'surface_temperature')
     surf.add_variable('albedo', '1', 'Surface albedo', 'surface_albedo')
+    surf.add_variable('layer_temp', 'K', 'Surface layer temperature')
+    surf.add_variable('thickness', 'm', 'Surface layer thickness')
+    surf.add_variable('therm_cond', 'W m-1 K-1', 'Surface thermal conductivity')
+    surf.add_variable('heat_flux', 'W m-2', 'Surface heat flux')  # TODO add standard_name
+    surf.add_variable('roughness_length', 'm', 'Surface roughness length', 'surface_roughness_length')
+    surf.add_variable('heat_moisture_transfer_coeff', '1', 'Heat and moisture transfer coefficient')
 
     # Snow variables
     snow = state.add_category('snow')
@@ -293,10 +299,12 @@ def add_default_state_variables(model):
     soil = state.add_category('soil')
     num_soil_layers = len(model.config.soil.layer_thicknesses)
     soil.add_variable('heat_flux', 'W m-2', 'Soil heat flux', 'downward_heat_flux_in_soil')
-    soil.add_variable('vol_heat_cap', 'J K-1 m-3', 'Volumetric heat capacity of dry soil')
+    soil.add_variable('vol_heat_cap_dry', 'J K-1 m-3', 'Volumetric heat capacity of dry soil')
     soil.add_variable('sat_water_pressure', 'm', 'Saturated soil water pressure')
     soil.add_variable('vol_moisture_content_sat', 'm3 m-3', 'Volumetric soil moisture content at saturation')
     soil.add_variable('vol_moisture_content_crit', 'm3 m-3', 'Volumetric soil moisture content at critical point')
+    soil.add_variable('frac_frozen_moisture_content', '1', 'Fractional frozen soil moisture content', dim3=num_soil_layers)
+    soil.add_variable('frac_unfrozen_moisture_content', '1', 'Fractional unfrozen soil moisture content', dim3=num_soil_layers)
     soil.add_variable('clapp_hornberger', '1', 'Clapp-Hornberger exponent')
     soil.add_variable('vol_moisture_content', 'm3 m-3', 'Volumetric soil moisture content', dim3=num_soil_layers)
     soil.add_variable('temp', 'K', 'Soil temperature', dim3=num_soil_layers)
@@ -304,4 +312,4 @@ def add_default_state_variables(model):
     soil.add_variable('areal_heat_cap', 'J K-1 m-2', 'Areal heat capacity of soil', dim3=num_soil_layers)
     soil.add_variable('therm_cond', 'W m-1 K-1', 'Thermal conductivity of soil', dim3=num_soil_layers)
     soil.add_variable('therm_cond_minerals', 'W m-1 K-1', 'Thermal conductivity of soil minerals')
-    soil.add_variable('therm_cond_soil', 'W m-1 K-1', 'Thermal conductivity of dry soil')
+    soil.add_variable('therm_cond_dry', 'W m-1 K-1', 'Thermal conductivity of dry soil')

@@ -41,7 +41,7 @@ def initialize(model):
         s.thickness[i, roi] = thickness
 
     # Volumetric heat capacity of dry soil
-    s.vol_heat_cap[roi] = (
+    s.vol_heat_cap_dry[roi] = (
         (
             constants.VOL_HEAT_CAP_SAND * cfg.sand_fraction
             + constants.VOL_HEAT_CAP_CLAY * cfg.clay_fraction
@@ -73,7 +73,7 @@ def initialize(model):
     )
 
     # Thermal conductivity of dry soil
-    s.therm_cond_soil[roi] = (
+    s.therm_cond_dry[roi] = (
         (constants.THERM_COND_AIR**s.vol_moisture_content_sat[roi])
         * s.therm_cond_minerals[roi]**(1 - s.vol_moisture_content_sat[roi])
     )

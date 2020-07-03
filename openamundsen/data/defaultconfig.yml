@@ -82,6 +82,10 @@ meteo:
     single_scattering_albedo: 0.9
     clear_sky_albedo: 0.0685
 
+  measurement_height:
+    temperature: 2  # m
+    wind: 10  # m
+
 # parameters for the snow module
 snow:
   model: layers  # layers, bulk, bulk_layers
@@ -125,6 +129,9 @@ soil:
 
   init_moisture_content: 0.5  # initial soil moisture content (fraction of moisture content at saturation)
   init_temp: 285.  # initial soil temperature (K)
+
+  saturated_soil_surface_conductance: 0.01  # surface conductance for saturated soil (m s-1)
+  roughness_length: 0.1  # snow-free roughness length (m)
 
 liveview:
   enabled: False

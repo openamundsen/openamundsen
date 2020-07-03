@@ -9,6 +9,7 @@ from openamundsen import (
     liveview,
     meteo,
     modules,
+    surface,
     statevars,
     terrain,
     util,
@@ -91,10 +92,13 @@ class Model:
         in every time step after the meteorological fields have been prepared.
         """
         modules.radiation.irradiance(self)
+        self._surface()
         modules.snow.update_albedo(self)
         modules.snow.compaction(self)
         modules.snow.add_fresh_snow(self)
         modules.snow.energy_balance(self)
+        self._soil_heat_flux()
+        self._soil_temperature()
 
     def _initialize_logger(self):
         """
@@ -531,6 +535,72 @@ class Model:
         # Total incoming/outgoing longwave radiation
         m.lw_in[roi] = lw_in_clearsky + lw_in_clouds + lw_in_slopes
         m.lw_out[roi] = snow_emissivity * constants.STEFAN_BOLTZMANN * self.state.surface.temp[roi]**4
+
+    def _surface(self):
+        s = self.state
+        roi = self.grid.roi
+
+        # TODO snow albedo
+        # TODO snow thermal conductivity
+        # TODO adjust roughness length for snow
+        # TODO partial snow cover (albedo, roughness length)
+        s.surface.roughness_length[roi] = self.config.soil.roughness_length
+
+        modules.soil.soil_properties(
+            self.grid.roi_idxs,
+            s.soil.thickness,
+            s.soil.temp,
+            s.soil.areal_heat_cap,
+            s.soil.vol_heat_cap_dry,
+            s.soil.therm_cond,
+            s.soil.therm_cond_dry,
+            s.soil.vol_moisture_content,
+            s.soil.vol_moisture_content_sat,
+            s.soil.frac_frozen_moisture_content,
+            s.soil.frac_unfrozen_moisture_content,
+            s.soil.sat_water_pressure,
+            s.soil.clapp_hornberger,
+        )
+
+        surface.surface_layer_properties(
+            self.grid.roi_idxs,
+            s.surface.layer_temp,
+            s.surface.thickness,
+            s.surface.therm_cond,
+            s.snow.temp,
+            s.snow.thickness,
+            s.snow.therm_cond,
+            s.soil.temp,
+            s.soil.thickness,
+            s.soil.therm_cond,
+        )
+
+        surface.surface_exchange(self)
+
+        # TODO surf_ebal
+        surface.energy_balance(self)
+        # surface.energy_balance(
+        #     self.grid.roi_idxs,
+        # )
+
+
+    def _soil_heat_flux(self):
+        s = self.state
+        roi = self.grid.roi
+        s.soil.heat_flux[roi] = s.surface.heat_flux[roi]
+        # TODO account for snow
+
+    def _soil_temperature(self):
+        s = self.state
+        modules.soil.soil_temperature(
+            self.grid.roi_idxs,
+            self.state.soil.thickness,
+            self.timestep,
+            self.state.soil.temp,
+            self.state.soil.therm_cond,
+            self.state.soil.heat_flux,
+            self.state.soil.areal_heat_cap,
+        )
 
     def initialize(self):
         """
