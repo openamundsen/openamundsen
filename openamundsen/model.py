@@ -62,6 +62,9 @@ class Model:
         )
         self.dates = dates
 
+        # Store timestep in seconds in the `timestep` attribute
+        self.timestep = util.offset_to_timedelta(self.config['timestep']).total_seconds()
+
     def _time_step_loop(self):
         """
         Run the main model loop, i.e. iterate over all time steps and call the

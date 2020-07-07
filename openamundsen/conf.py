@@ -3,7 +3,6 @@ from munch import Munch
 from openamundsen import util
 from openamundsen.errors import ConfigurationError
 import pandas as pd
-from pandas.tseries.frequencies import to_offset
 from pathlib import Path
 import re
 
@@ -63,7 +62,7 @@ def parse_config(config):
     # If no end hour is specified (only the date), set it to the last time step of the respective day
     # (for the start date the hour is automatically set to 0 if not explicitly specified)
     if infer_end_hour:
-        config.end_date += pd.Timedelta(hours=24) - pd.to_timedelta(to_offset(config.timestep))
+        config.end_date += pd.Timedelta(hours=24) - util.offset_to_timedelta(config.timestep)
 
     if config.results_dir is None:
         config.results_dir = Path('.')

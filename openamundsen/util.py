@@ -2,6 +2,8 @@ import copy
 from munch import Munch
 import numpy as np
 from openamundsen import constants, errors
+import pandas as pd
+import pandas.tseries.frequencies
 from pathlib import Path
 import pyproj
 import rasterio
@@ -214,3 +216,10 @@ class ModelGrid(Munch):
         roi_ys = self.Y[self.roi]
         self.roi_points = np.column_stack((roi_xs, roi_ys))
         self.roi_idxs = np.array(np.where(self.roi)).T
+
+
+def offset_to_timedelta(offset):
+    """
+    Convert a pandas-compatible offset (e.g. '3H') to a Timedelta object.
+    """
+    return pd.to_timedelta(pandas.tseries.frequencies.to_offset(offset))
