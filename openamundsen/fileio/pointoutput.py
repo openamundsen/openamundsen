@@ -91,6 +91,9 @@ _default_output_vars = [
     PointOutputVariable('meteo.sat_vap_press'),
     PointOutputVariable('meteo.vap_press'),
     PointOutputVariable('meteo.spec_hum'),
+    PointOutputVariable('surface.temp', 'surface_temp'),
+    PointOutputVariable('soil.temp', 'soil_temp'),
+    PointOutputVariable('snow.temp', 'snow_temp'),
 ]
 
 
