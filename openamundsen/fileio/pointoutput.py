@@ -70,27 +70,27 @@ class OutputPoint:
 
 
 _default_output_vars = [
-    'meteo.temp',
-    'meteo.precip',
-    'meteo.snow',
-    'meteo.rain',
-    'meteo.rel_hum',
-    'meteo.wind_speed',
-    'meteo.sw_in',
-    'meteo.sw_out',
-    'meteo.lw_in',
-    'meteo.lw_out',
-    'meteo.sw_in_clearsky',
-    'meteo.dir_in_clearsky',
-    'meteo.diff_in_clearsky',
-    'meteo.cloud_factor',
-    'meteo.cloud_fraction',
-    'meteo.wetbulb_temp',
-    'meteo.dewpoint_temp',
-    'meteo.atmos_press',
-    'meteo.sat_vap_press',
-    'meteo.vap_press',
-    'meteo.spec_hum',
+    PointOutputVariable('meteo.temp'),
+    PointOutputVariable('meteo.precip'),
+    PointOutputVariable('meteo.snow'),
+    PointOutputVariable('meteo.rain'),
+    PointOutputVariable('meteo.rel_hum'),
+    PointOutputVariable('meteo.wind_speed'),
+    PointOutputVariable('meteo.sw_in'),
+    PointOutputVariable('meteo.sw_out'),
+    PointOutputVariable('meteo.lw_in'),
+    PointOutputVariable('meteo.lw_out'),
+    PointOutputVariable('meteo.sw_in_clearsky'),
+    PointOutputVariable('meteo.dir_in_clearsky'),
+    PointOutputVariable('meteo.diff_in_clearsky'),
+    PointOutputVariable('meteo.cloud_factor'),
+    PointOutputVariable('meteo.cloud_fraction'),
+    PointOutputVariable('meteo.wetbulb_temp'),
+    PointOutputVariable('meteo.dewpoint_temp'),
+    PointOutputVariable('meteo.atmos_press'),
+    PointOutputVariable('meteo.sat_vap_press'),
+    PointOutputVariable('meteo.vap_press'),
+    PointOutputVariable('meteo.spec_hum'),
 ]
 
 
@@ -125,7 +125,7 @@ class PointOutputManager:
 
         # Add default output variables
         for var in _default_output_vars:
-            vars.append(PointOutputVariable(var))
+            vars.append(var)
 
         # Add default output points (= stations within ROI)
         if config.add_default_points:
@@ -194,6 +194,7 @@ class PointOutputManager:
         ds : xr.Dataset
         """
         data = {}
+        three_dim_coords = {}
         for var in self.vars:
             meta = self.model.state.meta(var.var_name)
             attrs = {}
@@ -203,11 +204,32 @@ class PointOutputManager:
                 if attr_val is not None:
                     attrs[attr] = attr_val
 
-            data[var.output_name] = (
-                ['time', 'point'],
-                np.full((len(dates), len(self.points)), np.nan, dtype=np.float32),
-                attrs,
-            )
+            if meta.dim3 == 0:  # 2-dimensional variable
+                var_def = (
+                    ['time', 'point'],
+                    np.full((len(dates), len(self.points)), np.nan, dtype=np.float32),
+                    attrs,
+                )
+            else:  # 3-dimensional variable
+                category = self.model.state.parse(var.var_name)[0]
+                coord_name = f'{category}_layer'
+
+                if category in three_dim_coords:
+                    if three_dim_coords[coord_name] != meta.dim3:
+                        # We assume that all 3-dimensional variables within a category have the
+                        # same shape (e.g. "soil.temp" must have the same shape as "soil.therm_cond");
+                        # varying numbers of layers within a category are not supported
+                        raise Exception('Inconsistent length of third variable dimension')
+                else:
+                    three_dim_coords[coord_name] = meta.dim3
+
+                var_def = (
+                    ['time', coord_name, 'point'],
+                    np.full((len(dates), meta.dim3, len(self.points)), np.nan, dtype=np.float32),
+                    attrs,
+                )
+
+            data[var.output_name] = var_def
 
         coords = {
             'time': (['time'], dates),
@@ -218,6 +240,10 @@ class PointOutputManager:
             'x': (['point'], [p.x for p in self.points]),
             'y': (['point'], [p.y for p in self.points]),
         }
+
+        # Add 3-dimensional coordinates
+        for coord_name, coord_len in three_dim_coords.items():
+            coords[coord_name] = ([coord_name], np.arange(coord_len))
 
         return xr.Dataset(data, coords=coords)
 
@@ -262,7 +288,12 @@ class PointOutputManager:
         # Update dataset
         for var in self.vars:
             var_data = self.model.state[var.var_name]
-            ds[var.output_name].loc[date, :] = var_data[self.point_rows, self.point_cols]
+            ds_var = ds[var.output_name]
+
+            if ds_var.ndim == 2:
+                ds[var.output_name].loc[date, :] = var_data[self.point_rows, self.point_cols]
+            else:  # 3-dimensional variable
+                ds[var.output_name].loc[date, :, :] = var_data[:, self.point_rows, self.point_cols]
 
         # Write data to file
         # If we are at the first write date, simple write the file (i.e. overwrite possibly
@@ -281,16 +312,31 @@ class PointOutputManager:
 
                     ds_merge.to_netcdf(filename)
             elif self.format == 'csv':
+                ds_out = ds.copy()
+
+                # If there are 3-dimensional variables, convert them to 2-dimensional variables
+                # before writing the CSV files
+                # (e.g. a 3-dimensional variable "soil_temp" with 4 layers is converted to 4
+                # variables "soil_temp0", "soil_temp1", "soil_temp2", "soil_temp3")
+                for var in self.vars:
+                    meta = self.model.state.meta(var.var_name)
+
+                    if meta.dim3 > 0:
+                        for i in range(meta.dim3):
+                            ds_out[f'{var.output_name}{i}'] = ds[var.output_name].loc[:, i, :]
+
+                        ds_out = ds_out.drop_vars(var.output_name)
+
                 for point in self.points:
                     filename = self.model.config.results_dir / f'point_output_{point.name}.csv'
-                    df = ds.sel(point=point.name).to_dataframe().drop(columns=[
-                        'point',
-                        'lon',
-                        'lat',
-                        'alt',
-                        'x',
-                        'y',
-                    ])
+
+                    ds_out_point = ds_out.sel(point=point.name)
+
+                    # Drop all coordinate variable columns except "time" and "point" (i.e. "lon", "lat", etc.)
+                    # so that they are not in the resulting dataframe when calling to_dataframe()
+                    ds_out_point = ds_out_point.drop_vars(list(set(list(ds_out_point.coords)) - set(['time'])))
+
+                    df = ds_out_point.to_dataframe()
 
                     if date == self.write_dates[0]:
                         df.to_csv(filename)
