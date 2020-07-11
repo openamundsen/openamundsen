@@ -6,7 +6,7 @@ from openamundsen import (
 )
 
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def soil_properties(
     roi_idxs,
     thickness,
@@ -183,7 +183,7 @@ def soil_properties(
                 therm_cond[k, i, j] = therm_cond_dry[i, j]
 
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def soil_temperature(
     roi_idxs,
     thickness,

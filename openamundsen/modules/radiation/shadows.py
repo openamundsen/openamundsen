@@ -8,6 +8,7 @@ import numpy as np
         numba.double,
         numba.double[:],
     ),
+    cache=True,
 )
 def shadows(dem, res, sun_vec):
     """

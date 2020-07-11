@@ -13,6 +13,7 @@ import numpy as np
         numba.double,
     ),
     parallel=True,
+    cache=True,
 )
 def _idw(x_points, y_points, z_points, x_targets, y_targets, power, smoothing):
     """

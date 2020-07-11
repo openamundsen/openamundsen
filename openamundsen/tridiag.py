@@ -1,7 +1,7 @@
 from numba import njit
 
 
-@njit
+@njit(cache=True)
 def solve_tridiag(a, b, c, d, overwrite_bd=False):
     """
     Solve a tridiagonal equation system using the Thomas algorithm.

@@ -3,7 +3,7 @@ import numpy as np
 from openamundsen import tridiag
 
 
-@njit
+@njit(cache=True)
 def temp_change(
     dx,
     dt,

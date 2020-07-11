@@ -3,7 +3,7 @@ import numpy as np
 from openamundsen import constants, meteo
 
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def surface_layer_properties(
     roi_idxs,
     surf_layer_temp,
