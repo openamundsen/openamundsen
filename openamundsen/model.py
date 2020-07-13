@@ -575,8 +575,6 @@ class Model:
             s.soil.therm_cond,
         )
 
-        surface.surface_exchange(self)
-
         # TODO surf_ebal
         surface.energy_balance(self)
         # surface.energy_balance(

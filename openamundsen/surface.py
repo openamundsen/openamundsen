@@ -41,24 +41,68 @@ def surface_layer_properties(
                 surf_layer_temp[i, j] = snow_temp[0, i, j]
 
 
-def surface_exchange(model):
-    s = model.state
-    roi = model.grid.roi
+def _heat_moisture_transfer_coefficient(
+    surface_roughness_length,
+    temp_measurement_height,
+    wind_measurement_height,
+    measurement_height_adjustment=False,
+    stability_correction=False,
+):
+    """
+    Calculate the transfer coefficient C_H from [1] (eq. (22)).
 
-    # TODO implement measurement height adjustment
-    adjusted_measurement_height = model.config.meteo.measurement_height.temperature
+    Parameters
+    ----------
+    surface_roughness_length : ndarray
+        Surface roughness length (m).
 
-    # Neutral exchange coefficients
-    heat_moisture_roughness_length = 0.1 * s.surface.roughness_length[roi]
-    s.surface.heat_moisture_transfer_coeff[roi] = (
-        constants.VON_KARMAN**2
+    temp_measurement_height : float
+        Temperature/humidity measurement height.
+
+    wind_measurement_height : float
+        Wind measurement height.
+
+    measurement_height_adjustment : bool, default False
+        Adjust the temperature measurement height with the current snow depth.
+
+    stability_correction : bool, default False
+        Adjust the turbulent fluxes for atmospheric stability.
+
+    Returns
+    -------
+    coeff : ndarray
+        Transfer coefficient.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
+    # TODO measurement height adjustment
+    if measurement_height_adjustment:
+        raise NotImplementedError
+    else:
+        adjusted_measurement_height = temp_measurement_height
+
+    # TODO stability correction (eq. (25))
+    if stability_correction:
+        raise NotImplementedError
+    else:
+        stability_factor = 1.
+
+    heat_moisture_roughness_length = 0.1 * surface_roughness_length
+
+    coeff = (
+        stability_factor
+        * constants.VON_KARMAN**2
         / (
-            np.log(model.config.meteo.measurement_height.wind / s.surface.roughness_length[roi])
+            np.log(wind_measurement_height / surface_roughness_length)
             * np.log(adjusted_measurement_height / heat_moisture_roughness_length)
         )
     )
 
-    # TODO stability correction
+    return coeff
 
 
 def energy_balance(model):
@@ -75,9 +119,17 @@ def energy_balance(model):
         )
     )
 
+    heat_moisture_transfer_coeff = _heat_moisture_transfer_coefficient(
+        s.surface.roughness_length[roi],
+        model.config.meteo.measurement_height.temperature,
+        model.config.meteo.measurement_height.wind,
+        measurement_height_adjustment=False,
+        stability_correction=False,
+    )
+
     moisture_availability = surf_moisture_conductance / (
         surf_moisture_conductance
-        + s.surface.heat_moisture_transfer_coeff[roi] * s.meteo.wind_speed[roi]
+        + heat_moisture_transfer_coeff * s.meteo.wind_speed[roi]
     )
 
     sat_vap_press_surf = meteo.saturation_vapor_pressure(s.surface.temp[roi])
@@ -96,21 +148,21 @@ def energy_balance(model):
     )
 
     air_density = s.meteo.atmos_press[roi] / (constants.GAS_CONSTANT_DRY_AIR * s.meteo.temp[roi])
-    # TODO rename rKH to meaningful name
-    rKH = air_density * s.surface.heat_moisture_transfer_coeff[roi] * s.meteo.wind_speed[roi]
+    rhoa_CH_Ua = air_density * heat_moisture_transfer_coeff * s.meteo.wind_speed[roi]
 
     # Surface energy balance without melt
-    # TODO rename D to meaningful name
-    D = latent_heat * sat_spec_hum_surf / (constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[roi]**2)
-    surf_moisture_flux = moisture_availability * rKH * (sat_spec_hum_surf - s.meteo.spec_hum[roi])
+    s.snow.melt[roi] = 0
+    D = latent_heat * sat_spec_hum_surf / (  # D = dQsat/dTs (eq. (37))
+        constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[roi]**2
+    )
+    surf_moisture_flux = moisture_availability * rhoa_CH_Ua * (sat_spec_hum_surf - s.meteo.spec_hum[roi])
     s.surface.heat_flux[roi] = (
         2 * s.surface.therm_cond[roi]
         * (s.surface.temp[roi] - s.surface.layer_temp[roi])
         / s.surface.thickness[roi]
     )
-    sens_heat_flux = constants.SPEC_HEAT_CAP_DRY_AIR * rKH * (s.surface.temp[roi] - s.meteo.temp[roi])
+    sens_heat_flux = constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua * (s.surface.temp[roi] - s.meteo.temp[roi])
     lat_heat_flux = latent_heat * surf_moisture_flux
-    s.snow.melt[roi] = 0
     net_radiation = (
         (1 - s.surface.albedo[roi]) * s.meteo.sw_in[roi]
         + s.meteo.lw_in[roi]
@@ -119,14 +171,14 @@ def energy_balance(model):
     surf_temp_change = (
         (net_radiation - sens_heat_flux - lat_heat_flux - s.surface.heat_flux[roi])
         / (
-            (constants.SPEC_HEAT_CAP_DRY_AIR + latent_heat * moisture_availability * D) * rKH
+            (constants.SPEC_HEAT_CAP_DRY_AIR + latent_heat * moisture_availability * D) * rhoa_CH_Ua
             + 2 * s.surface.therm_cond[roi] / s.surface.thickness[roi]
             + 4 * constants.STEFAN_BOLTZMANN * s.surface.temp[roi]**3
         )
     )
-    surf_moisture_flux_change = moisture_availability * rKH * D * surf_temp_change
+    surf_moisture_flux_change = moisture_availability * rhoa_CH_Ua * D * surf_temp_change
     surf_heat_flux_change = 2 * s.surface.therm_cond[roi] * surf_temp_change / s.surface.thickness[roi]
-    sens_heat_flux_change = constants.SPEC_HEAT_CAP_DRY_AIR * rKH * surf_temp_change
+    sens_heat_flux_change = constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua * surf_temp_change
 
     # TODO surface melting
 
