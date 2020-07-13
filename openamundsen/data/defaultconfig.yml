@@ -86,6 +86,9 @@ meteo:
     temperature: 2  # m
     wind: 10  # m
 
+  stability_correction: false  # adjust turbulent fluxes for atmospheric stability
+  stability_adjustment_parameter: 5.  # adjustment parameter for atmospheric stability correction
+
 # parameters for the snow module
 snow:
   model: layers  # layers, bulk, bulk_layers
@@ -97,6 +100,8 @@ snow:
     - 0.4
 
   thermal_conductivity: 0.24  # W m-1 K-1
+  roughness_length: 0.01  # roughness length of snow-covered ground (m)
+  measurement_height_adjustment: false  # adjust the temperature measurement height for snow depth
 
   albedo:
     min: 0.55

@@ -41,15 +41,100 @@ def surface_layer_properties(
                 surf_layer_temp[i, j] = snow_temp[0, i, j]
 
 
+def _stability_factor(
+    temp,
+    surface_temp,
+    wind_speed,
+    snow_cover_fraction,
+    snow_roughness_length,
+    snow_free_roughness_length,
+    temp_measurement_height,
+    wind_measurement_height,
+    stability_adjustment_parameter,
+):
+    """
+    Calculate the atmospheric stability factor from [1] (eq. (25)).
+
+    Parameters
+    ----------
+    temp : ndarray
+        Air temperature (K).
+
+    surface_temp : ndarray
+        Surface temperature (K).
+
+    wind_speed : ndarray
+        Wind speed (m s-1).
+
+    snow_cover_fraction : ndarray
+        Snow cover fraction.
+
+    snow_roughness_length : float
+        Roughness length of snow-covered ground (m).
+
+    snow_free_roughness_length : float
+        Roughness length of snow-free ground (m).
+
+    temp_measurement_height : float
+        Temperature measurement height (m).
+
+    wind_measurement_height : float
+        Wind measurement height (m).
+
+    stability_adjustment_parameter : float
+        Atmospheric stability adjustment parameter (b_h from [1]).
+
+    Returns
+    -------
+    stability_factor : ndarray
+        Atmospheric stability factor.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
+    # Bulk Richardson number (eq. (24))
+    richardson = (
+        constants.GRAVITATIONAL_ACCELERATION
+        * wind_measurement_height**2
+        * (temp - surface_temp)
+        / (temp_measurement_height * temp * wind_speed**2)
+    )
+
+    # Surface momentum roughness length (eq. (23))
+    momentum_roughness_length = (
+        snow_roughness_length**snow_cover_fraction
+        * snow_free_roughness_length**(1 - snow_cover_fraction)
+    )
+
+    # eq. (26)
+    c = (
+        3 * stability_adjustment_parameter**2 * constants.VON_KARMAN**2
+        * np.sqrt(wind_measurement_height / momentum_roughness_length)
+        / (np.log(wind_measurement_height / momentum_roughness_length))**2
+    )
+
+    # eq. (25)
+    pos = richardson >= 0
+    stability_factor = np.empty(pos.shape)
+    stability_factor[pos] = 1 / (1 + 3 * stability_adjustment_parameter * richardson[pos] * np.sqrt(
+        1 + stability_adjustment_parameter * richardson[pos]))
+    stability_factor[~pos] = 1 / (1 - 3 * stability_adjustment_parameter * richardson[~pos] * (
+        1 + c[~pos] * np.sqrt(-richardson[~pos])))
+
+    return stability_factor
+
+
 def _heat_moisture_transfer_coefficient(
     surface_roughness_length,
     temp_measurement_height,
     wind_measurement_height,
-    measurement_height_adjustment=False,
-    stability_correction=False,
 ):
     """
-    Calculate the transfer coefficient C_H from [1] (eq. (22)).
+    Calculate the transfer coefficient C_H from [1] (eq. (22)), without the
+    possible adjustment for atmospheric stability.
 
     Parameters
     ----------
@@ -62,12 +147,6 @@ def _heat_moisture_transfer_coefficient(
     wind_measurement_height : float
         Wind measurement height.
 
-    measurement_height_adjustment : bool, default False
-        Adjust the temperature measurement height with the current snow depth.
-
-    stability_correction : bool, default False
-        Adjust the turbulent fluxes for atmospheric stability.
-
     Returns
     -------
     coeff : ndarray
@@ -79,27 +158,11 @@ def _heat_moisture_transfer_coefficient(
        Geoscientific Model Development, 8(12), 3867–3876.
        https://doi.org/10.5194/gmd-8-3867-2015
     """
-    # TODO measurement height adjustment
-    if measurement_height_adjustment:
-        raise NotImplementedError
-    else:
-        adjusted_measurement_height = temp_measurement_height
-
-    # TODO stability correction (eq. (25))
-    if stability_correction:
-        raise NotImplementedError
-    else:
-        stability_factor = 1.
-
     heat_moisture_roughness_length = 0.1 * surface_roughness_length
 
-    coeff = (
-        stability_factor
-        * constants.VON_KARMAN**2
-        / (
-            np.log(wind_measurement_height / surface_roughness_length)
-            * np.log(adjusted_measurement_height / heat_moisture_roughness_length)
-        )
+    coeff = constants.VON_KARMAN**2 / (
+        np.log(wind_measurement_height / surface_roughness_length)
+        * np.log(temp_measurement_height / heat_moisture_roughness_length)
     )
 
     return coeff
@@ -119,13 +182,33 @@ def energy_balance(model):
         )
     )
 
+    temp_measurement_height = model.config.meteo.measurement_height.temperature
+    wind_measurement_height = model.config.meteo.measurement_height.wind
+
+    if model.config.snow.measurement_height_adjustment:
+        temp_measurement_height -= s.snow.depth[roi]
+        temp_measurement_height = np.maximum(temp_measurement_height, 1.)  # as implemented in FSM
+
     heat_moisture_transfer_coeff = _heat_moisture_transfer_coefficient(
         s.surface.roughness_length[roi],
-        model.config.meteo.measurement_height.temperature,
-        model.config.meteo.measurement_height.wind,
-        measurement_height_adjustment=False,
-        stability_correction=False,
+        temp_measurement_height,
+        wind_measurement_height,
     )
+
+    if model.config.meteo.stability_correction:
+        snow_cover_frac = np.full(roi.sum(), 1.)  # TODO implement this
+        stability_factor = _stability_factor(
+            s.meteo.temp[roi],
+            s.surface.temp[roi],
+            s.meteo.wind_speed[roi],
+            snow_cover_frac,
+            model.config.snow.roughness_length,
+            model.config.soil.roughness_length,
+            temp_measurement_height,
+            wind_measurement_height,
+            model.config.meteo.stability_adjustment_parameter,
+        )
+        heat_moisture_transfer_coeff *= stability_factor
 
     moisture_availability = surf_moisture_conductance / (
         surf_moisture_conductance

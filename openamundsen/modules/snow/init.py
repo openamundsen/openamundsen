@@ -6,6 +6,7 @@ def initialize(model):
     s = model.state.snow
 
     s.swe[roi] = 0
+    s.depth[roi] = 0
     s.num_layers[roi] = 0
     s.therm_cond[:, roi] = model.config.snow.thermal_conductivity
     s.thickness[:, roi] = 0
