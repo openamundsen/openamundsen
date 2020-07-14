@@ -29,19 +29,21 @@ def surface_layer_properties(model):
         * s.snow.thickness[0, roi] / s.soil.thickness[0, roi]
     )
 
+    with np.errstate(invalid='ignore'):  # ignore "invalid value encountered in less_equal" errors because here for simplicity outside-ROI values are also compared
+        pos1 = roi & (s.snow.thickness[0, :, :] <= s.soil.thickness[0, :, :] / 2)
+        pos2 = roi & (s.snow.thickness[0, :, :] > s.soil.thickness[0, :, :])
+
     # Effective surface thermal conductivity (eq. (79))
     s.surface.therm_cond[roi] = s.snow.therm_cond[0, roi]
-    pos = roi & (s.snow.thickness[0, :, :] <= s.soil.thickness[0, :, :] / 2)
-    s.surface.therm_cond[pos] = (
-        s.soil.thickness[0, pos]
+    s.surface.therm_cond[pos1] = (
+        s.soil.thickness[0, pos1]
         / (
-            2 * s.snow.thickness[0, pos] / s.snow.therm_cond[0, pos]
-            + (s.soil.thickness[0, pos] - 2 * s.snow.thickness[0, pos]) / s.soil.therm_cond[0, pos]
+            2 * s.snow.thickness[0, pos1] / s.snow.therm_cond[0, pos1]
+            + (s.soil.thickness[0, pos1] - 2 * s.snow.thickness[0, pos1]) / s.soil.therm_cond[0, pos1]
         )
     )
 
-    pos = roi & (s.snow.thickness[0, :, :] > s.soil.thickness[0, :, :])
-    s.surface.layer_temp[pos] = s.snow.temp[0, pos]
+    s.surface.layer_temp[pos2] = s.snow.temp[0, pos2]
 
 
 def _stability_factor(

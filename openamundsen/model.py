@@ -185,25 +185,28 @@ class Model:
                 col = int(dss.col)
                 within_roi_var.loc[station] = self.grid.roi[row, col]
 
-    def _initialize_state_variables(self):
+    def _create_state_variables(self):
         """
-        Initialize the default state variables (i.e., create the arrays and -
-        where required - fill them with initial values) for the model run.
+        Create the state variables (i.e., empty arrays with the shape of the
+        model grid) for the model run.
         """
         state = statevars.StateVariableManager(self.grid.rows, self.grid.cols)
         self.state = state
         statevars.add_default_state_variables(self)
         self.state.initialize()
 
-        # Initialize snow variables
+    def _initialize_state_variables(self):
+        """
+        Fill the state variables arrays with initial values.
+        """
         if self.config.snow.model == 'layers':
             modules.snow.initialize(self)
 
         modules.soil.initialize(self)
 
         # TODO replace this eventually
-        state.surface.albedo[self.grid.roi] = self.config.soil.albedo
-        state.surface.temp[self.grid.roi] = constants.T0
+        self.state.surface.albedo[self.grid.roi] = self.config.soil.albedo
+        self.state.surface.temp[self.grid.roi] = constants.T0
 
     def _initialize_point_outputs(self):
         self.point_outputs = fileio.PointOutputManager(self)
@@ -556,7 +559,7 @@ class Model:
 
         self._prepare_time_steps()
         self._initialize_grid()
-        self._initialize_state_variables()
+        self._create_state_variables()
 
         self._read_input_data()
         self._read_meteo_data()
@@ -565,6 +568,8 @@ class Model:
         self.config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
         self._initialize_point_outputs()
         self._initialize_field_outputs()
+
+        self._initialize_state_variables()
 
     def run(self):
         """
