@@ -232,6 +232,40 @@ def _soil_temperature(
     heat_flux,
     areal_heat_cap,
 ):
+    """
+    Update soil layer temperatures.
+
+    Parameters
+    ----------
+    roi_idxs : ndarray(int, ndim=2)
+        (N, 2)-array specifying the (row, col) indices within the data arrays
+        that should be considered.
+
+    thickness : ndarray(float, ndim=3)
+        Soil thickness (m).
+
+    timestep : float
+        Model timestep (s).
+
+    temp : ndarray(float, ndim=3)
+        Soil temperature (K).
+
+    therm_cond : ndarray(float, ndim=3)
+        Soil thermal conductivity (W m-1 K-1).
+
+    heat_flux : ndarray(float, ndim=2)
+        Soil heat flux (W m-2).
+
+    areal_heat_cap : ndarray(float, ndim=3)
+        Areal heat capacity (J K-1 m-2).
+
+    References
+    ----------
+    .. [1] Cox, P. M., Betts, R. A., Bunton, C. B., Essery, R. L. H., Rowntree,
+       P. R., & Smith, J. (1999). The impact of new land surface physics on the
+       GCM simulation of climate and climate sensitivity. Climate Dynamics, 15(3),
+       183–203. https://doi.org/10.1007/s003820050276
+    """
     num_pixels = len(roi_idxs)
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
@@ -250,6 +284,22 @@ def _soil_temperature(
 
 
 def soil_heat_flux(model):
+    """
+    Calculate the soil heat flux, i.e., the flux from the surface to the top
+    soil layer, following [1].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    References
+    ----------
+    .. [1] Cox, P. M., Betts, R. A., Bunton, C. B., Essery, R. L. H., Rowntree,
+       P. R., & Smith, J. (1999). The impact of new land surface physics on the
+       GCM simulation of climate and climate sensitivity. Climate Dynamics, 15(3),
+       183–203. https://doi.org/10.1007/s003820050276
+    """
     s = model.state
     roi = model.grid.roi
     s.soil.heat_flux[roi] = s.surface.heat_flux[roi]

@@ -4,6 +4,21 @@ from openamundsen import constants, meteo
 
 
 def surface_layer_properties(model):
+    """
+    Update surface layer properties following [1].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    References
+    ----------
+    .. [1] Cox, P. M., Betts, R. A., Bunton, C. B., Essery, R. L. H., Rowntree,
+       P. R., & Smith, J. (1999). The impact of new land surface physics on the
+       GCM simulation of climate and climate sensitivity. Climate Dynamics, 15(3),
+       183–203. https://doi.org/10.1007/s003820050276
+    """
     s = model.state
     roi = model.grid.roi
 
@@ -14,10 +29,9 @@ def surface_layer_properties(model):
         * s.snow.thickness[0, roi] / s.soil.thickness[0, roi]
     )
 
+    # Effective surface thermal conductivity (eq. (79))
     s.surface.therm_cond[roi] = s.snow.therm_cond[0, roi]
-
     pos = roi & (s.snow.thickness[0, :, :] <= s.soil.thickness[0, :, :] / 2)
-
     s.surface.therm_cond[pos] = (
         s.soil.thickness[0, pos]
         / (
@@ -158,6 +172,20 @@ def _heat_moisture_transfer_coefficient(
 
 
 def energy_balance(model):
+    """
+    Calculate the surface energy balance following [1].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     s = model.state
     roi = model.grid.roi
 
