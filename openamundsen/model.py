@@ -562,25 +562,8 @@ class Model:
             s.soil.clapp_hornberger,
         )
 
-        surface.surface_layer_properties(
-            self.grid.roi_idxs,
-            s.surface.layer_temp,
-            s.surface.thickness,
-            s.surface.therm_cond,
-            s.snow.temp,
-            s.snow.thickness,
-            s.snow.therm_cond,
-            s.soil.temp,
-            s.soil.thickness,
-            s.soil.therm_cond,
-        )
-
-        # TODO surf_ebal
+        surface.surface_layer_properties(self)
         surface.energy_balance(self)
-        # surface.energy_balance(
-        #     self.grid.roi_idxs,
-        # )
-
 
     def _soil_heat_flux(self):
         s = self.state

@@ -3,42 +3,31 @@ import numpy as np
 from openamundsen import constants, meteo
 
 
-@njit(parallel=True, cache=True)
-def surface_layer_properties(
-    roi_idxs,
-    surf_layer_temp,
-    surf_thickness,
-    surf_therm_cond,
-    snow_temp,
-    snow_thickness,
-    snow_therm_cond,
-    soil_temp,
-    soil_thickness,
-    soil_therm_cond,
-):
-    num_pixels = len(roi_idxs)
-    for idx_num in prange(num_pixels):
-        i, j = roi_idxs[idx_num]
+def surface_layer_properties(model):
+    s = model.state
+    roi = model.grid.roi
 
-        surf_thickness[i, j] = max(snow_thickness[0, i, j], soil_thickness[0, i, j])
-        surf_layer_temp[i, j] = (
-            soil_temp[0, i, j]
-            + (snow_temp[0, i, j] - soil_temp[0, i, j]) * snow_thickness[0, i, j] / soil_thickness[0, i, j]
+    s.surface.thickness[roi] = np.maximum(s.snow.thickness[0, roi], s.soil.thickness[0, roi])
+    s.surface.layer_temp[roi] = (
+        s.soil.temp[0, roi]
+        + (s.snow.temp[0, roi] - s.soil.temp[0, roi])
+        * s.snow.thickness[0, roi] / s.soil.thickness[0, roi]
+    )
+
+    s.surface.therm_cond[roi] = s.snow.therm_cond[0, roi]
+
+    pos = roi & (s.snow.thickness[0, :, :] <= s.soil.thickness[0, :, :] / 2)
+
+    s.surface.therm_cond[pos] = (
+        s.soil.thickness[0, pos]
+        / (
+            2 * s.snow.thickness[0, pos] / s.snow.therm_cond[0, pos]
+            + (s.soil.thickness[0, pos] - 2 * s.snow.thickness[0, pos]) / s.soil.therm_cond[0, pos]
         )
+    )
 
-        if snow_thickness[0, i, j] <= soil_thickness[0, i, j] / 2:
-            surf_therm_cond[i, j] = (
-                soil_thickness[0, i, j]
-                / (
-                    2 * snow_thickness[0, i, j] / snow_therm_cond[0, i, j]
-                    + (soil_thickness[0, i, j] - 2 * snow_thickness[0, i, j]) / soil_therm_cond[0, i, j]
-                )
-            )
-        else:
-            surf_therm_cond[i, j] = snow_therm_cond[0, i, j]
-
-            if snow_thickness[0, i, j] > soil_thickness[0, i, j]:
-                surf_layer_temp[i, j] = snow_temp[0, i, j]
+    pos = roi & (s.snow.thickness[0, :, :] > s.soil.thickness[0, :, :])
+    s.surface.layer_temp[pos] = s.snow.temp[0, pos]
 
 
 def _stability_factor(
