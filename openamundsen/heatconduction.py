@@ -42,7 +42,7 @@ def temp_change(
     top_heat_flux : float
         Heat flux from the top (W m-2).
 
-    areal_heat_cyp : ndarray
+    areal_heat_cap : ndarray
         Areal heat capacities (J K-1 m-2).
 
     Returns
