@@ -6,8 +6,31 @@ from openamundsen import (
 )
 
 
+def soil_properties(model):
+    """
+    Wrapper function for _soil_properties().
+    """
+    s = model.state
+
+    _soil_properties(
+        model.grid.roi_idxs,
+        s.soil.thickness,
+        s.soil.temp,
+        s.soil.areal_heat_cap,
+        s.soil.vol_heat_cap_dry,
+        s.soil.therm_cond,
+        s.soil.therm_cond_dry,
+        s.soil.vol_moisture_content,
+        s.soil.vol_moisture_content_sat,
+        s.soil.frac_frozen_moisture_content,
+        s.soil.frac_unfrozen_moisture_content,
+        s.soil.sat_water_pressure,
+        s.soil.clapp_hornberger,
+    )
+
+
 @njit(parallel=True, cache=True)
-def soil_properties(
+def _soil_properties(
     roi_idxs,
     thickness,
     temp,
@@ -183,8 +206,24 @@ def soil_properties(
                 therm_cond[k, i, j] = therm_cond_dry[i, j]
 
 
+def soil_temperature(model):
+    """
+    Wrapper function for _soil_temperature().
+    """
+    s = model.state
+    _soil_temperature(
+        model.grid.roi_idxs,
+        model.state.soil.thickness,
+        model.timestep,
+        model.state.soil.temp,
+        model.state.soil.therm_cond,
+        model.state.soil.heat_flux,
+        model.state.soil.areal_heat_cap,
+    )
+
+
 @njit(parallel=True, cache=True)
-def soil_temperature(
+def _soil_temperature(
     roi_idxs,
     thickness,
     timestep,
@@ -208,3 +247,10 @@ def soil_temperature(
             heat_flux[i, j],
             areal_heat_cap[:, i, j],
         )
+
+
+def soil_heat_flux(model):
+    s = model.state
+    roi = model.grid.roi
+    s.soil.heat_flux[roi] = s.surface.heat_flux[roi]
+    # TODO account for snow

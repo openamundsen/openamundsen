@@ -97,8 +97,8 @@ class Model:
         modules.snow.compaction(self)
         modules.snow.add_fresh_snow(self)
         modules.snow.energy_balance(self)
-        self._soil_heat_flux()
-        self._soil_temperature()
+        modules.soil.soil_heat_flux(self)
+        modules.soil.soil_temperature(self)
 
     def _initialize_logger(self):
         """
@@ -546,42 +546,9 @@ class Model:
         # TODO partial snow cover (albedo, roughness length)
         s.surface.roughness_length[roi] = self.config.soil.roughness_length
 
-        modules.soil.soil_properties(
-            self.grid.roi_idxs,
-            s.soil.thickness,
-            s.soil.temp,
-            s.soil.areal_heat_cap,
-            s.soil.vol_heat_cap_dry,
-            s.soil.therm_cond,
-            s.soil.therm_cond_dry,
-            s.soil.vol_moisture_content,
-            s.soil.vol_moisture_content_sat,
-            s.soil.frac_frozen_moisture_content,
-            s.soil.frac_unfrozen_moisture_content,
-            s.soil.sat_water_pressure,
-            s.soil.clapp_hornberger,
-        )
-
+        modules.soil.soil_properties(self)
         surface.surface_layer_properties(self)
         surface.energy_balance(self)
-
-    def _soil_heat_flux(self):
-        s = self.state
-        roi = self.grid.roi
-        s.soil.heat_flux[roi] = s.surface.heat_flux[roi]
-        # TODO account for snow
-
-    def _soil_temperature(self):
-        s = self.state
-        modules.soil.soil_temperature(
-            self.grid.roi_idxs,
-            self.state.soil.thickness,
-            self.timestep,
-            self.state.soil.temp,
-            self.state.soil.therm_cond,
-            self.state.soil.heat_flux,
-            self.state.soil.areal_heat_cap,
-        )
 
     def initialize(self):
         """
