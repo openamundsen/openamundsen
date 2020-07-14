@@ -210,7 +210,6 @@ def soil_temperature(model):
     """
     Wrapper function for _soil_temperature().
     """
-    s = model.state
     _soil_temperature(
         model.grid.roi_idxs,
         model.state.soil.thickness,
