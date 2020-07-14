@@ -44,9 +44,6 @@ class Model:
         self.state = None
         self.dates = None
 
-        self._initialize_logger()
-
-        self.logger.info('Checking configuration')
         full_config = conf.full_config(config)
         self.config = conf.parse_config(full_config)
 
@@ -107,7 +104,7 @@ class Model:
         logger = copy.deepcopy(loguru.logger)
         log_format = ('<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | ' +
                       '<level>{message}</level>')
-        logger.add(sys.stderr, format=log_format, filter='openamundsen', level='DEBUG')
+        logger.add(sys.stderr, format=log_format, filter='openamundsen', level=self.config.log_level)
         self.logger = logger
 
     def _initialize_grid(self):
@@ -555,6 +552,8 @@ class Model:
         the required input raster files and meteorological input data,
         initialize the model grid and all required state variables, etc.
         """
+        self._initialize_logger()
+
         self._prepare_time_steps()
         self._initialize_grid()
         self._initialize_state_variables()

@@ -6,6 +6,7 @@ timestep: H  # temporal resolution
 results_dir:  # directory for writing the result files
 crs:  # coordinate reference system of the input raster files
 timezone:  # timezone (difference of local time to UTC in hours)
+log_level: INFO  # python logging-compatible log level (e.g. DEBUG or INFO)
 
 input_data:
   grids:
