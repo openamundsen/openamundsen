@@ -202,7 +202,7 @@ class Model:
         modules.soil.initialize(self)
 
         # TODO replace this eventually
-        state.surface.albedo[self.grid.roi] = constants.SNOWFREE_ALBEDO
+        state.surface.albedo[self.grid.roi] = self.config.soil.albedo
         state.surface.temp[self.grid.roi] = constants.T0
 
     def _initialize_point_outputs(self):
