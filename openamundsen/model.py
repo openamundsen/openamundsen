@@ -16,7 +16,6 @@ from openamundsen import (
 )
 import numpy as np
 import pandas as pd
-from pathlib import Path
 import rasterio
 import sys
 import time
