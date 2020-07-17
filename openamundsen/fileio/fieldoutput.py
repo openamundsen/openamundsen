@@ -131,16 +131,29 @@ class FieldOutputManager:
         for field in self.fields:
             if field.agg is not None:
                 if field.data is None:
-                    arr = np.full((self.model.grid.rows, self.model.grid.cols), np.nan)
-                    arr[roi] = 0
+                    meta = self.model.state.meta(field.var)
+
+                    if meta.dim3 == 0:
+                        arr = np.full((self.model.grid.rows, self.model.grid.cols), np.nan)
+                        arr[roi] = 0
+                    else:
+                        arr = np.full((meta.dim3, self.model.grid.rows, self.model.grid.cols), np.nan)
+                        arr[:, roi] = 0
+
                     field.data = arr
 
                 data_cur = self.model.state[field.var]
 
                 if field.agg == 'sum':
-                    field.data[roi] += data_cur[roi]
+                    if field.data.ndim == 2:
+                        field.data[roi] += data_cur[roi]
+                    else:
+                        field.data[:, roi] += data_cur[:, roi]
                 elif field.agg == 'mean':
-                    field.data[roi] += (data_cur[roi] - field.data[roi]) / (field.num_aggregations + 1)
+                    if field.data.ndim == 2:
+                        field.data[roi] += (data_cur[roi] - field.data[roi]) / (field.num_aggregations + 1)
+                    else:
+                        field.data[:, roi] += (data_cur[:, roi] - field.data[:, roi]) / (field.num_aggregations + 1)
 
                 field.num_aggregations += 1
 
@@ -154,9 +167,19 @@ class FieldOutputManager:
                     date_idx = np.flatnonzero(field.write_dates == date)[0]
                     ds[field.output_name][date_idx, :, :] = data
                 elif self.format == 'ascii':
-                    filename = self.model.config.results_dir / f'{field.output_name}_{date:%Y-%m-%dT%H%M}.asc'
-                    self.model.logger.debug(f'Writing field {field.var} to {filename}')
-                    fileio.write_raster_file(filename, data, self.model.grid.transform)
+                    if data.ndim == 2:
+                        filename = self.model.config.results_dir / f'{field.output_name}_{date:%Y-%m-%dT%H%M}.asc'
+                        self.model.logger.debug(f'Writing field {field.var} to {filename}')
+                        fileio.write_raster_file(filename, data, self.model.grid.transform)
+                    else:
+                        # For 3-dimensional variables, write each layer as a separate file
+                        for layer_num in range(data.shape[0]):
+                            filename = (
+                                self.model.config.results_dir
+                                / f'{field.output_name}_{layer_num}_{date:%Y-%m-%dT%H%M}.asc'
+                            )
+                            self.model.logger.debug(f'Writing field {field.var} (layer {layer_num}) to {filename}')
+                            fileio.write_raster_file(filename, data[layer_num, :, :], self.model.grid.transform)
                 else:
                     raise NotImplementedError
 
@@ -261,6 +284,7 @@ class FieldOutputManager:
 
         # Define data variables
         data = {}
+        three_dim_coords = {}
         for field, field_time_var in zip(self.fields, field_time_vars):
             meta = self.model.state.meta(field.var)
             attrs = {}
@@ -272,11 +296,38 @@ class FieldOutputManager:
 
             attrs['grid_mapping'] = 'crs'
 
-            data[field.output_name] = (
-                [field_time_var, 'y', 'x'],
-                np.full((len(field.write_dates), len(y_coords), len(x_coords)), np.nan, dtype=np.float32),
-                attrs,
-            )
+            if meta.dim3 == 0:  # 2-dimensional variable
+                data[field.output_name] = (
+                    [field_time_var, 'y', 'x'],
+                    np.full((len(field.write_dates), len(y_coords), len(x_coords)), np.nan, dtype=np.float32),
+                    attrs,
+                )
+            else:  # 3-dimensional variable
+                category = self.model.state.parse(field.var)[0]
+                coord_name = f'{category}_layer'
+
+                if category in three_dim_coords:
+                    if three_dim_coords[coord_name] != meta.dim3:
+                        # We assume that all 3-dimensional variables within a category have the
+                        # same shape (e.g. "soil.temp" must have the same shape as "soil.therm_cond");
+                        # varying numbers of layers within a category are not supported
+                        raise Exception('Inconsistent length of third variable dimension')
+                else:
+                    three_dim_coords[coord_name] = meta.dim3
+
+                data[field.output_name] = (
+                    [field_time_var, coord_name, 'y', 'x'],
+                    np.full(
+                        (len(field.write_dates), meta.dim3, len(y_coords), len(x_coords)),
+                        np.nan,
+                        dtype=np.float32,
+                    ),
+                    attrs,
+                )
+
+        # Add 3-dimensional coordinates
+        for coord_name, coord_len in three_dim_coords.items():
+            coords[coord_name] = ([coord_name], np.arange(coord_len))
 
         ds = xr.Dataset(data, coords=coords)
         ds.attrs['Conventions'] = 'CF-1.7'
