@@ -335,7 +335,7 @@ class PointOutputManager:
 
                     ds_out_point = ds_out.sel(point=point.name)
 
-                    # Drop all coordinate variable columns except "time" and "point" (i.e. "lon", "lat", etc.)
+                    # Drop all coordinate variables except "time" (i.e. "lon", "lat", etc.)
                     # so that they are not in the resulting dataframe when calling to_dataframe()
                     ds_out_point = ds_out_point.drop_vars(list(set(list(ds_out_point.coords)) - set(['time'])))
 
