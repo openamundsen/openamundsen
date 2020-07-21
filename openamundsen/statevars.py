@@ -282,12 +282,14 @@ def add_default_state_variables(model):
     snow.add_variable('melt', 'kg m-2', 'Snow melt', 'surface_snow_melt_amount')
     snow.add_variable('sublimation', 'kg m-2', 'Snow sublimation', 'surface_snow_sublimation_amount')
     snow.add_variable('runoff', 'kg m-2', 'Snow runoff')
+    snow.add_variable('area_fraction', '1', 'Snow cover fraction', 'surface_snow_area_fraction')
 
     if model.config.snow.model == 'layers':
-        num_snow_layers = len(model.config.snow.min_layer_thicknesses)
+        num_snow_layers = len(model.config.snow.min_thickness)
         snow.add_variable('albedo', '1', 'Snow albedo')
         snow.add_variable('num_layers', '1', 'Number of snow layers', dtype=int)
         snow.add_variable('thickness', 'm', 'Snow thickness', dim3=num_snow_layers)
+        snow.add_variable('density', 'kg m-3', 'Snow density', 'snow_density', dim3=num_snow_layers)
         snow.add_variable('ice_content', 'kg m-2', 'Ice content of snow', dim3=num_snow_layers)
         snow.add_variable('liquid_water_content', 'kg m-2', 'Liquid water content of snow', dim3=num_snow_layers)
         snow.add_variable('temp', 'K', 'Snow temperature', dim3=num_snow_layers)

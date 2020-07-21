@@ -88,11 +88,26 @@ class Model:
         in every time step after the meteorological fields have been prepared.
         """
         modules.radiation.irradiance(self)
-        self._surface()
-        modules.snow.update_albedo(self)
+
+        modules.snow.albedo(self)
+        modules.snow.accumulation(self)
+        # TODO call update_layers() here?
+        modules.snow.snow_properties(self)
+
+        modules.soil.soil_properties(self)
+        surface.surface_properties(self)
+        surface.surface_layer_properties(self)
+        surface.energy_balance(self)
+
+        modules.snow.heat_conduction(self)
+        modules.snow.melt(self)
+        modules.snow.sublimation(self)
+        modules.snow.runoff(self)
         modules.snow.compaction(self)
-        modules.snow.add_fresh_snow(self)
-        modules.snow.energy_balance(self)
+
+        modules.snow.snow_properties(self)
+        modules.snow.update_layers(self)
+
         modules.soil.soil_heat_flux(self)
         modules.soil.soil_temperature(self)
 
@@ -122,6 +137,24 @@ class Model:
         grid = util.ModelGrid(meta)
         grid.prepare_coordinates()
         self.grid = grid
+
+    def roi_mask_to_global(self, mask):
+        if mask.shape[-1] != len(self.grid.roi_idxs_flat):
+            raise Exception('mask does not match ROI size')
+
+        if mask.ndim == 1:
+            global_mask = np.zeros((self.grid.rows, self.grid.cols), dtype=bool)
+            idxs = self.grid.roi_idxs_flat[mask]
+            global_mask.flat[idxs] = True
+        elif mask.ndim == 2:
+            dim3 = mask.shape[0]
+            global_mask = np.zeros((dim3, self.grid.rows, self.grid.cols), dtype=bool)
+
+            for i in range(dim3):
+                idxs = self.grid.roi_idxs_flat[mask[i, :]]
+                global_mask[i, :, :].flat[idxs] = True
+
+        return global_mask
 
     def _prepare_station_coordinates(self):
         """
@@ -206,7 +239,7 @@ class Model:
 
         # TODO replace this eventually
         self.state.surface.albedo[self.grid.roi] = self.config.soil.albedo
-        self.state.surface.temp[self.grid.roi] = constants.T0
+        self.state.surface.temp[self.grid.roi] = 285.
 
     def _initialize_point_outputs(self):
         self.point_outputs = fileio.PointOutputManager(self)
@@ -534,20 +567,6 @@ class Model:
         # Total incoming/outgoing longwave radiation
         m.lw_in[roi] = lw_in_clearsky + lw_in_clouds + lw_in_slopes
         m.lw_out[roi] = snow_emissivity * constants.STEFAN_BOLTZMANN * self.state.surface.temp[roi]**4
-
-    def _surface(self):
-        s = self.state
-        roi = self.grid.roi
-
-        # TODO snow albedo
-        # TODO snow thermal conductivity
-        # TODO adjust roughness length for snow
-        # TODO partial snow cover (albedo, roughness length)
-        s.surface.roughness_length[roi] = self.config.soil.roughness_length
-
-        modules.soil.soil_properties(self)
-        surface.surface_layer_properties(self)
-        surface.energy_balance(self)
 
     def initialize(self):
         """

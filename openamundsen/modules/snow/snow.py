@@ -1,0 +1,516 @@
+from numba import njit, prange
+import numpy as np
+from openamundsen import (
+    constants as c,
+    heatconduction,
+)
+
+
+# TODO this is the Essery albedo parameterization, implement the AMUNDSEN one too
+def albedo(model):
+    s = model.state
+    roi = model.grid.roi
+
+    albedo_decay_timescale = np.where(
+        s.surface.temp[roi] >= c.T0,
+        c.SECONDS_PER_HOUR * model.config.snow.albedo.melting_snow_decay_timescale,
+        c.SECONDS_PER_HOUR * model.config.snow.albedo.cold_snow_decay_timescale,
+    )
+    reciprocal_albedo_timescale = (
+        1 / albedo_decay_timescale
+        + s.meteo.snow[roi] / model.config.snow.albedo.refresh_snowfall
+    )
+    albedo_limit = (
+        model.config.snow.albedo.min / albedo_decay_timescale
+        + s.meteo.snow[roi] * model.config.snow.albedo.max / model.config.snow.albedo.refresh_snowfall
+    ) / reciprocal_albedo_timescale
+    s.snow.albedo[roi] = (
+        albedo_limit
+        + (s.snow.albedo[roi] - albedo_limit)
+        * np.exp(-reciprocal_albedo_timescale * model.timestep)
+    )
+
+
+def fresh_snow_density(temp):
+    """
+    Calculate fresh snow density based on the parameterization by [1] (eq. (4.22)).
+
+    Parameters
+    ----------
+    temp : numeric
+        Wet-bulb temperature (K) in the original formulation by [1]. Can be
+        substituted by air temperature if not available.
+
+    Returns
+    -------
+    rho : numeric
+        Fresh snow density (kg m-3).
+
+    References
+    ----------
+    .. [1] Anderson, E. A. (1976). A point energy and mass balance model of a
+       snow cover (NOAA Technical Report NWS 19, pp. 1–172). NOAA.
+       https://repository.library.noaa.gov/view/noaa/6392
+    """
+    min_temp = c.T0 - 15.
+    temp = np.array(temp).clip(min_temp)  # the parameterization is only valid for temperatures >= -15 °C
+    rho = 50 + 1.7 * (temp - min_temp)**1.5
+    return rho
+
+
+def accumulation(model):
+    roi = model.grid.roi
+    s = model.state
+
+    density = fresh_snow_density(model.state.meteo.wetbulb_temp[roi])
+
+    frost = -np.minimum(s.snow.sublimation[roi], 0)
+    ice_content_change = (s.meteo.snow[roi] + frost) * model.timestep
+
+    # Initialize first snow layer where necessary
+    pos_init_layer = model.roi_mask_to_global((s.snow.num_layers[roi] == 0) & (ice_content_change > 0))
+    s.snow.num_layers[pos_init_layer] = 1
+    s.snow.temp[0, pos_init_layer] = np.minimum(s.meteo.temp[pos_init_layer], c.T0)
+    s.snow.albedo[pos_init_layer] = model.config.snow.albedo.max
+
+    # Add snow to first layer
+    s.snow.ice_content[0, roi] += ice_content_change
+    s.snow.thickness[0, roi] += ice_content_change / density
+
+
+def compaction(model):
+    roi = model.grid.roi
+    snow = model.state.snow
+    timescale = c.SECONDS_PER_HOUR * model.config.snow.compaction_timescale  # snow compaction timescale (s)
+
+    _compaction(
+        model.grid.roi_idxs,
+        model.timestep,
+        timescale,
+        model.config.snow.max_cold_density,
+        model.config.snow.max_melting_density,
+        snow.num_layers,
+        snow.temp,
+        snow.thickness,
+        snow.ice_content,
+        snow.liquid_water_content,
+        snow.density,
+    )
+
+
+@njit(cache=True, parallel=True)
+def _compaction(
+    roi_idxs,
+    timestep,
+    timescale,
+    max_cold_density,
+    max_melting_density,
+    num_layers,
+    temp,
+    thickness,
+    ice_content,
+    liquid_water_content,
+    density,
+):
+    num_pixels = len(roi_idxs)
+    for idx_num in prange(num_pixels):
+        i, j = roi_idxs[idx_num]
+
+        for k in range(num_layers[i, j]):
+            if thickness[k, i, j] > 0:
+                # TODO rather update density in update_layers()?
+                density[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / thickness[k, i, j]
+
+                if temp[k, i, j] < c.T0:
+                    max_density = max_cold_density
+                else:
+                    max_density = max_melting_density
+
+                if density[k, i, j] < max_density:
+                    # Where the maximum density is already reached, do not increase it anymore
+                    # but to avoid jumps do not actually clip the values (because snow might
+                    # switch between "cold" and "melting" from one timestep to another)
+                    density[k, i, j] = (
+                        max_density
+                        + (density[k, i, j] - max_density)
+                        * np.exp(-timestep / timescale)
+                    )
+
+                    thickness[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / density[k, i, j]
+
+
+def melt(model):
+    snow = model.state.snow
+
+    _melt(
+        model.grid.roi_idxs,
+        model.timestep,
+        snow.num_layers,
+        snow.melt,
+        snow.thickness,
+        snow.temp,
+        snow.ice_content,
+        snow.liquid_water_content,
+        snow.areal_heat_cap,
+    )
+
+
+@njit(cache=True, parallel=True)
+def _melt(
+    roi_idxs,
+    timestep,
+    num_layers,
+    melt,
+    thickness,
+    temp,
+    ice_content,
+    liquid_water_content,
+    areal_heat_cap,
+):
+    num_pixels = len(roi_idxs)
+    for idx_num in prange(num_pixels):
+        i, j = roi_idxs[idx_num]
+
+        ice_content_change = melt[i, j] * timestep
+
+        for k in range(num_layers[i, j]):
+            cold_content = areal_heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
+            if cold_content < 0:
+                ice_content_change -= cold_content / c.LATENT_HEAT_OF_FUSION
+                temp[k, i, j] = c.T0
+
+            if ice_content_change > 0:
+                if ice_content_change > ice_content[k, i, j]:  # layer melts completely
+                    ice_content_change -= ice_content[k, i, j]
+                    thickness[k, i, j] = 0.
+                    liquid_water_content[k, i, j] += ice_content[k, i, j]
+                    ice_content[k, i, j] = 0.
+                else:  # layer melts partially
+                    thickness[k, i, j] *= (1 - ice_content_change / ice_content[k, i, j])
+                    ice_content[k, i, j] -= ice_content_change
+                    liquid_water_content[k, i, j] += ice_content_change
+                    ice_content_change = 0.
+
+
+def sublimation(model):
+    snow = model.state.snow
+
+    _sublimation(
+        model.grid.roi_idxs,
+        model.timestep,
+        snow.num_layers,
+        snow.ice_content,
+        snow.thickness,
+        snow.sublimation,
+    )
+
+
+@njit(cache=True, parallel=True)
+def _sublimation(
+    roi_idxs,
+    timestep,
+    num_layers,
+    ice_content,
+    thickness,
+    sublimation,
+):
+    num_pixels = len(roi_idxs)
+    for idx_num in prange(num_pixels):
+        i, j = roi_idxs[idx_num]
+
+        ice_content_change = max(sublimation[i, j], 0.) * timestep
+
+        if ice_content_change > 0:
+            for k in range(num_layers[i, j]):
+                if ice_content_change > ice_content[k, i, j]:  # complete sublimation of layer
+                    ice_content_change -= ice_content[k, i, j]
+                    thickness[k, i, j] = 0.
+                    ice_content[k, i, j] = 0.
+                else:  # partial sublimation
+                    thickness[k, i, j] *= (1 - ice_content_change / ice_content[k, i, j])
+                    ice_content[k, i, j] -= ice_content_change
+                    ice_content_change = 0.
+
+
+def runoff(model):
+    s = model.state
+
+    _runoff(
+        model.grid.roi_idxs,
+        model.timestep,
+        model.config.snow.irreducible_liquid_water_content,
+        s.meteo.snow,
+        s.meteo.rain,
+        s.snow.num_layers,
+        s.snow.thickness,
+        s.snow.temp,
+        s.snow.ice_content,
+        s.snow.liquid_water_content,
+        s.snow.runoff,
+        s.snow.areal_heat_cap,
+    )
+
+
+@njit(cache=True, parallel=True)
+def _runoff(
+    roi_idxs,
+    timestep,
+    irreducible_liquid_water_content,
+    snowfall,
+    rainfall,
+    num_layers,
+    thickness,
+    temp,
+    ice_content,
+    liquid_water_content,
+    runoff,
+    areal_heat_cap,
+):
+    num_pixels = len(roi_idxs)
+    for idx_num in prange(num_pixels):
+        i, j = roi_idxs[idx_num]
+
+        runoff[i, j] = rainfall[i, j] * timestep  # TODO optimize this
+
+        for k in range(num_layers[i, j]):
+            if thickness[k, i, j] > 0:
+                porosity = 1 - ice_content[k, i, j] / (c.ICE_DENSITY * thickness[k, i, j])  # eq. (27)
+            else:
+                porosity = 0.
+
+            max_liquid_water_content = (  # eq. (28)
+                c.WATER_DENSITY
+                * thickness[k, i, j]
+                * porosity
+                * irreducible_liquid_water_content
+            )
+
+            liquid_water_content[k, i, j] += runoff[i, j]
+
+            if liquid_water_content[k, i, j] > max_liquid_water_content:
+                runoff[i, j] = liquid_water_content[k, i, j] - max_liquid_water_content
+                liquid_water_content[k, i, j] = max_liquid_water_content
+            else:
+                runoff[i, j] = 0.
+
+            # Refreeze liquid water
+            cold_content = areal_heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
+            if cold_content > 0:
+                ice_content_change = min(
+                    liquid_water_content[k, i, j],
+                    cold_content / c.LATENT_HEAT_OF_FUSION,
+                )
+                liquid_water_content[k, i, j] -= ice_content_change
+                ice_content[k, i, j] += ice_content_change
+                temp[k, i, j] += c.LATENT_HEAT_OF_FUSION * ice_content_change / areal_heat_cap[k, i, j]
+
+
+def heat_conduction(model):
+    _heat_conduction(
+        model.grid.roi_idxs,
+        model.state.snow.num_layers,
+        model.state.snow.thickness,
+        model.state.soil.thickness,
+        model.timestep,
+        model.state.snow.temp,
+        model.state.snow.therm_cond,
+        model.state.soil.therm_cond,
+        model.state.surface.heat_flux,
+        model.state.snow.areal_heat_cap,
+    )
+
+
+@njit(parallel=True, cache=True)
+def _heat_conduction(
+    roi_idxs,
+    num_layers,
+    snow_thickness,
+    soil_thickness,
+    timestep,
+    temp,
+    therm_cond_snow,
+    therm_cond_soil,
+    heat_flux,
+    areal_heat_cap,
+):
+    """
+    Update snow layer temperatures.
+
+    Parameters
+    ----------
+    roi_idxs : ndarray(int, ndim=2)
+        (N, 2)-array specifying the (row, col) indices within the data arrays
+        that should be considered.
+
+    num_layers : ndarray(float, ndim=2)
+        Number of snow layers.
+
+    snow_thickness : ndarray(float, ndim=3)
+        Snow thickness (m).
+
+    soil_thickness : ndarray(float, ndim=3)
+        Soil thickness (m).
+
+    timestep : float
+        Model timestep (s).
+
+    temp : ndarray(float, ndim=3)
+        Snow temperature (K).
+
+    therm_cond_snow : ndarray(float, ndim=3)
+        Snow thermal conductivity (W m-1 K-1).
+
+    therm_cond_soil : ndarray(float, ndim=3)
+        Soil thermal conductivity (W m-1 K-1).
+
+    heat_flux : ndarray(float, ndim=2)
+        Surface heat flux (W m-2).
+
+    areal_heat_cap : ndarray(float, ndim=3)
+        Areal heat capacity of snow (J K-1 m-2).
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
+    num_pixels = len(roi_idxs)
+    for idx_num in prange(num_pixels):
+        i, j = roi_idxs[idx_num]
+
+        ns = num_layers[i, j]
+
+        if ns > 0:
+            temp[:ns, i, j] += heatconduction.temp_change(
+                snow_thickness[:ns, i, j],
+                timestep,
+                temp[:ns, i, j],
+                therm_cond_snow[:ns, i, j],
+                temp[-1, i, j],
+                soil_thickness[0, i, j],
+                therm_cond_soil[0, i, j],
+                heat_flux[i, j],
+                areal_heat_cap[:ns, i, j],
+            )
+
+
+def update_layers(model):
+    snow = model.state.snow
+
+    _update_layers(
+        model.grid.roi_idxs,
+        snow.num_layers,
+        np.array(model.config.snow.min_thickness),
+        snow.thickness,
+        snow.ice_content,
+        snow.liquid_water_content,
+        snow.areal_heat_cap,
+        snow.temp,
+        snow.depth,
+    )
+
+
+@njit(cache=True, parallel=True)
+def _update_layers(
+    roi_idxs,
+    num_layers,
+    min_thickness,
+    thickness,
+    ice_content,
+    liquid_water_content,
+    areal_heat_cap,
+    temp,
+    depth,
+):
+    max_num_layers = len(min_thickness)
+    num_layers_prev = num_layers.copy()
+    thickness_prev = thickness.copy()
+    ice_content_prev = ice_content.copy()
+    liquid_water_content_prev = liquid_water_content.copy()
+    energy_prev = areal_heat_cap * (temp - c.T0)  # energy content (J m-2)
+
+    num_pixels = len(roi_idxs)
+    for idx_num in prange(num_pixels):
+        i, j = roi_idxs[idx_num]
+
+        num_layers[i, j] = 0
+        thickness[:, i, j] = 0.
+        ice_content[:, i, j] = 0.
+        liquid_water_content[:, i, j] = 0.
+        temp[:, i, j] = c.T0
+        internal_energy = np.zeros(max_num_layers)
+
+        if depth[i, j] > 0:
+            new_thickness = depth[i, j]
+
+            # Update thicknesses and number of layers
+            for k in range(max_num_layers):
+                thickness[k, i, j] = min_thickness[k]
+                new_thickness -= min_thickness[k]
+
+                if new_thickness <= min_thickness[k] or k == max_num_layers - 1:
+                    thickness[k, i, j] += new_thickness
+                    break
+
+            # Set thin snow layers to 0 to avoid numerical artifacts
+            # TODO should this be done at some other location?
+            for k in range(max_num_layers):
+                if thickness[k, i, j] < 1e-6:
+                    thickness[k, i, j] = 0.
+
+            ns = (thickness[:, i, j] > 0).sum()  # new number of layers
+            new_thickness = thickness[0, i, j]
+            k_new = 0
+
+            # TODO optimize this entire loop
+            for k_old in range(num_layers_prev[i, j]):
+                while True:  # TODO replace with normal loop
+                    weight = min(new_thickness / thickness_prev[k_old, i, j], 1.)
+
+                    ice_content[k_new, i, j] += weight * ice_content_prev[k_old, i, j]
+                    liquid_water_content[k_new, i, j] += weight * liquid_water_content_prev[k_old, i, j]
+                    internal_energy[k_new] += weight * energy_prev[k_old, i, j]
+
+                    if weight == 1.:
+                        new_thickness -= thickness_prev[k_old, i, j]  # XXX
+                        break
+
+                    thickness_prev[k_old, i, j] *= 1 - weight
+                    ice_content_prev[k_old, i, j] *= 1 - weight
+                    liquid_water_content_prev[k_old, i, j] *= 1 - weight
+                    energy_prev[k_old, i, j] *= 1 - weight
+
+                    k_new += 1
+
+                    if k_new >= ns:
+                        break
+
+                    if weight < 1:
+                        new_thickness = thickness[k_new, i, j]
+
+            num_layers[i, j] = ns
+
+            # Update areal heat capacity and snow temperature
+            areal_heat_cap[:ns, i, j] = (  # TODO use snow_heat_capacity() for this
+                ice_content[:ns, i, j] * c.SPEC_HEAT_CAP_ICE
+                + liquid_water_content[:ns, i, j] * c.SPEC_HEAT_CAP_WATER
+            )
+            temp[:ns, i, j] = c.T0 + internal_energy[:ns] / areal_heat_cap[:ns, i, j]
+
+
+def snow_properties(model):
+    roi = model.grid.roi
+    snow = model.state.snow
+
+    snow.depth[roi] = snow.thickness[:, roi].sum(axis=0)
+    snow.swe[roi] = (snow.ice_content[:, roi] + snow.liquid_water_content[:, roi]).sum(axis=0)
+
+    # Snow cover fraction (eq. (13) from Essery et al. (2015))
+    snow.area_fraction[roi] = np.tanh(snow.depth[roi] / model.config.snow.snow_cover_fraction_depth_scale)
+
+    # Areal heat capacity of snow (eq. (9))
+    snow.areal_heat_cap[:, roi] = (
+        snow.ice_content[:, roi] * c.SPEC_HEAT_CAP_ICE
+        + snow.liquid_water_content[:, roi] * c.SPEC_HEAT_CAP_WATER
+    )

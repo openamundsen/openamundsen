@@ -1,5 +1,12 @@
-from .albedo import update_albedo
-from .compaction import compaction
-from .energybalance import energy_balance
 from .init import initialize
-from .snowfall import add_fresh_snow
+from .snow import (
+    accumulation,
+    albedo,
+    compaction,
+    heat_conduction,
+    melt,
+    runoff,
+    snow_properties,
+    sublimation,
+    update_layers,
+)

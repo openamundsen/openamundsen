@@ -164,6 +164,7 @@ class ModelGrid(Munch):
         - all_points: (N, 2)-array containing (x, y) coordinates of all grid points.
         - roi_points: (N, 2)-array containing (x, y) coordinates of all ROI points.
         - roi_idxs: (N, 2)-array containing (row, col) indexes of all ROI points.
+        - roi_idxs_flat: 1d-array containing the flattened (1d) indexes of all ROI points
         """
         transform = self.transform
         if transform.a < 0 or transform.e > 0:
@@ -216,6 +217,7 @@ class ModelGrid(Munch):
         roi_ys = self.Y[self.roi]
         self.roi_points = np.column_stack((roi_xs, roi_ys))
         self.roi_idxs = np.array(np.where(self.roi)).T
+        self.roi_idxs_flat = np.where(self.roi.flat)[0]
 
 
 def offset_to_timedelta(offset):

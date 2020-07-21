@@ -95,7 +95,7 @@ snow:
   model: layers  # layers, bulk, bulk_layers
   melt: energy_balance  # energy_balance or temperature_index
 
-  min_layer_thicknesses:  # minimum snow layer thicknesses (m)
+  min_thickness:  # minimum snow layer thicknesses (m)
     - 0.1
     - 0.2
     - 0.4
@@ -103,12 +103,24 @@ snow:
   thermal_conductivity: 0.24  # W m-1 K-1
   roughness_length: 0.01  # roughness length of snow-covered ground (m)
   measurement_height_adjustment: false  # adjust the temperature measurement height for snow depth
+  snow_cover_fraction_depth_scale: 0.1  # snow cover fraction depth scale (m)
+  irreducible_liquid_water_content: 0.03  # irreducible liquid water content of snow
+
+  # Parameters for the FSM prognostic density parameterization
+  compaction_timescale: 200  # snow compaction timescale (h)
+  max_cold_density: 300  # maximum density for cold (T < 0 °C) snow (kg m-3)
+  max_melting_density: 500  # maximum density for melting snow (kg m-3)
 
   albedo:
     min: 0.55
     max: 0.85
     k_pos: 0.12
     k_neg: 0.05
+
+    # Parameters for the Essery (2015) prognostic albedo parameterization
+    cold_snow_decay_timescale: 1000.  # cold snow albedo decay timescale (h)
+    melting_snow_decay_timescale: 100.  # melting snow albedo decay timescale (h)
+    refresh_snowfall: 10.  # Snowfall to refresh albedo (kg/m^2)
 
   slides:
     enabled: false

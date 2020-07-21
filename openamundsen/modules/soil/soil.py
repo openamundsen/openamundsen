@@ -284,13 +284,73 @@ def _soil_temperature(
 
 def soil_heat_flux(model):
     """
+    Wrapper function for _soil_heat_flux().
+    """
+    s = model.state
+
+    _soil_heat_flux(
+        model.grid.roi_idxs,
+        s.surface.heat_flux,
+        s.soil.heat_flux,
+        s.soil.thickness,
+        s.soil.temp,
+        s.soil.therm_cond,
+        s.snow.num_layers,
+        s.snow.thickness,
+        s.snow.temp,
+        s.snow.therm_cond,
+    )
+
+
+@njit(parallel=True, cache=True)
+def _soil_heat_flux(
+    roi_idxs,
+    surf_heat_flux,
+    soil_heat_flux,
+    soil_thickness,
+    soil_temp,
+    therm_cond_soil,
+    num_snow_layers,
+    snow_thickness,
+    snow_temp,
+    therm_cond_snow,
+):
+    """
     Calculate the soil heat flux, i.e., the flux from the surface to the top
     soil layer, following [1].
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    roi_idxs : ndarray(int, ndim=2)
+        (N, 2)-array specifying the (row, col) indices within the data arrays
+        that should be considered.
+
+    surf_heat_flux : ndarray(float, ndim=2)
+        Surface heat flux (W m-2).
+
+    soil_heat_flux : ndarray(float, ndim=2)
+        Soil heat flux (W m-2).
+
+    soil_thickness : ndarray(float, ndim=3)
+        Soil thickness (m).
+
+    soil_temp : ndarray(float, ndim=3)
+        Soil temperature (K).
+
+    therm_cond_soil : ndarray(float, ndim=3)
+        Soil thermal conductivity (W m-1 K-1).
+
+    num_snow_layers : ndarray(float, ndim=2)
+        Number of snow layers.
+
+    snow_thickness : ndarray(float, ndim=3)
+        Snow thickness (m).
+
+    snow_temp : ndarray(float, ndim=3)
+        Snow temperature (K).
+
+    therm_cond_snow : ndarray(float, ndim=3)
+        Snow thermal conductivity (W m-1 K-1).
 
     References
     ----------
@@ -299,7 +359,20 @@ def soil_heat_flux(model):
        GCM simulation of climate and climate sensitivity. Climate Dynamics, 15(3),
        183–203. https://doi.org/10.1007/s003820050276
     """
-    s = model.state
-    roi = model.grid.roi
-    s.soil.heat_flux[roi] = s.surface.heat_flux[roi]
-    # TODO account for snow
+    num_pixels = len(roi_idxs)
+    for idx_num in prange(num_pixels):
+        i, j = roi_idxs[idx_num]
+
+        ns = num_snow_layers[i, j]
+
+        if ns == 0:
+            soil_heat_flux[i, j] = surf_heat_flux[i, j]
+        else:
+            surf_moisture_conductance_bottom = 2. / (
+                snow_thickness[ns - 1, i, j] / therm_cond_snow[ns - 1, i, j]
+                + soil_thickness[0, i, j] / therm_cond_soil[0, i, j]
+            )
+            soil_heat_flux[i, j] = (
+                surf_moisture_conductance_bottom
+                * (snow_temp[ns - 1, i, j] - soil_temp[0, i, j])
+            )

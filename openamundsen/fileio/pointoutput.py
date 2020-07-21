@@ -91,9 +91,21 @@ _default_output_vars = [
     PointOutputVariable('meteo.sat_vap_press'),
     PointOutputVariable('meteo.vap_press'),
     PointOutputVariable('meteo.spec_hum'),
+
     PointOutputVariable('surface.temp', 'surface_temp'),
+    PointOutputVariable('surface.heat_flux', 'surface_heat_flux'),
+
     PointOutputVariable('soil.temp', 'soil_temp'),
+    PointOutputVariable('soil.heat_flux', 'soil_heat_flux'),
+
+    PointOutputVariable('snow.swe', 'swe'),
+    PointOutputVariable('snow.depth', 'snow_depth'),
     PointOutputVariable('snow.temp', 'snow_temp'),
+    PointOutputVariable('snow.thickness', 'snow_thickness'),
+    PointOutputVariable('snow.ice_content'),
+    PointOutputVariable('snow.liquid_water_content'),
+    PointOutputVariable('snow.melt'),
+    PointOutputVariable('snow.runoff'),
 ]
 
 

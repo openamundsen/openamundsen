@@ -7,7 +7,9 @@ def initialize(model):
 
     s.swe[roi] = 0
     s.depth[roi] = 0
+    s.area_fraction[roi] = 0
     s.num_layers[roi] = 0
+    s.sublimation[roi] = 0
     s.therm_cond[:, roi] = model.config.snow.thermal_conductivity
     s.thickness[:, roi] = 0
     s.ice_content[:, roi] = 0
