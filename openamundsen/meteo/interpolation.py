@@ -25,11 +25,12 @@ def _param_station_data(ds, param, date):
         Measurements (excluding nodata values) and corresponding x, y and z
         coordinates.
     """
-    data = ds[param].sel(time=date).dropna(dim='station')
-    xs = ds['x'].sel(station=data['station'])
-    ys = ds['y'].sel(station=data['station'])
-    zs = ds['alt'].sel(station=data['station'])
-    return data.values, xs.values, ys.values, zs.values
+    ds_param = ds[[param, 'x', 'y', 'alt']].sel(time=date).dropna(dim='station', subset=[param])
+    data = ds_param[param].values
+    xs = ds_param['x'].values
+    ys = ds_param['y'].values
+    zs = ds_param['alt'].values
+    return data, xs, ys, zs
 
 
 def _linear_fit(x, y):
