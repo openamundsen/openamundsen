@@ -288,15 +288,23 @@ class PointOutputManager:
         ds = self.data
         date = self.model.date
 
+        # Get the index for the current date because directly writing to the
+        # underlying numpy arrays of the xarray variables
+        # (ds_var.values[date_idx, :]) is a lot faster than using xarray with
+        # label-based indexing (ds_var.loc[date, :]).
+        # Using np.argmax is equivalent to using np.where to get the index,
+        # but is faster because it stops at the first match.
+        date_idx = np.argmax(ds.time.values == ds.sel(time=date).time.values)
+
         # Update dataset
         for var in self.vars:
             var_data = self.model.state[var.var_name]
             ds_var = ds[var.output_name]
 
-            if ds_var.ndim == 2:
-                ds[var.output_name].loc[date, :] = var_data[self.point_rows, self.point_cols]
+            if var_data.ndim == 2:
+                ds_var.values[date_idx, :] = var_data[self.point_rows, self.point_cols]
             else:  # 3-dimensional variable
-                ds[var.output_name].loc[date, :, :] = var_data[:, self.point_rows, self.point_cols]
+                ds_var.values[date_idx, :, :] = var_data[:, self.point_rows, self.point_cols]
 
         # Write data to file
         # If we are at the first write date, simple write the file (i.e. overwrite possibly
