@@ -37,7 +37,7 @@ def initialize(model):
     s.temp[:, roi] = cfg.init_temp
 
     # Thickness
-    for i, thickness in enumerate(cfg.layer_thicknesses):
+    for i, thickness in enumerate(cfg.thickness):
         s.thickness[i, roi] = thickness
 
     # Volumetric heat capacity of dry soil

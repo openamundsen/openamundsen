@@ -124,7 +124,7 @@ snow:
     threshold_temperature: 1.
 
 soil:
-  layer_thicknesses:
+  thickness:
     - 0.1
     - 0.2
     - 0.4

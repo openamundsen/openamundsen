@@ -296,7 +296,7 @@ def add_default_state_variables(model):
 
     # Soil variables
     soil = state.add_category('soil')
-    num_soil_layers = len(model.config.soil.layer_thicknesses)
+    num_soil_layers = len(model.config.soil.thickness)
     soil.add_variable('heat_flux', 'W m-2', 'Soil heat flux', 'downward_heat_flux_in_soil')
     soil.add_variable('vol_heat_cap_dry', 'J K-1 m-3', 'Volumetric heat capacity of dry soil')
     soil.add_variable('sat_water_pressure', 'm', 'Saturated soil water pressure')
