@@ -112,15 +112,20 @@ snow:
   max_melting_density: 500  # maximum density for melting snow (kg m-3)
 
   albedo:
-    min: 0.55
-    max: 0.85
-    k_pos: 0.12
-    k_neg: 0.05
+    method: usaco  # "usaco" or "fsm"
 
-    # Parameters for the Essery (2015) prognostic albedo parameterization
+    min: 0.55  # minimum snow albedo
+    max: 0.85  # maximum snow albedo
+
+    # Parameters for the "usaco" method (values from Rohrer (1992))
+    k_pos: 0.12  # decay factor for positive air temperatures (d-1)
+    k_neg: 0.05  # decay factor for negative air temperatures (d-1)
+    significant_snowfall: 0.5  # snowfall to refresh albedo (kg m-2 h-1)
+
+    # Parameters for the "fsm" method (prognostic albedo parameterization after Essery (2015))
     cold_snow_decay_timescale: 1000.  # cold snow albedo decay timescale (h)
     melting_snow_decay_timescale: 100.  # melting snow albedo decay timescale (h)
-    refresh_snowfall: 10.  # Snowfall to refresh albedo (kg/m^2)
+    refresh_snowfall: 10.  # snowfall to refresh albedo (kg m-2)
 
   slides:
     enabled: false

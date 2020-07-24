@@ -6,29 +6,174 @@ from openamundsen import (
 )
 
 
-# TODO this is the Essery albedo parameterization, implement the AMUNDSEN one too
+def _albedo_usaco(
+    albedo,
+    temp,
+    snowfall,
+    min_albedo,
+    max_albedo,
+    k_pos,
+    k_neg,
+    significant_snowfall,
+    timestep,
+):
+    """
+    Calculate snow albedo based on the aging curve approach by [1] and [2].
+
+    Parameters
+    ----------
+    albedo : ndarray
+        Current snow albedo.
+
+    temp : ndarray
+        Air temperature (K).
+
+    snowfall : ndarray
+        Snowfall rate (kg m-2 s-1).
+
+    min_albedo : float
+        Minimum albedo that can be reached.
+
+    max_albedo : float
+        Maximum albedo for fresh snowfall.
+
+    k_pos : float
+        Decay parameter for positive air temperatures (d-1).
+
+    k_neg : float
+        Decay parameter for positive air temperatures (d-1).
+
+    significant_snowfall : float
+        Snowfall rate required for resetting albedo to the maximum value (kg
+        m-2 s-1).
+
+    timestep : float
+        Model timestep (s).
+
+    Returns
+    -------
+    albedo : ndarray
+        Updated snow albedo.
+
+    References
+    ----------
+    .. [1] Snow Hydrology: Summary Report of the Snow Investigations. Published
+       by the North Pacific Division, Corps of Engineers, U.S. Army, Portland,
+       Oregon, 1956.  437 pages, 70 pages of plates, maps and figs., 27 cm.
+       https://doi.org/10.3189/S0022143000024503
+
+    .. [2] Rohrer, Mario. (1992). Die Schneedecke im Schweizer Alpenraum und
+       ihre Modellierung. Züricher Geographische Schriften. 49. 178.
+    """
+    k_scale_factor = timestep / (c.SECONDS_PER_HOUR * c.HOURS_PER_DAY)
+    decay_factor = k_scale_factor * np.where(temp >= c.T0, k_pos, k_neg)
+    albedo = min_albedo + (albedo - min_albedo) * np.exp(-decay_factor)
+    albedo[snowfall >= significant_snowfall] = max_albedo
+    return albedo
+
+
+def _albedo_fsm(
+    albedo,
+    surface_temp,
+    snowfall,
+    min_albedo,
+    max_albedo,
+    melting_snow_decay_timescale,
+    cold_snow_decay_timescale,
+    refresh_snowfall,
+    timestep,
+):
+    """
+    Calculate snow albedo based on the approach by [1].
+
+    Parameters
+    ----------
+    albedo : ndarray
+        Current snow albedo.
+
+    surface_temp : ndarray
+        Surface temperature (K).
+
+    snowfall : ndarray
+        Snowfall rate (kg m-2 s-1).
+
+    min_albedo : float
+        Minimum albedo that can be reached.
+
+    max_albedo : float
+        Maximum albedo for fresh snowfall.
+
+    melting_snow_decay_timescale : float
+        Melting snow albedo decay timescale (h).
+
+    cold_snow_decay_timescale : float
+        Cold snow albedo decay timescale (h).
+
+    refresh_snowfall : float
+        Snowfall for refreshing albedo (kg m-2).
+
+    timestep : float
+        Model timestep (s).
+
+    Returns
+    -------
+    albedo : ndarray
+        Updated snow albedo.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
+    albedo_decay_timescale = np.where(
+        surface_temp >= c.T0,
+        c.SECONDS_PER_HOUR * melting_snow_decay_timescale,
+        c.SECONDS_PER_HOUR * cold_snow_decay_timescale,
+    )
+    reciprocal_albedo_timescale = 1 / albedo_decay_timescale + snowfall / refresh_snowfall
+    albedo_limit = (
+        min_albedo / albedo_decay_timescale
+        + snowfall * max_albedo / refresh_snowfall
+    ) / reciprocal_albedo_timescale
+    decay_factor = reciprocal_albedo_timescale * timestep
+    albedo = albedo_limit + (albedo - albedo_limit) * np.exp(-decay_factor)
+    return albedo
+
+
 def albedo(model):
+    """
+    Update snow albedo using an exponential decay function.
+    """
     s = model.state
     roi = model.grid.roi
 
-    albedo_decay_timescale = np.where(
-        s.surface.temp[roi] >= c.T0,
-        c.SECONDS_PER_HOUR * model.config.snow.albedo.melting_snow_decay_timescale,
-        c.SECONDS_PER_HOUR * model.config.snow.albedo.cold_snow_decay_timescale,
-    )
-    reciprocal_albedo_timescale = (
-        1 / albedo_decay_timescale
-        + s.meteo.snow[roi] / model.config.snow.albedo.refresh_snowfall
-    )
-    albedo_limit = (
-        model.config.snow.albedo.min / albedo_decay_timescale
-        + s.meteo.snow[roi] * model.config.snow.albedo.max / model.config.snow.albedo.refresh_snowfall
-    ) / reciprocal_albedo_timescale
-    s.snow.albedo[roi] = (
-        albedo_limit
-        + (s.snow.albedo[roi] - albedo_limit)
-        * np.exp(-reciprocal_albedo_timescale * model.timestep)
-    )
+    if model.config.snow.albedo.method == 'usaco':
+        s.snow.albedo[roi] = _albedo_usaco(
+            s.snow.albedo[roi],
+            s.meteo.temp[roi],
+            s.meteo.snow[roi],
+            model.config.snow.albedo.min,
+            model.config.snow.albedo.max,
+            model.config.snow.albedo.k_pos,
+            model.config.snow.albedo.k_neg,
+            model.config.snow.albedo.significant_snowfall / c.SECONDS_PER_HOUR,
+            model.timestep,
+        )
+    elif model.config.snow.albedo.method == 'fsm':
+        s.snow.albedo[roi] = _albedo_fsm(
+            s.snow.albedo[roi],
+            s.surface.temp[roi],
+            s.meteo.snow[roi],
+            model.config.snow.albedo.min,
+            model.config.snow.albedo.max,
+            model.config.snow.albedo.melting_snow_decay_timescale,
+            model.config.snow.albedo.cold_snow_decay_timescale,
+            model.config.snow.albedo.refresh_snowfall,
+            model.timestep,
+        )
+    else:
+        raise NotImplementedError
 
 
 def fresh_snow_density(temp):
