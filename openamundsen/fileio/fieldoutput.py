@@ -78,11 +78,24 @@ class FieldOutputManager:
             if 'dates' in field_cfg:
                 write_dates = pd.to_datetime(field_cfg['dates'])
             else:
-                write_dates = pd.date_range(
-                    start=model.dates[0],
-                    end=model.dates[-1],
-                    freq=freq,
-                )
+                # If a frequency is set, for non-aggregated fields the write dates are assigned
+                # to the start of the respective intervals (e.g. if the model timestep is
+                # hourly and the write frequency is 'D', the write dates are 00:00 of each
+                # day).
+                # For aggregated fields, the write dates are assigned to the end of the
+                # intervals (e.g., in this case the write dates would be 23:00 of each day).
+                if agg is None:
+                    write_dates = pd.date_range(
+                        start=model.dates[0],
+                        end=model.dates[-1],
+                        freq=freq,
+                    )
+                else:
+                    write_dates = pd.period_range(
+                        start=model.dates[0],
+                        end=model.dates[-1],
+                        freq=freq,
+                    ).asfreq(model.config.timestep, how='E').to_timestamp()
 
             if output_name is None:
                 output_name = field_cfg.var.split('.')[-1]
