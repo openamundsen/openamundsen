@@ -176,7 +176,7 @@ def albedo(model):
         raise NotImplementedError
 
 
-def fresh_snow_density(temp):
+def _fresh_snow_density(temp):
     """
     Calculate fresh snow density based on the parameterization by [1] (eq. (4.22)).
 
@@ -207,7 +207,7 @@ def accumulation(model):
     roi = model.grid.roi
     s = model.state
 
-    density = fresh_snow_density(model.state.meteo.wetbulb_temp[roi])
+    density = _fresh_snow_density(model.state.meteo.wetbulb_temp[roi])
 
     frost = -np.minimum(s.snow.sublimation[roi], 0)
     ice_content_change = (s.meteo.snow[roi] + frost) * model.timestep
