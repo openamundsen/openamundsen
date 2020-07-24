@@ -3,9 +3,7 @@ import loguru
 from openamundsen import (
     conf,
     constants,
-    errors,
     fileio,
-    interpolation,
     liveview,
     meteo,
     modules,
@@ -73,7 +71,6 @@ class Model:
             self.date = date
             meteo.interpolate_station_data(self, date)
             self._process_meteo_data()
-            self._calculate_irradiance()
             self._model_interface()
             self.point_outputs.update()
             self.field_outputs.update()
@@ -381,192 +378,6 @@ class Model:
         )
         m.snow[roi] = snowfall_frac * m.precip[roi]
         m.rain[roi] = (1 - snowfall_frac) * m.precip[roi]
-
-    def _calculate_irradiance(self):
-        sun_params = modules.radiation.sun_parameters(
-            self.date,
-            self.grid.center_lon,
-            self.grid.center_lat,
-            self.config.timezone,
-        )
-
-        day_angle = sun_params['day_angle']
-        sun_vec = sun_params['sun_vector']
-        zenith_angle = np.rad2deg(np.arccos(sun_vec[2]))
-        sun_over_horizon = zenith_angle < 90
-
-        self._calculate_clear_sky_shortwave_irradiance(day_angle, sun_vec, sun_over_horizon)
-        self._calculate_shortwave_irradiance(sun_over_horizon)
-        self._calculate_longwave_irradiance()
-
-    def _calculate_clear_sky_shortwave_irradiance(self, day_angle, sun_vec, sun_over_horizon):
-        roi = self.grid.roi
-
-        mean_surface_albedo = self.state.surface.albedo[roi].mean()
-
-        if sun_over_horizon:
-            self.logger.debug('Calculating shadows')
-            shadows = modules.radiation.shadows(
-                self.state.base.dem,
-                self.grid.resolution,
-                sun_vec,
-            )
-
-            self.logger.debug('Calculating clear-sky shortwave irradiance')
-            dir_irr, diff_irr = modules.radiation.clear_sky_shortwave_irradiance(
-                day_angle,
-                sun_vec,
-                shadows,
-                self.state.base.dem,
-                self.state.base.svf,
-                self.state.base.normal_vec,
-                self.state.meteo.atmos_press,
-                self.state.meteo.precipitable_water,
-                mean_surface_albedo,
-                roi=roi,
-                ozone_layer_thickness=self.config.meteo.radiation.ozone_layer_thickness,
-                atmospheric_visibility=self.config.meteo.radiation.atmospheric_visibility,
-                single_scattering_albedo=self.config.meteo.radiation.single_scattering_albedo,
-                clear_sky_albedo=self.config.meteo.radiation.clear_sky_albedo,
-            )
-        else:
-            dir_irr = np.zeros((self.grid.rows, self.grid.cols))
-            diff_irr = np.zeros((self.grid.rows, self.grid.cols))
-
-        pot_irr = dir_irr + diff_irr
-        self.state.meteo.sw_in_clearsky[roi] = pot_irr[roi]
-        self.state.meteo.dir_in_clearsky[roi] = dir_irr[roi]
-        self.state.meteo.diff_in_clearsky[roi] = diff_irr[roi]
-
-    def _calculate_shortwave_irradiance(self, sun_over_horizon):
-        self.logger.debug('Calculating actual shortwave irradiance')
-        cloud_config = self.config.meteo.interpolation.cloudiness
-        roi = self.grid.roi
-        m = self.state.meteo
-
-        # Select stations within the grid extent and with shortwave radiation measurements
-        # for the current time step
-        ds_rad = (
-            self.meteo
-            .isel(station=self.meteo.within_grid_extent)
-            .sel(time=self.date)
-            .dropna('station', subset=['sw_in'])
-        )
-        num_rad_stations = len(ds_rad.station)
-
-        # Select stations with temperature and humidity measurements for the current time step
-        ds_temp_hum = (
-            self.meteo
-            .sel(time=self.date)
-            .dropna('station', how='any', subset=['temp', 'rel_hum'])
-        )
-        num_temp_hum_stations = len(ds_temp_hum.station)
-
-        method = 'constant'
-        if sun_over_horizon:
-            if cloud_config['day_method'] == 'clear_sky_fraction':
-                if num_rad_stations > 0:
-                    method = 'clear_sky_fraction'
-                else:
-                    if cloud_config['allow_fallback'] and num_temp_hum_stations > 0:
-                        self.logger.debug('No radiation measurements available, falling back '
-                                          'to humidity-based cloudiness calculation')
-                        method = 'humidity'
-                    else:
-                        self.logger.debug('No radiation measurements available, using cloudiness '
-                                          'from previous time step')
-                        method = 'constant'
-            else:
-                method = cloud_config['day_method']
-        else:
-            if cloud_config['night_method'] == 'humidity':
-                if num_temp_hum_stations > 0:
-                    method = 'humidity'
-                else:
-                    self.logger.debug('No temperature and humidity measurements available, using '
-                                      'cloudiness from previous time step')
-                    method = 'constant'
-
-        if method == 'constant':
-            pass  # use cloudiness from previous time step, i.e., do nothing
-        elif method == 'humidity':
-            lr_t = self.config.meteo.interpolation.temperature.lapse_rates[self.date.month - 1]
-            lr_td = self.config.meteo.interpolation.humidity.lapse_rates[self.date.month - 1]
-            # TODO use here also the same settings for regression/fixed gradients as for the interpolation
-            cloud_fracs = meteo.cloud_fraction_from_humidity(
-                ds_temp_hum.temp,
-                ds_temp_hum.rel_hum,
-                ds_temp_hum.alt,
-                lr_t,
-                lr_td,
-            )
-            cloud_factors = meteo.cloud_factor_from_cloud_fraction(cloud_fracs)
-            cloud_factor_interpol = interpolation.idw(
-                ds_temp_hum.x,
-                ds_temp_hum.y,
-                cloud_factors,
-                self.grid.roi_points[:, 0],
-                self.grid.roi_points[:, 1],
-            )
-            m.cloud_factor[roi] = cloud_factor_interpol.clip(0, 1)
-        elif method == 'clear_sky_fraction':
-            cloud_factors = ds_rad.sw_in.values / m.sw_in_clearsky[ds_rad.row, ds_rad.col]
-            cloud_factor_interpol = interpolation.idw(
-                ds_rad.x,
-                ds_rad.y,
-                cloud_factors,
-                self.grid.roi_points[:, 0],
-                self.grid.roi_points[:, 1],
-            )
-            m.cloud_factor[roi] = cloud_factor_interpol.clip(0, 1)
-
-        m.cloud_fraction[roi] = meteo.cloud_fraction_from_cloud_factor(m.cloud_factor[roi])
-        m.sw_in[roi] = m.sw_in_clearsky[roi] * m.cloud_factor[roi]
-        m.sw_out[roi] = self.state.surface.albedo[roi] * m.sw_in[roi]
-
-    def _calculate_longwave_irradiance(self):
-        self.logger.debug('Calculating longwave irradiance')
-        roi = self.grid.roi
-        m = self.state.meteo
-        clear_sky_emissivity = meteo.clear_sky_emissivity(m.precipitable_water[roi])
-
-        # TODO these are parameters
-        snow_emissivity = 0.99
-        cloud_emissivity = 0.976  # emissivity of totally overcast skies (Greuell et al., 1997)
-        rock_emission_factor = 0.01  # (K W-1 m2) temperature of emitting rocks during daytime is assumed to be higher than the air temperature by this factor multiplied by the incoming shortwave radiation (Greuell et al., 1997)
-
-        # Incoming longwave radiation from the clear sky
-        lw_in_clearsky = (
-            clear_sky_emissivity
-            * constants.STEFAN_BOLTZMANN
-            * m.temp[roi]**4
-            * self.state.base.svf[roi]
-            * (1 - m.cloud_fraction[roi]**2)
-        )
-
-        # Incoming longwave radiation from clouds
-        lw_in_clouds = (
-            cloud_emissivity
-            * constants.STEFAN_BOLTZMANN
-            * m.temp[roi]**4
-            * self.state.base.svf[roi]
-            * m.cloud_fraction[roi]**2
-        )
-
-        # Incoming longwave radiation from surrounding slopes
-        snowfree_count = (self.state.snow.swe[roi] == 0).sum()
-        rock_fraction = snowfree_count / self.grid.roi.sum()
-        lw_in_slopes = (
-            constants.STEFAN_BOLTZMANN
-            * (1 - self.state.base.svf[roi]) * (
-                rock_fraction * (m.temp[roi] + rock_emission_factor * m.sw_in[roi])**4
-                + (1 - rock_fraction) * self.state.surface.temp[roi]**4
-            )
-        )
-
-        # Total incoming/outgoing longwave radiation
-        m.lw_in[roi] = lw_in_clearsky + lw_in_clouds + lw_in_slopes
-        m.lw_out[roi] = snow_emissivity * constants.STEFAN_BOLTZMANN * self.state.surface.temp[roi]**4
 
     def initialize(self):
         """
