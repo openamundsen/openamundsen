@@ -276,15 +276,16 @@ def energy_balance(model):
         * (s.surface.temp[roi] - s.surface.layer_temp[roi])
         / s.surface.thickness[roi]
     )
-    sens_heat_flux = constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua * (s.surface.temp[roi] - s.meteo.temp[roi])
-    lat_heat_flux = latent_heat * surf_moisture_flux
+    # TODO implement other turbulent fluxes parameterizations
+    s.surface.sens_heat_flux[roi] = constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua * (s.surface.temp[roi] - s.meteo.temp[roi])
+    s.surface.lat_heat_flux[roi] = latent_heat * surf_moisture_flux
     net_radiation = (
         (1 - s.surface.albedo[roi]) * s.meteo.sw_in[roi]
         + s.meteo.lw_in[roi]
         - constants.STEFAN_BOLTZMANN * s.surface.temp[roi]**4
     )
     surf_temp_change = (
-        (net_radiation - sens_heat_flux - lat_heat_flux - s.surface.heat_flux[roi])
+        (net_radiation - s.surface.sens_heat_flux[roi] - s.surface.lat_heat_flux[roi] - s.surface.heat_flux[roi])
         / (
             (constants.SPEC_HEAT_CAP_DRY_AIR + latent_heat * moisture_availability * D) * rhoa_CH_Ua
             + 2 * s.surface.therm_cond[roi] / s.surface.thickness[roi]
@@ -306,8 +307,8 @@ def energy_balance(model):
         surf_temp_change[melties_roi] = (
             (
                 net_radiation[melties_roi]
-                - sens_heat_flux[melties_roi]
-                - lat_heat_flux[melties_roi]
+                - s.surface.sens_heat_flux[melties]
+                - s.surface.lat_heat_flux[melties]
                 - s.surface.heat_flux[melties]
                 - constants.LATENT_HEAT_OF_FUSION * s.snow.melt[melties]
             ) / (
@@ -360,8 +361,8 @@ def energy_balance(model):
                 / s.surface.thickness[melties2]
             )
 
-            sens_heat_flux[melties2_roi] = constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua[melties2_roi] * (constants.T0 - s.meteo.temp[melties2])
-            lat_heat_flux[melties2_roi] = constants.LATENT_HEAT_OF_SUBLIMATION * surf_moisture_flux[melties2_roi]
+            s.surface.sens_heat_flux[melties2] = constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua[melties2_roi] * (constants.T0 - s.meteo.temp[melties2])
+            s.surface.lat_heat_flux[melties2] = constants.LATENT_HEAT_OF_SUBLIMATION * surf_moisture_flux[melties2_roi]
             net_radiation[melties2_roi] = (
                 (1 - s.surface.albedo[melties2]) * s.meteo.sw_in[melties2]
                 + s.meteo.lw_in[melties2]
@@ -372,8 +373,8 @@ def energy_balance(model):
                 (
                     (
                         net_radiation[melties2_roi]
-                        - sens_heat_flux[melties2_roi]
-                        - lat_heat_flux[melties2_roi]
+                        - s.surface.sens_heat_flux[melties2]
+                        - s.surface.lat_heat_flux[melties2]
                         - s.surface.heat_flux[melties2]
                     ) / constants.LATENT_HEAT_OF_FUSION
                 ),
@@ -389,7 +390,7 @@ def energy_balance(model):
     s.surface.temp[roi] += surf_temp_change
     surf_moisture_flux += surf_moisture_flux_change
     s.surface.heat_flux[roi] += surf_heat_flux_change
-    sens_heat_flux += sens_heat_flux_change
+    s.surface.sens_heat_flux[roi] += sens_heat_flux_change
 
     # Snow sublimation
     s.snow.sublimation[roi] = 0.
@@ -400,5 +401,5 @@ def energy_balance(model):
         constants.LATENT_HEAT_OF_SUBLIMATION,
         constants.LATENT_HEAT_OF_VAPORIZATION,
     )
-    lat_heat_flux = latent_heat * surf_moisture_flux
+    s.surface.lat_heat_flux[roi] = latent_heat * surf_moisture_flux
     # soil_evaporation[model.roi_mask_to_global(~pos)] = surf_moisture_flux[~pos]

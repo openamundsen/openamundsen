@@ -94,6 +94,8 @@ _default_output_vars = [
 
     PointOutputVariable('surface.temp', 'surface_temp'),
     PointOutputVariable('surface.heat_flux', 'surface_heat_flux'),
+    PointOutputVariable('surface.sens_heat_flux'),
+    PointOutputVariable('surface.lat_heat_flux'),
 
     PointOutputVariable('soil.temp', 'soil_temp'),
     PointOutputVariable('soil.heat_flux', 'soil_heat_flux'),

@@ -273,6 +273,8 @@ def add_default_state_variables(model):
     surf.add_variable('thickness', 'm', 'Surface layer thickness')
     surf.add_variable('therm_cond', 'W m-1 K-1', 'Surface thermal conductivity')
     surf.add_variable('heat_flux', 'W m-2', 'Surface heat flux')
+    surf.add_variable('sens_heat_flux', 'W m-2', 'Sensible heat flux', 'surface_downward_sensible_heat_flux')
+    surf.add_variable('lat_heat_flux', 'W m-2', 'Latent heat flux', 'surface_downward_latent_heat_flux')
     surf.add_variable('roughness_length', 'm', 'Surface roughness length', 'surface_roughness_length')
 
     # Snow variables
