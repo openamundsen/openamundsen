@@ -240,25 +240,139 @@ def _fresh_snow_density(temp):
 def compaction(model):
     roi = model.grid.roi
     snow = model.state.snow
-    timescale = c.SECONDS_PER_HOUR * model.config.snow.compaction_timescale  # snow compaction timescale (s)
 
-    _compaction(
-        model.grid.roi_idxs,
-        model.timestep,
-        timescale,
-        model.config.snow.max_cold_density,
-        model.config.snow.max_melting_density,
-        snow.num_layers,
-        snow.temp,
-        snow.thickness,
-        snow.ice_content,
-        snow.liquid_water_content,
-        snow.density,
-    )
+    if model.config.snow.compaction.method == 'anderson':
+        _compaction_anderson(
+            model.grid.roi_idxs,
+            model.timestep,
+            snow.num_layers,
+            snow.thickness,
+            snow.ice_content,
+            snow.liquid_water_content,
+            snow.density,
+            model.state.meteo.temp,
+        )
+    elif model.config.snow.compaction.method == 'fsm':
+        timescale = c.SECONDS_PER_HOUR * model.config.snow.compaction.timescale  # snow compaction timescale (s)
+        _compaction_fsm(
+            model.grid.roi_idxs,
+            model.timestep,
+            timescale,
+            model.config.snow.compaction.max_cold_density,
+            model.config.snow.compaction.max_melting_density,
+            snow.num_layers,
+            snow.temp,
+            snow.thickness,
+            snow.ice_content,
+            snow.liquid_water_content,
+            snow.density,
+        )
+    else:
+        raise NotImplementedError
 
 
 @njit(cache=True, parallel=True)
-def _compaction(
+def _compaction_anderson(
+    roi_idxs,
+    timestep,
+    num_layers,
+    thickness,
+    ice_content,
+    liquid_water_content,
+    density,
+    air_temp,
+):
+    """
+    Calculate snow compaction following [1].
+    Parameter names (c1...c7) are changed compared to the original
+    formulation, follwing [2].
+
+    Parameters
+    ----------
+    roi_idxs : ndarray(int, ndim=2)
+        (N, 2)-array specifying the (row, col) indices within the data arrays
+        that should be considered.
+
+    timestep : float
+        Model timestep (s).
+
+    num_layers : ndarray(float, ndim=2)
+        Number of snow layers.
+
+    thickness : ndarray(float, ndim=3)
+        Snow thickness (m).
+
+    ice_content : ndarray(float, ndim=3)
+        Ice content of snow (kg m-2).
+
+    liquid_water_content : ndarray(float, ndim=3)
+        Liquid water content of snow (kg m-2).
+
+    density : ndarray(float, ndim=3)
+        Snow density (kg m-3).
+
+    air_temp : ndarray(float, ndim=2)
+        Air temperature (K).
+
+    References
+    ----------
+    .. [1] Anderson, E. A. (1976). A point energy and mass balance model of a
+       snow cover (NOAA Technical Report NWS 19, pp. 1–172). NOAA.
+       https://repository.library.noaa.gov/view/noaa/6392
+
+    .. [2] Koivusalo, H., Heikinheimo, M., & Karvonen, T. (2001). Test of a
+       simple two-layer parameterisation to simulate the energy balance and
+       temperature of a snow pack. Theoretical and Applied Climatology, 70(1–4),
+       65–79. https://doi.org/10.1007/s007040170006
+    """
+    timestep_h = timestep / c.SECONDS_PER_HOUR  # model timestep (h)
+
+    c1 = 0.001  # m2 kg-1 h-1
+    c2 = 0.08  # K-1
+    c3 = 0.021  # m3 kg-1
+    c5 = 0.04  # K-1
+    c7 = 0.046  # m3 kg-1
+    rho_d = 150.  # kg m-3
+
+    num_pixels = len(roi_idxs)
+    for idx_num in prange(num_pixels):
+        i, j = roi_idxs[idx_num]
+        load = 0.  # snow load (mass of layers above + 50% of the current layer) (kg m-2)
+
+        for k in range(num_layers[i, j]):
+            if thickness[k, i, j] > 0:  # TODO is this necessary?
+                load += (ice_content[k, i, j] + liquid_water_content[k, i, j]) / 2.
+
+                # TODO rather update density in update_layers()?
+                density[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / thickness[k, i, j]
+
+                if density[k, i, j] > rho_d:
+                    c6 = np.exp(-c7 * (density[k, i, j] - rho_d))
+                else:
+                    c6 = 1.
+
+                # Parameter c4 has an enhancement factor of 2 for wet snow
+                if liquid_water_content[k, i, j] > 0:
+                    c4 = 0.02  # h-1
+                else:
+                    c4 = 0.01  # h-1
+
+                # Densification due to snow load (eq. (3.29) in [1], eq. (12) in [2])
+                dens_compact = c1 * load * np.exp(-c2 * (c.T0 - air_temp[i, j]) - c3 * density[k, i, j])
+
+                # Densification due to destructive metamorphism (eq. (3.31) in [1], eq. (13) in [2])
+                dens_metamorph = c4 * np.exp(-c5 * (c.T0 - air_temp[i, j])) * c6
+
+                densification_rate = density[k, i, j] * (dens_compact + dens_metamorph)
+                density[k, i, j] += densification_rate * timestep_h
+                thickness[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / density[k, i, j]
+
+                # Update snow load for the next layer
+                load += (ice_content[k, i, j] + liquid_water_content[k, i, j])
+
+
+@njit(cache=True, parallel=True)
+def _compaction_fsm(
     roi_idxs,
     timestep,
     timescale,
@@ -321,7 +435,7 @@ def _compaction(
         i, j = roi_idxs[idx_num]
 
         for k in range(num_layers[i, j]):
-            if thickness[k, i, j] > 0:
+            if thickness[k, i, j] > 0:  # TODO is this necessary?
                 # TODO rather update density in update_layers()?
                 density[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / thickness[k, i, j]
 
