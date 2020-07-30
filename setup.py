@@ -30,7 +30,7 @@ setup(
     extras_require={
         'liveview': [
             'PyQt5>=5.12',
-            'pyqtgraph @ git+https://github.com/pyqtgraph/pyqtgraph@develop',
+            'pyqtgraph>=0.11.0',
         ],
     },
 )

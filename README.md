@@ -22,7 +22,7 @@ line utility.
             pandas                   \
             pyproj                   \
             pyqt                     \
-            pyqtgraph=0.11.0rc0      \
+            pyqtgraph                \
             ruamel.yaml              \
             rasterio                 \
             scipy                    \
