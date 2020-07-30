@@ -18,7 +18,7 @@ setup(
         'loguru>=0.3.2',
         'munch>=2.5.0',
         'netCDF4>=1.5.2',
-        'numba>=0.47.0',
+        'numba>=0.50.1',
         'numpy>=1.17.2',
         'pandas>=0.25.1',
         'pyproj>=2.4.0',
