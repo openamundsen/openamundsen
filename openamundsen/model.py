@@ -233,10 +233,7 @@ class Model:
             modules.snow.initialize(self)
 
         modules.soil.initialize(self)
-
-        # TODO replace this eventually
-        self.state.surface.albedo[self.grid.roi] = self.config.soil.albedo
-        self.state.surface.temp[self.grid.roi] = 285.
+        self.state.surface.temp[self.grid.roi] = self.state.soil.temp[0, self.grid.roi]
 
     def _initialize_point_outputs(self):
         self.point_outputs = fileio.PointOutputManager(self)

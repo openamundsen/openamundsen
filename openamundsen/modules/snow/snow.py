@@ -848,7 +848,7 @@ def _update_layers(
                     internal_energy[k_new] += weight * energy_prev[k_old, i, j]
 
                     if weight == 1.:
-                        new_thickness -= thickness_prev[k_old, i, j]  # XXX
+                        new_thickness -= thickness_prev[k_old, i, j]
                         break
 
                     thickness_prev[k_old, i, j] *= 1 - weight
@@ -895,7 +895,7 @@ def snow_properties(model):
     snow.depth[roi] = snow.thickness[:, roi].sum(axis=0)
     snow.swe[roi] = (snow.ice_content[:, roi] + snow.liquid_water_content[:, roi]).sum(axis=0)
 
-    # Snow cover fraction (eq. (13) from Essery et al. (2015))
+    # Snow cover fraction (eq. (13))
     snow.area_fraction[roi] = np.tanh(snow.depth[roi] / model.config.snow.snow_cover_fraction_depth_scale)
 
     # Areal heat capacity of snow (eq. (9))
