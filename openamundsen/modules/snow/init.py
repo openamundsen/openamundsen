@@ -2,6 +2,23 @@ from openamundsen import constants
 
 
 def initialize(model):
+    """
+    Initialize state variables for the snow layer model.
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    References
+    ----------
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     roi = model.grid.roi
     s = model.state.snow
 

@@ -6,6 +6,41 @@ from openamundsen import (
 )
 
 
+def albedo(model):
+    """
+    Update snow albedo using an exponential decay function.
+    """
+    s = model.state
+    roi = model.grid.roi
+
+    if model.config.snow.albedo.method == 'usaco':
+        s.snow.albedo[roi] = _albedo_usaco(
+            s.snow.albedo[roi],
+            s.meteo.temp[roi],
+            s.meteo.snow[roi],
+            model.config.snow.albedo.min,
+            model.config.snow.albedo.max,
+            model.config.snow.albedo.k_pos,
+            model.config.snow.albedo.k_neg,
+            model.config.snow.albedo.significant_snowfall / c.SECONDS_PER_HOUR,
+            model.timestep,
+        )
+    elif model.config.snow.albedo.method == 'fsm':
+        s.snow.albedo[roi] = _albedo_fsm(
+            s.snow.albedo[roi],
+            s.surface.temp[roi],
+            s.meteo.snow[roi],
+            model.config.snow.albedo.min,
+            model.config.snow.albedo.max,
+            model.config.snow.albedo.melting_snow_decay_timescale,
+            model.config.snow.albedo.cold_snow_decay_timescale,
+            model.config.snow.albedo.refresh_snowfall,
+            model.timestep,
+        )
+    else:
+        raise NotImplementedError
+
+
 def _albedo_usaco(
     albedo,
     temp,
@@ -141,39 +176,38 @@ def _albedo_fsm(
     return albedo
 
 
-def albedo(model):
+def accumulation(model):
     """
-    Update snow albedo using an exponential decay function.
-    """
-    s = model.state
-    roi = model.grid.roi
+    Add fresh snowfall and frost to the first snow layer.
 
-    if model.config.snow.albedo.method == 'usaco':
-        s.snow.albedo[roi] = _albedo_usaco(
-            s.snow.albedo[roi],
-            s.meteo.temp[roi],
-            s.meteo.snow[roi],
-            model.config.snow.albedo.min,
-            model.config.snow.albedo.max,
-            model.config.snow.albedo.k_pos,
-            model.config.snow.albedo.k_neg,
-            model.config.snow.albedo.significant_snowfall / c.SECONDS_PER_HOUR,
-            model.timestep,
-        )
-    elif model.config.snow.albedo.method == 'fsm':
-        s.snow.albedo[roi] = _albedo_fsm(
-            s.snow.albedo[roi],
-            s.surface.temp[roi],
-            s.meteo.snow[roi],
-            model.config.snow.albedo.min,
-            model.config.snow.albedo.max,
-            model.config.snow.albedo.melting_snow_decay_timescale,
-            model.config.snow.albedo.cold_snow_decay_timescale,
-            model.config.snow.albedo.refresh_snowfall,
-            model.timestep,
-        )
-    else:
-        raise NotImplementedError
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
+    roi = model.grid.roi
+    s = model.state
+
+    density = _fresh_snow_density(model.state.meteo.wetbulb_temp[roi])
+
+    frost = -np.minimum(s.snow.sublimation[roi], 0)
+    ice_content_change = (s.meteo.snow[roi] + frost) * model.timestep
+
+    # Initialize first snow layer where necessary
+    pos_init_layer = model.roi_mask_to_global((s.snow.num_layers[roi] == 0) & (ice_content_change > 0))
+    s.snow.num_layers[pos_init_layer] = 1
+    s.snow.temp[0, pos_init_layer] = np.minimum(s.meteo.temp[pos_init_layer], c.T0)
+    s.snow.albedo[pos_init_layer] = model.config.snow.albedo.max
+
+    # Add snow to first layer
+    s.snow.ice_content[0, roi] += ice_content_change
+    s.snow.thickness[0, roi] += ice_content_change / density
 
 
 def _fresh_snow_density(temp):
@@ -201,26 +235,6 @@ def _fresh_snow_density(temp):
     temp = np.array(temp).clip(min_temp)  # the parameterization is only valid for temperatures >= -15 °C
     rho = 50 + 1.7 * (temp - min_temp)**1.5
     return rho
-
-
-def accumulation(model):
-    roi = model.grid.roi
-    s = model.state
-
-    density = _fresh_snow_density(model.state.meteo.wetbulb_temp[roi])
-
-    frost = -np.minimum(s.snow.sublimation[roi], 0)
-    ice_content_change = (s.meteo.snow[roi] + frost) * model.timestep
-
-    # Initialize first snow layer where necessary
-    pos_init_layer = model.roi_mask_to_global((s.snow.num_layers[roi] == 0) & (ice_content_change > 0))
-    s.snow.num_layers[pos_init_layer] = 1
-    s.snow.temp[0, pos_init_layer] = np.minimum(s.meteo.temp[pos_init_layer], c.T0)
-    s.snow.albedo[pos_init_layer] = model.config.snow.albedo.max
-
-    # Add snow to first layer
-    s.snow.ice_content[0, roi] += ice_content_change
-    s.snow.thickness[0, roi] += ice_content_change / density
 
 
 def compaction(model):
@@ -257,6 +271,51 @@ def _compaction(
     liquid_water_content,
     density,
 ):
+    """
+    Calculate snow compaction following [1].
+
+    Parameters
+    ----------
+    roi_idxs : ndarray(int, ndim=2)
+        (N, 2)-array specifying the (row, col) indices within the data arrays
+        that should be considered.
+
+    timestep : float
+        Model timestep (s).
+
+    timescale : float
+        Snow compaction timescale (s).
+
+    max_cold_density : float
+        Maximum density for cold (T < 0 °C) snow (kg m-2).
+
+    max_melting_density : float
+        Maximum density for melting snow (kg m-2).
+
+    num_layers : ndarray(float, ndim=2)
+        Number of snow layers.
+
+    temp : ndarray(float, ndim=3)
+        Snow temperature (K).
+
+    thickness : ndarray(float, ndim=3)
+        Snow thickness (m).
+
+    ice_content : ndarray(float, ndim=3)
+        Ice content of snow (kg m-2).
+
+    liquid_water_content : ndarray(float, ndim=3)
+        Liquid water content of snow (kg m-2).
+
+    density : ndarray(float, ndim=3)
+        Snow density (kg m-3).
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     num_pixels = len(roi_idxs)
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
@@ -285,6 +344,9 @@ def _compaction(
 
 
 def melt(model):
+    """
+    Wrapper function for _melt().
+    """
     snow = model.state.snow
 
     _melt(
@@ -312,6 +374,45 @@ def _melt(
     liquid_water_content,
     areal_heat_cap,
 ):
+    """
+    Calculate snowmelt following [1].
+
+    Parameters
+    ----------
+    roi_idxs : ndarray(int, ndim=2)
+        (N, 2)-array specifying the (row, col) indices within the data arrays
+        that should be considered.
+
+    timestep : float
+        Model timestep (s).
+
+    num_layers : ndarray(float, ndim=2)
+        Number of snow layers.
+
+    melt : ndarray(float, ndim=2)
+        Snowmelt (kg m-2).
+
+    thickness : ndarray(float, ndim=3)
+        Snow thickness (m).
+
+    temp : ndarray(float, ndim=3)
+        Snow temperature (K).
+
+    ice_content : ndarray(float, ndim=3)
+        Ice content of snow (kg m-2).
+
+    liquid_water_content : ndarray(float, ndim=3)
+        Liquid water content of snow (kg m-2).
+
+    areal_heat_cap : ndarray(float, ndim=3)
+        Areal heat capacity of snow (J K-1 m-2).
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     num_pixels = len(roi_idxs)
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
@@ -338,6 +439,9 @@ def _melt(
 
 
 def sublimation(model):
+    """
+    Wrapper function for _sublimation().
+    """
     snow = model.state.snow
 
     _sublimation(
@@ -359,6 +463,36 @@ def _sublimation(
     thickness,
     sublimation,
 ):
+    """
+    Calculate snow sublimation following [1].
+
+    Parameters
+    ----------
+    roi_idxs : ndarray(int, ndim=2)
+        (N, 2)-array specifying the (row, col) indices within the data arrays
+        that should be considered.
+
+    timestep : float
+        Model timestep (s).
+
+    num_layers : ndarray(float, ndim=2)
+        Number of snow layers.
+
+    ice_content : ndarray(float, ndim=3)
+        Ice content of snow (kg m-2).
+
+    thickness : ndarray(float, ndim=3)
+        Snow thickness (m).
+
+    sublimation : ndarray(float, ndim=2)
+        Snow sublimation (kg m-2).
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     num_pixels = len(roi_idxs)
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
@@ -378,6 +512,9 @@ def _sublimation(
 
 
 def runoff(model):
+    """
+    Wrapper function for _runoff().
+    """
     s = model.state
 
     _runoff(
@@ -411,6 +548,54 @@ def _runoff(
     runoff,
     areal_heat_cap,
 ):
+    """
+    Calculate snowmelt runoff following [1].
+
+    Parameters
+    ----------
+    roi_idxs : ndarray(int, ndim=2)
+        (N, 2)-array specifying the (row, col) indices within the data arrays
+        that should be considered.
+
+    timestep : float
+        Model timestep (s).
+
+    irreducible_liquid_water_content : float
+        Irreducible liquid water content (-).
+
+    snowfall : ndarray(float, ndim=2)
+        Snowfall flux (kg m-2 s-1).
+
+    rainfall : ndarray(float, ndim=2)
+        Rainfall flux (kg m-2 s-1).
+
+    num_layers : ndarray(float, ndim=2)
+        Number of snow layers.
+
+    thickness : ndarray(float, ndim=3)
+        Snow thickness (m).
+
+    temp : ndarray(float, ndim=3)
+        Snow temperature (K).
+
+    ice_content : ndarray(float, ndim=3)
+        Ice content of snow (kg m-2).
+
+    liquid_water_content : ndarray(float, ndim=3)
+        Liquid water content of snow (kg m-2).
+
+    runoff : ndarray(float, ndim=2)
+        Snow runoff (kg m-2).
+
+    areal_heat_cap : ndarray(float, ndim=3)
+        Areal heat capacity of snow (J K-1 m-2).
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     num_pixels = len(roi_idxs)
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
@@ -451,6 +636,9 @@ def _runoff(
 
 
 def heat_conduction(model):
+    """
+    Wrapper function for _heat_conduction().
+    """
     _heat_conduction(
         model.grid.roi_idxs,
         model.state.snow.num_layers,
@@ -541,6 +729,9 @@ def _heat_conduction(
 
 
 def update_layers(model):
+    """
+    Wrapper function for _update_layers().
+    """
     snow = model.state.snow
 
     _update_layers(
@@ -568,6 +759,45 @@ def _update_layers(
     temp,
     depth,
 ):
+    """
+    Update snow layers.
+
+    Parameters
+    ----------
+    roi_idxs : ndarray(int, ndim=2)
+        (N, 2)-array specifying the (row, col) indices within the data arrays
+        that should be considered.
+
+    num_layers : ndarray(float, ndim=2)
+        Number of snow layers.
+
+    min_thickness : ndarray(float, ndim=1)
+        Minimum snow layer thicknesses (m).
+
+    thickness : ndarray(float, ndim=3)
+        Snow thickness (m).
+
+    ice_content : ndarray(float, ndim=3)
+        Ice content of snow (kg m-2).
+
+    liquid_water_content : ndarray(float, ndim=3)
+        Liquid water content of snow (kg m-2).
+
+    areal_heat_cap : ndarray(float, ndim=3)
+        Areal heat capacity of snow (J K-1 m-2).
+
+    temp : ndarray(float, ndim=3)
+        Snow temperature (K).
+
+    depth : ndarray(float, ndim=2)
+        Snow depth (m).
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     max_num_layers = len(min_thickness)
     num_layers_prev = num_layers.copy()
     thickness_prev = thickness.copy()
@@ -645,6 +875,20 @@ def _update_layers(
 
 
 def snow_properties(model):
+    """
+    Update snow properties (depth, SWE, snow cover fraction, heat capacity).
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     roi = model.grid.roi
     snow = model.state.snow
 

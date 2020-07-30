@@ -4,6 +4,20 @@ from openamundsen import constants, meteo
 
 
 def surface_properties(model):
+    """
+    Update surface properties following [1].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     s = model.state
     roi = model.grid.roi
 
