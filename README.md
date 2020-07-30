@@ -109,14 +109,14 @@ to the next time step.
 
 ### v0.1 (2020-07-30)
 
-- Calculate precipitation phase
-- Implement point outputs (to NetCDF or CSV)
+- Calculate precipitation phase.
+- Implement point outputs (to NetCDF or CSV).
 - Implement field outputs (2D/3D variables, for single dates/regular
-  intervals/temporally aggregated (sum/mean), to NetCDF or ASCII)
-- Implement Cox et al. (1999) soil model
-- Implement Essery (2015) snow model
+  intervals/temporally aggregated (sum/mean), to NetCDF or ASCII).
+- Implement Cox et al. (1999) soil model.
+- Implement Essery (2015) snow model.
 - Implement AMUNDSEN snow albedo (Rohrer, 1992) and densification (Anderson,
-  1976) parameterizations
+  1976) parameterizations.
 
 ### v0.0.3 (2020-05-20)
 
