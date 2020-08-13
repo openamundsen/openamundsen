@@ -29,8 +29,8 @@ setup(
     ],
     extras_require={
         'liveview': [
+            'matplotlib>=3.0.0',
             'PyQt5>=5.12',
-            'pyqtgraph>=0.11.0',
         ],
     },
 )

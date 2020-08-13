@@ -1,12 +1,14 @@
 import openamundsen as oa
+import numpy as np
 
 
 try:
-    import pyqtgraph as pg
-    import pyqtgraph.multiprocess as mp
-    pg_available = True
-except ModuleNotFoundError:
-    pg_available = False
+    import matplotlib
+    import matplotlib.pyplot as plt
+    matplotlib.use('Qt5Agg')
+    mpl_available = True
+except ImportError:
+    mpl_available = False
 
 
 class LiveView:
@@ -24,42 +26,23 @@ class LiveView:
         respective Model instance.
     """
     def __init__(self, config, state):
-        if not pg_available:
-            raise ModuleNotFoundError('pyqtgraph and/or PyQt5 not available')
+        if not mpl_available:
+            raise ModuleNotFoundError('matplotlib and/or PyQt5 not available')
 
         self.config = config
         self.state = state
-
-        self.img_height, self.img_width = self.state.base.dem.shape
-        self.cbar_width = 20
-        self.cbar_spacing = 30  # spacing between image and colorbar
 
     def create_window(self):
         """
         Prepare and open the live view window.
         """
-        pg.mkQApp()
+        plt.style.use('dark_background')
+        plt.rcParams['toolbar'] = 'None'
 
-        # Create remote process
-        proc = mp.QtProcess()
-        rpg = proc._import('pyqtgraph')
-
-        self.proc = proc
-        self.rpg = rpg
-
-        # Interpret image data as row-major instead of col-major
-        rpg.setConfigOptions(imageAxisOrder='row-major')
-
-        win = rpg.GraphicsLayoutWidget()
-        win.setWindowTitle('openAMUNDSEN')
-
-        win.addLabel(f'openAMUNDSEN v{oa.__version__}', colspan=2)
-        time_label = win.addLabel()
-
-        gei = rpg.GradientEditorItem()
-        gei.loadPreset('viridis')
-        lut = gei.getLookupTable(50)
-        self.cmap = gei.colorMap()
+        num_cols = self.config.cols
+        num_rows = int(np.ceil(len(self.config.fields) / num_cols))
+        fig, axarr = plt.subplots(ncols=num_cols, nrows=num_rows)
+        fig.subplots_adjust(top=0.92, bottom=0.03, left=0.03, right=0.97)
 
         fields = []
         imgs = []
@@ -69,36 +52,61 @@ class LiveView:
             min_range = d['min']
             max_range = d['max']
 
-            if field_num % self.config.cols == 0:
-                win.nextRow()
+            data = self.state[field]
 
-            vb = rpg.ViewBox(enableMouse=False, enableMenu=False, lockAspect=True)
-            vb.invertY(True)  # y axis points downward (otherwise images are plotted upside down)
+            ax = axarr.flat[field_num]
+            img = ax.imshow(
+                data,
+                vmin=min_range,
+                vmax=max_range,
+                interpolation='None',
+                cmap=self.config.cmap,
+            )
 
-            pi = rpg.PlotItem(title=self._var_label(field), viewBox=vb)
+            cbar = fig.colorbar(img, ax=ax)
+            cbar.ax.tick_params(labelsize='x-small')
 
-            for ax in ('left', 'right', 'top', 'bottom'):
-                pi.hideAxis(ax)
-
-            img = rpg.ImageItem(lut=lut, levels=(min_range, max_range))
-            img.setAutoDownsample(True)
-
-            pi.addItem(img)
-            win.addItem(pi)
-
-            min_label = f'{min_range:g}'
-            max_label = f'{max_range:g}'
-            self._colorbar(vb, min_label, max_label)
+            ax.set_title(self._var_label(field), fontsize='small')
+            ax.axis('off')
 
             imgs.append(img)
             fields.append(field)
 
-        self.fields = fields
-        self.win = win
-        self.time_label = time_label
-        self.imgs = imgs
+        plt.text(
+            x=0.03,
+            y=0.95,
+            s=f'openAMUNDSEN v{oa.__version__}',
+            fontsize='xx-large',
+            ha='left',
+            transform=fig.transFigure,
+        )
+        time_label = plt.text(
+            x=0.97,
+            y=0.95,
+            s='',
+            fontsize='large',
+            ha='right',
+            transform=fig.transFigure,
+            bbox=dict(  # set the text background color to ensure that old values are overplotted
+                facecolor=plt.rcParams['figure.facecolor'],
+                linewidth=0,
+            ),
+        )
 
-        win.show()
+        self.fields = fields
+        self.fig = fig
+        self.imgs = imgs
+        self.axarr = axarr
+        self.time_label = time_label
+
+        if self.config.blit:
+            fig.canvas.mpl_connect('draw_event', self._on_draw)
+
+        plt.show(block=False)
+        fig.canvas.draw()
+        mgr = plt.get_current_fig_manager()
+        mgr.set_window_title('openAMUNDSEN')
+        mgr.resize(self.config.width, self.config.height)
 
     def update(self, date):
         """
@@ -110,23 +118,53 @@ class LiveView:
         date : datetime
             Current model time step.
         """
-        self.time_label.setText(f'{date:%Y-%m-%d %H:%M}')
+        fig = self.fig
 
-        for field, img in zip(self.fields, self.imgs):
+        if self.config.blit:
+            fig.canvas.restore_region(self.fig_bg)
+
+        # Update time label
+        time_label = self.time_label
+        time_label.set_text(f'{date:%Y-%m-%d %H:%M}')
+
+        if self.config.blit:
+            fig.draw_artist(time_label)
+            label_extent = time_label.get_window_extent(renderer=fig.canvas.get_renderer())
+            label_bbox = matplotlib.transforms.TransformedBbox(
+                label_extent.transformed(fig.transFigure.inverted()),
+                fig.transFigure,
+            )
+            fig.canvas.blit(label_bbox)
+
+        # Update images
+        for field, ax, img in zip(self.fields, self.axarr.flat, self.imgs):
             data = self.state[field]
-            img.setImage(data, autoLevels=False)
+            img.set_data(data)
+
+            if self.config.blit:
+                ax.draw_artist(img)
+                fig.canvas.blit(ax.bbox)
+
+        if not self.config.blit:
+            fig.canvas.draw()
+
+        fig.canvas.flush_events()
 
     def close(self):
         """
-        Close the window and kill the underlying Qt process.
+        Close the window.
         """
-        self.proc.close()
+        plt.close(self.fig)
 
     def __del__(self):
         """
         Close the window when the object is deleted.
         """
         self.close()
+
+    def _on_draw(self, event):
+        fig = self.fig
+        self.fig_bg = fig.canvas.copy_from_bbox(fig.bbox)
 
     def _var_label(self, field):
         """
@@ -152,40 +190,6 @@ class LiveView:
             label = var_name
 
         if meta.units is not None:
-            label += f' ({meta.units})'
+            label += f'\n({meta.units})'
 
         return label
-
-    def _colorbar(self, vb, min_label, max_label):
-        rpg = self.rpg
-
-        gradient = self.cmap.getGradient()
-        gradient.setStart(self.img_width + self.cbar_spacing, 0 + self.img_height)
-        gradient.setFinalStop(self.img_width + self.cbar_spacing, 0)
-
-        rect = rpg.QtGui.QGraphicsRectItem(
-            self.img_width + self.cbar_spacing,
-            0,
-            self.cbar_width,
-            self.img_height,
-        )
-        rect.setPen(rpg.mkPen('w'))
-        rect.setBrush(rpg.QtGui.QBrush(gradient))
-
-        label_html = '<span style="color: #CCC; font-size: 10pt;">{}</span>'
-
-        ti_min = rpg.TextItem(html=label_html.format(min_label), anchor=(0.5, 0))
-        ti_min.setPos(
-            self.img_width + self.cbar_spacing + self.cbar_width / 2.,
-            self.img_height,
-        )
-
-        ti_max = rpg.TextItem(html=label_html.format(max_label), anchor=(0.5, 1))
-        ti_max.setPos(
-            self.img_width + self.cbar_spacing + self.cbar_width / 2.,
-            0,
-        )
-
-        vb.addItem(rect)
-        vb.addItem(ti_min)
-        vb.addItem(ti_max)

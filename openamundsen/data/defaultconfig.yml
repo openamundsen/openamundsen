@@ -161,6 +161,10 @@ soil:
   albedo: 0.15  # snow-free albedo
 
 liveview:
-  enabled: False
+  enabled: false
   cols: 4
+  width: 1200
+  height: 800
+  cmap: viridis
+  blit: true
   fields: []
