@@ -25,7 +25,7 @@ def save_and_parse_config(config):
         else:
             raise Exception('Unsupported type')
 
-        return oa.conf.parse_config(oa.conf.full_config(oa.read_config(f.name)))
+        return oa.conf.parse_config(oa.read_config(f.name))
 
 
 @pytest.fixture(scope='function')
@@ -35,6 +35,7 @@ def minimal_config():
         'start_date': '2019-11-01',
         'end_date': '2020-04-30',
         'resolution': 50,
+        'timezone': 1,
     }
 
 
@@ -44,6 +45,7 @@ def test_config_equal():
         'start_date': '2019-11-01',
         'end_date': '2020-04-30',
         'resolution': 50,
+        'timezone': 1,
 
         'input_data': {
             'grids': {
@@ -83,6 +85,7 @@ def test_infer_end_date(minimal_config):
         start_date: 2019-11-01
         end_date: {d}
         resolution: 50
+        timezone: 1
     """)
 
     config = save_and_parse_config(yaml_str.format(d='2020-04-30'))

@@ -42,8 +42,7 @@ class Model:
         self.state = None
         self.dates = None
 
-        full_config = conf.full_config(config)
-        self.config = conf.parse_config(full_config)
+        self.config = conf.parse_config(config)
 
     def _prepare_time_steps(self):
         """

@@ -1,13 +1,47 @@
-import copy
 from munch import Munch
 import numpy as np
-from openamundsen import constants, errors
+from openamundsen import constants
 import pandas as pd
 import pandas.tseries.frequencies
-from pathlib import Path
+from pathlib import Path, PosixPath, WindowsPath
 import pyproj
 import rasterio
-from ruamel.yaml import YAML
+import ruamel.yaml
+
+
+class ConfigurationYAML(ruamel.yaml.YAML):
+    def __init__(self):
+        super().__init__(typ='rt')  # .indent() works only with the roundtrip dumper
+        self.default_flow_style = False
+        self.indent(mapping=2, sequence=4, offset=2)
+
+        self.representer.add_representer(pd.Timestamp, self._repr_datetime)
+
+        # Add representers for path objects (just using pathlib.Path does not
+        # work, so have to add PosixPath and WindowsPath separately)
+        self.representer.add_representer(PosixPath, self._repr_path)
+        self.representer.add_representer(WindowsPath, self._repr_path)
+
+    def _repr_datetime(self, representer, date):
+        return representer.represent_str(str(date))
+
+    def _repr_path(self, representer, path):
+        return representer.represent_str(str(path))
+
+    def dump(self, data, stream=None, **kw):
+        inefficient = False
+
+        if stream is None:
+            inefficient = True
+            stream = ruamel.yaml.compat.StringIO()
+
+        super().dump(data, stream, **kw)
+
+        if inefficient:
+            return stream.getvalue()
+
+
+yaml = ConfigurationYAML()
 
 
 def create_empty_array(shape, dtype):
@@ -37,51 +71,6 @@ def create_empty_array(shape, dtype):
     return np.full(shape, dtype_init_vals[dtype], dtype=dtype)
 
 
-def merge_data(a, b):
-    """
-    Recursively merge b into a and return the result.
-    Based on https://stackoverflow.com/a/15836901/1307576.
-
-    Parameters
-    ----------
-    a : dict, list or primitive (str, int, float)
-    b : dict, list or primitive (str, int, float)
-
-    Returns
-    -------
-    result : same dtype as `a`
-    """
-    a = copy.deepcopy(a)
-
-    try:
-        if a is None or isinstance(a, (str, int, float)):
-            a = b
-        elif isinstance(a, list):
-            # lists are appended
-            if isinstance(b, list):
-                # merge lists
-                a.extend(b)
-            else:
-                # append to list
-                a.append(b)
-        elif isinstance(a, dict):
-            # dicts are merged
-            if isinstance(b, dict):
-                for key in b:
-                    if key in a:
-                        a[key] = merge_data(a[key], b[key])
-                    else:
-                        a[key] = b[key]
-            else:
-                raise errors.YamlReaderError(f'Cannot merge non-dict "{b}" into dict "{a}"')
-        else:
-            raise errors.YamlReaderError(f'Merging "{b}" into "{a}" is not implemented')
-    except TypeError as e:
-        raise errors.YamlReaderError(f'TypeError "{e}" in key "{key}" when merging "{b}" into "{a}"')
-
-    return a
-
-
 def read_yaml_file(filename):
     """
     Read a YAML file.
@@ -94,10 +83,12 @@ def read_yaml_file(filename):
     -------
     result : dict
     """
-    yaml = YAML(typ='safe')
-
     with open(filename) as f:
         return yaml.load(f.read())
+
+
+def to_yaml(d):
+    return yaml.dump(d)
 
 
 def raster_filename(kind, config):

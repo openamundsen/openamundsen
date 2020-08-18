@@ -15,6 +15,7 @@ setup(
     include_package_data=True,
     scripts=['bin/openamundsen'],
     install_requires=[
+        'cerberus>=1.3.0',
         'loguru>=0.3.2',
         'munch>=2.5.0',
         'netCDF4>=1.5.2',
