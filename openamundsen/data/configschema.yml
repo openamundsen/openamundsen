@@ -267,7 +267,7 @@ meteo:
                 - -0.0047  # Nov
                 - -0.0046  # Dec
 
-        windspeed:
+        wind_speed:
           type: dict
           default: {}
           schema:
