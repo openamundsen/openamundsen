@@ -169,7 +169,7 @@ meteo:
           type: dict
           default: {}
           schema:
-            method:
+            trend_method:
               type: string
               allowed:
                 - regression
@@ -203,7 +203,7 @@ meteo:
           type: dict
           default: {}
           schema:
-            method:
+            trend_method:
               type: string
               allowed:
                 - regression
@@ -237,7 +237,7 @@ meteo:
           type: dict
           default: {}
           schema:
-            method:
+            trend_method:
               type: string
               allowed:
                 - regression
@@ -271,7 +271,7 @@ meteo:
           type: dict
           default: {}
           schema:
-            method:
+            trend_method:
               type: string
               allowed:
                 - regression
