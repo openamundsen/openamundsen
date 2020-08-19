@@ -179,7 +179,7 @@ meteo:
               type: boolean
               default: true
 
-            lapse_rates:
+            lapse_rate:
               type: list
               schema:
                 type: float
@@ -213,7 +213,7 @@ meteo:
               type: boolean
               default: true
 
-            lapse_rates:
+            lapse_rate:
               type: list
               schema:
                 type: float
@@ -247,7 +247,7 @@ meteo:
               type: boolean
               default: true
 
-            lapse_rates:
+            lapse_rate:
               type: list
               schema:
                 type: float

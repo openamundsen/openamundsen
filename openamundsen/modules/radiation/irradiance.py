@@ -117,8 +117,8 @@ def shortwave_irradiance(model, sun_over_horizon):
     if method == 'constant':
         pass  # use cloudiness from previous time step, i.e., do nothing
     elif method == 'humidity':
-        lr_t = model.config.meteo.interpolation.temperature.lapse_rates[model.date.month - 1]
-        lr_td = model.config.meteo.interpolation.humidity.lapse_rates[model.date.month - 1]
+        lr_t = model.config.meteo.interpolation.temperature.lapse_rate[model.date.month - 1]
+        lr_td = model.config.meteo.interpolation.humidity.lapse_rate[model.date.month - 1]
         # TODO use here also the same settings for regression/fixed gradients as for the interpolation
         cloud_fracs = meteo.cloud_fraction_from_humidity(
             ds_temp_hum.temp,
