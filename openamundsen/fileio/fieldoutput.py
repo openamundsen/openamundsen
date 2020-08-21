@@ -97,6 +97,16 @@ class FieldOutputManager:
                         freq=freq,
                     ).asfreq(model.config.timestep, how='E').to_timestamp()
 
+                    # Write aggregated fields at the last model timestep even if the last
+                    # aggregation is not yet finished (e.g. if the aggregation is monthly
+                    # but the model run ends in the middle of the month)
+                    if model.dates[-1] not in write_dates:
+                        write_dates = (
+                            write_dates
+                            .append(pd.DatetimeIndex([model.dates[-1]]))
+                            .sort_values()
+                        )
+
             if output_name is None:
                 output_name = field_cfg.var.split('.')[-1]
 
