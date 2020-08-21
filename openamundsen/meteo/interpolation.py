@@ -55,40 +55,9 @@ def _linear_fit(x, y):
     return slope, intercept
 
 
-def _detrend(data, elevs, factor, method='linear'):
+def _apply_linear_trend(data, elevs, trend, direction):
     """
-    Perform elevation detrending for a set of measurements.
-
-    Parameters
-    ----------
-    data : ndarray
-        Values to be detrended.
-
-    elevs : ndarray
-        Elevations corresponding to the data points.
-
-    factor : float
-        Lapse rate.
-
-    method : str, default "linear"
-        Detrending method.
-
-    Returns
-    -------
-    data_detrended : ndarray
-        Detrended data values.
-    """
-    if method == 'linear':
-        data_detrended = data - factor * elevs
-    else:
-        raise NotImplementedError
-
-    return data_detrended
-
-
-def _apply_trend(data, elevs, factor, method='linear'):
-    """
-    Reapply a trend to a detrended set of data points.
+    Detrend or retrend a set of data points using a given trend value.
 
     Parameters
     ----------
@@ -98,40 +67,105 @@ def _apply_trend(data, elevs, factor, method='linear'):
     elevs : ndarray
         Elevations corresponding to the data points.
 
-    factor : float
-        Lapse rate.
+    trend : float
+        Trend value.
 
-    method : str, default "linear"
-        Detrending method.
+    direction : str
+        Either "detrend" or "retrend".
 
     Returns
     -------
     data_trend : ndarray
-        Data points with reapplied trend.
+        De-/retrended data points.
     """
-    if method == 'linear':
-        data_trend = data + factor * elevs
+    if direction == 'detrend':
+        return data - trend * elevs
+    elif direction == 'retrend':
+        return data + trend * elevs
     else:
-        raise NotImplementedError
-
-    return data_trend
+        raise NotImplementedError(f'Unsupported direction: {direction}')
 
 
-def _detrend_and_interpolate(xs, ys, zs, data, target_xs, target_ys, target_zs):
-    slope, _ = _linear_fit(zs, data)
-    data_detrended = _detrend(data, zs, slope)
-    data_detrended_interpol = interpolation.idw(
-        xs,
-        ys,
-        data_detrended,
-        target_xs,
-        target_ys,
-    )
-    data_interpol = _apply_trend(
-        data_detrended_interpol,
-        target_zs,
-        slope,
-    )
+def _interpolate_with_trend(
+    xs,
+    ys,
+    zs,
+    data,
+    target_xs,
+    target_ys,
+    target_zs,
+    trend_method,
+    lapse_rate,
+):
+    """
+    Interpolate station measurements using inverse distance weighting with an
+    elevation-dependent trend.
+
+    Parameters
+    ----------
+    xs, ys, zs : ndarray
+        x, y and z coordinates of the stations.
+
+    data : ndarray
+        Values to be interpolated.
+
+    target_xs, target_ys, target_zs : ndarray
+        x, y and z coordinates of the interpolation targets.
+
+    trend_method : string
+        Method to use for de-/retrending. Either 'regression' (to derive a
+        trend from the data points using linear regression), 'fixed' (to use a
+        prescribed lapse rate as linear trend), 'fractional' (to use a
+        prescribed fractional lapse rate (in case of precipitation) as linear
+        trend) or 'adjustment_factor' (to use a nonlinear precipitation
+        adjustment factor following [1]).
+
+    lapse_rate : float
+        Trend value. If trend_method == 'regression', this value is ignored.
+        If trend_method == 'fixed', the value is interpreted as absolute change
+        by elevation (e.g. °C m-1).  If trend_method == 'fractional', the value
+        is interpreted as a fractional change by elevation (e.g., 0.0005 for
+        0.05 % m-1) If trend_method == 'adjustment_factor', the value is
+        interpreted as a nonlinear precipitation adjustment factor following
+        [1].
+
+    Returns
+    -------
+    data_interpol : ndarray
+        Interpolated values for the target locations.
+
+    References
+    ----------
+    .. [1] Liston, G. E., & Elder, K. (2006). A Meteorological Distribution
+       System for High-Resolution Terrestrial Modeling (MicroMet). Journal of
+       Hydrometeorology, 7(2), 217–234. https://doi.org/10.1175/JHM486.1
+    """
+    if trend_method in ('regression', 'fixed', 'fractional'):
+        if trend_method == 'regression':
+            # When using the regression method, the passed lapse rate is overwritten
+            lapse_rate, _ = _linear_fit(zs, data)
+        elif trend_method == 'fixed':
+            pass  # do nothing, i.e., use the passed lapse rate as is
+        elif trend_method == 'fractional':
+            lapse_rate *= np.nanmean(data)
+
+        data_detrended = _apply_linear_trend(data, zs, lapse_rate, 'detrend')
+        data_detrended_interpol = interpolation.idw(
+            xs,
+            ys,
+            data_detrended,
+            target_xs,
+            target_ys,
+        )
+        data_interpol = _apply_linear_trend(data_detrended_interpol, target_zs, lapse_rate, 'retrend')
+    elif trend_method == 'adjustment_factor':
+        data_interpol_notrend = interpolation.idw(xs, ys, data, target_xs, target_ys)
+        zs_interpol = interpolation.idw(xs, ys, zs, target_xs, target_ys)
+        z_diffs = target_zs - zs_interpol
+        data_interpol = data_interpol_notrend * (  # eq. (33) from [1]
+            (1 + lapse_rate * z_diffs) / (1 - lapse_rate * z_diffs)
+        )
+
     return data_interpol
 
 
@@ -155,9 +189,35 @@ def interpolate_station_data(model, date):
     target_ys = model.grid.roi_points[:, 1]
     target_zs = model.state.base.dem[roi]
 
+    # Mappings of config keys (e.g. meteo.interpolation.temperature) to
+    # internal variable names
+    param_name_mappings = {
+        'temp': 'temperature',
+        'precip': 'precipitation',
+        'wind_speed': 'wind_speed',
+    }
+
     for param in ('temp', 'precip', 'wind_speed'):
+        if param == 'wind_speed':  # for wind speed fixed lapse rates are not supported
+            trend_method = 'regression'
+            lapse_rate = None
+        else:
+            param_config = model.config['meteo']['interpolation'][param_name_mappings[param]]
+            trend_method = param_config['trend_method']
+            lapse_rate = param_config['lapse_rate'][date.month - 1]
+
         data, xs, ys, zs = _param_station_data(model.meteo, param, date)
-        data_interpol = _detrend_and_interpolate(xs, ys, zs, data, target_xs, target_ys, target_zs)
+        data_interpol = _interpolate_with_trend(
+            xs,
+            ys,
+            zs,
+            data,
+            target_xs,
+            target_ys,
+            target_zs,
+            trend_method,
+            lapse_rate,
+        )
         model.state.meteo[param][roi] = data_interpol[:]
 
     # For humidity interpolate dewpoint temperature and convert back to relative humidity
@@ -168,7 +228,10 @@ def interpolate_station_data(model, date):
     temps = ds.temp.values
     rel_hums = ds.rel_hum.values
     dewpoint_temps = meteo.dew_point_temperature(temps, rel_hums)
-    dewpoint_temp_interpol = _detrend_and_interpolate(
+    param_config = model.config['meteo']['interpolation']['humidity']
+    trend_method = param_config['trend_method']
+    lapse_rate = param_config['lapse_rate'][date.month - 1]
+    dewpoint_temp_interpol = _interpolate_with_trend(
         xs,
         ys,
         zs,
@@ -176,6 +239,8 @@ def interpolate_station_data(model, date):
         target_xs,
         target_ys,
         target_zs,
+        trend_method,
+        lapse_rate,
     )
     vapor_press_roi = meteo.saturation_vapor_pressure(dewpoint_temp_interpol, 'water')
     sat_vapor_press_roi = meteo.saturation_vapor_pressure(model.state.meteo['temp'][roi], 'water')

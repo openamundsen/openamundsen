@@ -173,6 +173,7 @@ meteo:
               type: string
               allowed:
                 - regression
+                - fixed
               default: regression
 
             allow_extrapolation:
@@ -207,6 +208,8 @@ meteo:
               type: string
               allowed:
                 - regression
+                - adjustment_factor
+                - fractional
               default: regression
 
             allow_extrapolation:
@@ -241,6 +244,7 @@ meteo:
               type: string
               allowed:
                 - regression
+                - fixed
               default: regression
 
             allow_extrapolation:
