@@ -7,7 +7,7 @@ from pathlib import Path
 import xarray as xr
 
 
-def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, logger=None):
+def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, freq='H', logger=None):
     """
     Read all available stations in NetCDF format for a given period.
 
@@ -21,6 +21,10 @@ def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, logger=None):
 
     end_date : datetime-like
         End date.
+
+    freq : str
+        Pandas-compatible frequency string (e.g. '3H') to which the data should
+        be resampled.
 
     logger : logger, default None
         Logger to use for status messages.
@@ -46,6 +50,7 @@ def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, logger=None):
 
         ds = read_netcdf_meteo_file(nc_file)
         ds = ds.sel(time=slice(start_date, end_date))
+        ds = _resample_dataset(ds, freq)
 
         if ds.dims['time'] == 0:
             logger.warning('File contains no meteo data for the specified period')
@@ -58,7 +63,7 @@ def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, logger=None):
     return combine_meteo_datasets(datasets)
 
 
-def read_meteo_data_csv(meteo_data_dir, start_date, end_date, crs, logger=None):
+def read_meteo_data_csv(meteo_data_dir, start_date, end_date, crs, freq='H', logger=None):
     """
     Read all available stations in CSV format for a given period.
     This function expects a file named `stations.csv` in the specified
@@ -79,6 +84,10 @@ def read_meteo_data_csv(meteo_data_dir, start_date, end_date, crs, logger=None):
 
     crs : str
         CRS of the station coordinates specified in the stations.csv file.
+
+    freq : str
+        Pandas-compatible frequency string (e.g. '3H') to which the data should
+        be resampled.
 
     logger : logger, default None
         Logger to use for status messages.
@@ -109,6 +118,7 @@ def read_meteo_data_csv(meteo_data_dir, start_date, end_date, crs, logger=None):
         )
 
         ds = ds.sel(time=slice(start_date, end_date))
+        ds = _resample_dataset(ds, freq)
 
         if ds.dims['time'] == 0:
             logger.warning('File contains no meteo data for the specified period')
@@ -284,3 +294,55 @@ def combine_meteo_datasets(datasets):
         datasets_processed.append(ds)
 
     return xr.combine_nested(datasets_processed, concat_dim='station')
+
+
+def _resample_dataset(ds, freq):
+    """
+    Resample a dataset to a given frequency.
+
+    For all parameters except precipitation, the instantaneous values at the
+    target timestamps are taken, i.e.  no aggregation is performed. For
+    precipitation flux, the mean over the respective time intervals is
+    calculated.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset.
+
+    freq : str
+        Pandas-compatible frequency string (e.g. '3H'). Must be an exact subset
+        of the original frequency of the data.
+
+    Returns
+    -------
+    ds_res : Dataset
+        Resampled dataset.
+    """
+    # return ds
+    # ds.resample() is somehow extremely slow, so we resample using pandas
+    df = ds.to_dataframe().drop(columns=['lon', 'lat', 'alt'])
+
+    # Take the instantaneous values for all parameters except precipitation flux
+    # (where we calculate the mean)
+    df_res = df.asfreq(freq)
+
+    if 'precip' in df:
+        df_res['precip'] = df['precip'].resample(freq, label='right', closed='right').mean()
+
+    # Check if the desired frequency is a subset of the original frequency of the
+    # data (e.g., resampling hourly to 3-hourly data is ok, but not hourly to
+    # 1.5-hourly)
+    if not df.index.intersection(df_res.index).equals(df_res.index):
+        raise errors.MeteoDataError(f'Resampling from freq "{df.index.inferred_freq}" '
+                                    f'to "{freq}" not supported')
+
+    # Create a new dataset with the resampled time series
+    ds_res = ds[['lon', 'lat', 'alt', 'time']]
+    ds_res['time'] = df_res.index
+    ds_res.attrs = ds.attrs
+
+    for param in df_res.columns:
+        ds_res[param] = df_res[param]
+
+    return ds_res

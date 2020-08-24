@@ -299,6 +299,7 @@ class Model:
                 self.config.input_data.meteo.dir,
                 self.config.start_date,
                 self.config.end_date,
+                freq=self.config['timestep'],
                 logger=self.logger,
             )
         elif meteo_format == 'csv':
@@ -307,6 +308,7 @@ class Model:
                 self.config.start_date,
                 self.config.end_date,
                 self.config.input_data.meteo.crs,
+                freq=self.config['timestep'],
                 logger=self.logger,
             )
         else:
