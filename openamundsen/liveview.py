@@ -24,13 +24,17 @@ class LiveView:
     state : StateVariableManager
         StateVariableManager (i.e., the model.state attribute) of the
         respective Model instance.
+
+    roi : ndarray
+        Boolean array specifying the region of interest.
     """
-    def __init__(self, config, state):
+    def __init__(self, config, state, roi):
         if not mpl_available:
             raise ModuleNotFoundError('matplotlib and/or PyQt5 not available')
 
         self.config = config
         self.state = state
+        self.roi = roi
 
     def create_window(self):
         """
@@ -139,6 +143,13 @@ class LiveView:
         # Update images
         for field, ax, img in zip(self.fields, self.axarr.flat, self.imgs):
             data = self.state[field]
+
+            # Hide non-ROI pixels for integer fields (for float fields they should contain NaNs
+            # already)
+            if np.issubdtype(data.dtype, np.integer):
+                data = data.astype(float)
+                data[~self.roi] = np.nan
+
             img.set_data(data)
 
             if self.config.blit:

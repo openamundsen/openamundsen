@@ -406,7 +406,7 @@ class Model:
         """
         if self.config.liveview.enabled:
             self.logger.info('Creating live view window')
-            lv = liveview.LiveView(self.config.liveview, self.state)
+            lv = liveview.LiveView(self.config.liveview, self.state, self.grid.roi)
             lv.create_window()
             self.liveview = lv
 
