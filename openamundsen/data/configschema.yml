@@ -299,6 +299,7 @@ meteo:
         method:
           type: string
           allowed:
+            - temp
             - wet_bulb_temp
           default: wet_bulb_temp
 
