@@ -68,17 +68,9 @@ class Model:
         for date in self.dates:
             self.logger.info(f'Processing time step {date:%Y-%m-%d %H:%M}')
             self.date = date
-
-            # Interpolate temperature, humidity and wind speed (precipitation is handled later as
-            # for some undercatch correction approaches derived variables such as wet-bulb
-            # temperature are required)
-            meteo.interpolate_station_data(self, 'temp')
-            meteo.interpolate_station_data(self, 'rel_hum')
-            meteo.interpolate_station_data(self, 'wind_speed')
-
+            meteo.interpolate_station_data(self, date)
             self._process_meteo_data()
             self._model_interface()
-
             self.point_outputs.update()
             self.field_outputs.update()
 
@@ -369,8 +361,6 @@ class Model:
             m.temp[roi],
             m.vap_press[roi],
         )
-
-        meteo.interpolate_station_data(self, 'precip')
 
         # Calculate precipitation phase
         precip_phase_method = self.config.meteo.precipitation_phase.method
