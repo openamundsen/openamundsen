@@ -183,7 +183,7 @@ def _interpolate_with_trend(
     return data_interpol
 
 
-def interpolate_station_data(model, date):
+def interpolate_station_data(model):
     """
     Interpolate station measurements to the model grid.
 
@@ -191,14 +191,11 @@ def interpolate_station_data(model, date):
     ----------
     model : Model
         Model instance.
-
-    date : datetime-like
-        Date for which to perform the interpolation.
     """
     model.logger.debug('Interpolating station data')
 
+    date = model.date
     roi = model.grid.roi
-
     target_xs = model.grid.roi_points[:, 0]
     target_ys = model.grid.roi_points[:, 1]
     target_zs = model.state.base.dem[roi]
@@ -209,58 +206,133 @@ def interpolate_station_data(model, date):
         'temp': 'temperature',
         'precip': 'precipitation',
         'wind_speed': 'wind_speed',
+        'rel_hum': 'humidity',
     }
 
     for param in ('temp', 'precip', 'wind_speed'):
-        if param == 'wind_speed':  # for wind speed fixed lapse rates are not supported
-            trend_method = 'regression'
-            lapse_rate = None
-        else:
-            param_config = model.config['meteo']['interpolation'][param_name_mappings[param]]
-            trend_method = param_config['trend_method']
-            lapse_rate = param_config['lapse_rate'][date.month - 1]
-
+        param_config = model.config['meteo']['interpolation'][param_name_mappings[param]]
         data, xs, ys, zs = _param_station_data(model.meteo, param, date)
-        data_interpol = _interpolate_with_trend(
+
+        model.state.meteo[param][roi] = interpolate_param(
+            param,
+            model.date,
+            param_config,
+            data,
             xs,
             ys,
             zs,
-            data,
             target_xs,
             target_ys,
             target_zs,
-            trend_method,
-            lapse_rate,
         )
-        model.state.meteo[param][roi] = data_interpol[:]
 
-    # For humidity interpolate dewpoint temperature and convert back to relative humidity
-    ds = model.meteo[['temp', 'rel_hum', 'x', 'y', 'alt']].sel(time=date).dropna(dim='station')
-    xs = ds.x.values
-    ys = ds.y.values
-    zs = ds.alt.values
-    temps = ds.temp.values
-    rel_hums = ds.rel_hum.values
-    dewpoint_temps = meteo.dew_point_temperature(temps, rel_hums)
-    param_config = model.config['meteo']['interpolation']['humidity']
-    trend_method = param_config['trend_method']
-    lapse_rate = param_config['lapse_rate'][date.month - 1]
-    dewpoint_temp_interpol = _interpolate_with_trend(
+    # For relative humidity dewpoint temperature is interpolated, so we also need station
+    # temperatures and the interpolated temperature field
+    param = 'rel_hum'
+    param_config = model.config['meteo']['interpolation'][param_name_mappings[param]]
+    data, xs, ys, zs = _param_station_data(model.meteo, [param, 'temp'], date)
+    rel_hums = data[0, :]
+    temps = data[1, :]
+    model.state.meteo[param][roi] = interpolate_param(
+        param,
+        model.date,
+        param_config,
+        rel_hums,
         xs,
         ys,
         zs,
-        dewpoint_temps,
+        target_xs,
+        target_ys,
+        target_zs,
+        temps=temps,
+        target_temps=model.state.meteo['temp'][roi],
+    )
+
+
+def interpolate_param(
+        param,
+        date,
+        param_config,
+        data,
+        xs,
+        ys,
+        zs,
+        target_xs,
+        target_ys,
+        target_zs,
+        temps=None,
+        target_temps=None,
+):
+    """
+    Interpolate a set of data points to a set of target points.
+
+    Parameters
+    ----------
+    param : str
+        Parameter to be interpolated. Can be one of 'temp', 'precip', 'rel_hum', 'wind_speed'.
+
+    date : datetime-like
+        Date (required in the case of seasonally specified lapse rates).
+
+    param_config : dict
+        Interpolation configuration for the respective parameter from the model run configuration
+        (e.g., config['meteo']['interpolation'][‘temperature']).
+
+    data : ndarray
+        Values to be interpolated.
+
+    xs, ys, zs : ndarray
+        x, y and z coordinates of the stations.
+
+    target_xs, target_ys, target_zs : ndarray
+        x, y and z coordinates of the interpolation targets.
+
+    temps : ndarray, default None
+        Temperatures at the source locations (required for humidity interpolation).
+
+    target_temps : ndarray, default None
+        Temperatures at the target locations (required for humidity interpolation).
+
+    Returns
+    -------
+    data_interpol : ndarray
+        Interpolated values for the target locations.
+   """
+    if param in ('temp', 'precip', 'rel_hum'):
+        trend_method = param_config['trend_method']
+        lapse_rate = param_config['lapse_rate'][date.month - 1]
+    elif param == 'wind_speed':
+        trend_method = 'regression'
+        lapse_rate = np.nan
+    else:
+        raise NotImplementedError(f'Unsupported parameter: {param}')
+
+    # For relative humidity interpolate dewpoint temperature and convert back to humidity later
+    if param == 'rel_hum':
+        if temps is None or target_temps is None:
+            raise Exception('Temperature must be provided for humidity interpolation')
+
+        rel_hums = data
+        dewpoint_temps = meteo.dew_point_temperature(temps, rel_hums)
+        data = dewpoint_temps
+
+    data_interpol = _interpolate_with_trend(
+        xs,
+        ys,
+        zs,
+        data,
         target_xs,
         target_ys,
         target_zs,
         trend_method,
         lapse_rate,
     )
-    vapor_press_roi = meteo.saturation_vapor_pressure(dewpoint_temp_interpol, 'water')
-    sat_vapor_press_roi = meteo.saturation_vapor_pressure(model.state.meteo['temp'][roi], 'water')
-    model.state.meteo['rel_hum'][roi] = 100 * vapor_press_roi / sat_vapor_press_roi
 
-    for param in ('temp', 'precip', 'rel_hum', 'wind_speed'):
-        data = model.state.meteo[param]
-        min_range, max_range = constants.ALLOWED_METEO_VAR_RANGES[param]
-        data[roi] = np.clip(data[roi], min_range, max_range)
+    if param == 'rel_hum':
+        target_dewpoint_temps = data_interpol
+        vapor_press = meteo.saturation_vapor_pressure(target_dewpoint_temps, 'water')
+        sat_vapor_press = meteo.saturation_vapor_pressure(target_temps, 'water')
+        data_interpol = 100 * vapor_press / sat_vapor_press
+
+    min_range, max_range = constants.ALLOWED_METEO_VAR_RANGES[param]
+    return np.clip(data_interpol, min_range, max_range)
