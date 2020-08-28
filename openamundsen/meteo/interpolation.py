@@ -101,10 +101,10 @@ def _apply_linear_trend(data, elevs, trend, direction):
 
 
 def _interpolate_with_trend(
+    data,
     xs,
     ys,
     zs,
-    data,
     target_xs,
     target_ys,
     target_zs,
@@ -117,11 +117,11 @@ def _interpolate_with_trend(
 
     Parameters
     ----------
-    xs, ys, zs : ndarray
-        x, y and z coordinates of the stations.
-
     data : ndarray
         Values to be interpolated.
+
+    xs, ys, zs : ndarray
+        x, y and z coordinates of the stations.
 
     target_xs, target_ys, target_zs : ndarray
         x, y and z coordinates of the interpolation targets.
@@ -317,10 +317,10 @@ def interpolate_param(
         data = dewpoint_temps
 
     data_interpol = _interpolate_with_trend(
+        data,
         xs,
         ys,
         zs,
-        data,
         target_xs,
         target_ys,
         target_zs,
