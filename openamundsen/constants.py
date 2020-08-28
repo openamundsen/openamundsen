@@ -78,6 +78,15 @@ NETCDF_VAR_MAPPINGS = {
     'wss': 'wind_speed',
 }
 
+# Mappings of internal variable names to interpolation config keys (e.g.
+# config['meteo']['interpolation']['temperature'])
+INTERPOLATION_CONFIG_PARAM_MAPPINGS = {
+    'temp': 'temperature',
+    'precip': 'precipitation',
+    'wind_speed': 'wind_speed',
+    'rel_hum': 'humidity',
+}
+
 ALLOWED_METEO_VAR_RANGES = {
     'temp': (-273.15, None),
     'precip': (0, None),

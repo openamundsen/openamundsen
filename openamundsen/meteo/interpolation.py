@@ -200,17 +200,8 @@ def interpolate_station_data(model):
     target_ys = model.grid.roi_points[:, 1]
     target_zs = model.state.base.dem[roi]
 
-    # Mappings of config keys (e.g. meteo.interpolation.temperature) to
-    # internal variable names
-    param_name_mappings = {
-        'temp': 'temperature',
-        'precip': 'precipitation',
-        'wind_speed': 'wind_speed',
-        'rel_hum': 'humidity',
-    }
-
     for param in ('temp', 'precip', 'wind_speed'):
-        param_config = model.config['meteo']['interpolation'][param_name_mappings[param]]
+        param_config = model.config['meteo']['interpolation'][constants.INTERPOLATION_CONFIG_PARAM_MAPPINGS[param]]
         data, xs, ys, zs = _param_station_data(model.meteo, param, date)
 
         model.state.meteo[param][roi] = interpolate_param(
@@ -229,7 +220,7 @@ def interpolate_station_data(model):
     # For relative humidity dewpoint temperature is interpolated, so we also need station
     # temperatures and the interpolated temperature field
     param = 'rel_hum'
-    param_config = model.config['meteo']['interpolation'][param_name_mappings[param]]
+    param_config = model.config['meteo']['interpolation'][constants.INTERPOLATION_CONFIG_PARAM_MAPPINGS[param]]
     data, xs, ys, zs = _param_station_data(model.meteo, [param, 'temp'], date)
     rel_hums = data[0, :]
     temps = data[1, :]
