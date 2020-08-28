@@ -4,8 +4,8 @@ from openamundsen import constants, interpolation, meteo
 
 def _param_station_data(ds, param, date):
     """
-    Return station measurements including station x, y and z coordinates for a
-    given parameter and date.
+    Return station measurements including station x, y and z coordinates for one or more given
+    parameter(s) and a specified date.
 
     Parameters
     ----------
@@ -13,24 +13,38 @@ def _param_station_data(ds, param, date):
         Dataset containing the station measurements (i.e. the model.meteo
         variable)
 
-    param : str
-        Parameter for which the measurements should be returned.
+    param : str or list
+        Parameter(s) for which the measurements should be returned.
 
     date : datetime-like
         Date for which the measurements should be returned.
 
     Returns
     -------
-    data, x, y, z : ndarrays
-        Measurements (excluding nodata values) and corresponding x, y and z
-        coordinates.
+    data : ndarray
+        Measurements (excluding nodata values). If param is a string, this is a 1-D array; if param
+        is a list of strings it is a 2-D array with dimensions
+        (len(param), <number of available measurements where all parameters are non-null>).
+    x, y, z : ndarrays
+        Corresponding x, y and z coordinates.
     """
-    ds_param = ds[[param, 'x', 'y', 'alt']].sel(time=date).dropna(dim='station', subset=[param])
-    data = ds_param[param].values
+    if isinstance(param, str):
+        param_as_list = [param]
+    else:
+        param_as_list = param
+
+    ds_param = ds[param_as_list + ['x', 'y', 'alt']].sel(time=date).dropna(dim='station')
+    data = ds_param[param]
     xs = ds_param['x'].values
     ys = ds_param['y'].values
     zs = ds_param['alt'].values
-    return data, xs, ys, zs
+
+    if isinstance(param, str):
+        data_vals = data.values
+    else:
+        data_vals = data.to_array().values
+
+    return data_vals, xs, ys, zs
 
 
 def _linear_fit(x, y):
