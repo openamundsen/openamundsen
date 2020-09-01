@@ -128,3 +128,7 @@ def test_precipitation_phase():
     temps = np.array([-0.99, -1.01, -1.0, 0., 1., 2.99, 3.01, 3.]) + 273.15
     sf = meteo.precipitation_phase(temps, threshold_temp=1 + 273.15, temp_range=4)
     assert_allclose(sf, [0.9975, 1, 1, 0.75, 0.5, 0.0025, 0, 0], atol=1e-10)
+
+
+def test_log_wind_profile():
+    assert_allclose(meteo.log_wind_profile(1, 10, 2, 0.03), 0.722947444)

@@ -8,6 +8,7 @@ from .atmosphere import (
     dew_point_temperature,
     dry_air_density,
     latent_heat_of_vaporization,
+    log_wind_profile,
     precipitable_water,
     precipitation_phase,
     psychrometric_constant,

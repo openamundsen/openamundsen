@@ -540,3 +540,33 @@ def precipitation_phase(temp, threshold_temp=c.T0, temp_range=0., method='linear
         snowfall_frac = (1 - (temp - t1) / (t2 - t1)).clip(0, 1)
 
     return snowfall_frac
+
+
+def log_wind_profile(ref_wind_speed, ref_height, height, roughness_length):
+    """
+    Calculate wind speed at a different height based on a logarithmic wind
+    profile.
+
+    Parameters
+    ----------
+    ref_wind_speed : numeric
+        Reference wind speed (m s-1).
+
+    ref_height : float
+        Height of the reference wind speed (m).
+
+    height : float
+        New height.
+
+    roughness_length : float
+        Surface roughness length (m).
+
+    Returns
+    -------
+    wind_speed : numeric
+        Wind speed at the new height (m s-1).
+    """
+    return ref_wind_speed * (
+        np.log(height / roughness_length)
+        / np.log(ref_height / roughness_length)
+    )
