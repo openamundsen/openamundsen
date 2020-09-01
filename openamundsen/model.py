@@ -71,6 +71,7 @@ class Model:
             meteo.interpolate_station_data(self)
             self._process_meteo_data()
             self._model_interface()
+            self._calculate_diagnostic_variables()
             self.point_outputs.update()
             self.field_outputs.update()
 
@@ -106,6 +107,17 @@ class Model:
 
         modules.soil.soil_heat_flux(self)
         modules.soil.soil_temperature(self)
+
+    def _calculate_diagnostic_variables(self):
+        """
+        Calculate diagnostic variables from the other state variables.
+        """
+        s = self.state
+        roi = self.grid.roi
+
+        s.meteo.precip_amount[roi] = s.meteo.precip[roi] * self.timestep
+        s.meteo.snow_amount[roi] = s.meteo.snow[roi] * self.timestep
+        s.meteo.rain_amount[roi] = s.meteo.rain[roi] * self.timestep
 
     def _initialize_logger(self):
         """
