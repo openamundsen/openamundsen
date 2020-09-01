@@ -19,4 +19,5 @@ from .atmosphere import (
     vapor_pressure,
     wet_bulb_temperature,
 )
-from .interpolation import interpolate_station_data
+from .interpolation import interpolate_station_data, interpolate_param
+from .precipcorr import correct_station_precipitation

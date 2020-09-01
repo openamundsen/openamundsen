@@ -311,6 +311,29 @@ meteo:
           type: number
           default: 0.
 
+    # Settings for precipitation correction
+    precipitation_correction:
+      type: list
+      default: []
+      schema:
+        type: dict
+        schema:
+          method:
+            type: string
+            required: true
+            oneof:
+              - allowed:  # method constant_scf requires a scf
+                  - constant_scf
+                dependencies: scf
+              - allowed:  # methods wmo and kochendorfer require a gauge specification
+                  - wmo
+                  - kochendorfer
+                dependencies: gauge
+          gauge:
+            type: string
+          scf:
+            type: number
+
     # Radiation related parameters
     radiation:
       type: dict

@@ -330,6 +330,8 @@ class Model:
         ] + list(constants.METEO_VAR_METADATA.keys())
         self.meteo = self.meteo[var_order]
 
+        meteo.correct_station_precipitation(self)
+
     def _process_meteo_data(self):
         """
         Calculate derived meteorological variables from the interpolated fields.
