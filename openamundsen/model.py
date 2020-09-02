@@ -171,8 +171,8 @@ class Model:
         roi = self.grid.roi
 
         s.meteo.precip_amount[roi] = s.meteo.precip[roi] * self.timestep
-        s.meteo.snow_amount[roi] = s.meteo.snow[roi] * self.timestep
-        s.meteo.rain_amount[roi] = s.meteo.rain[roi] * self.timestep
+        s.meteo.snowfall_amount[roi] = s.meteo.snowfall[roi] * self.timestep
+        s.meteo.rainfall_amount[roi] = s.meteo.rainfall[roi] * self.timestep
 
     def _initialize_logger(self):
         """
@@ -425,5 +425,5 @@ class Model:
             threshold_temp=self.config.meteo.precipitation_phase.threshold_temp + constants.T0,
             temp_range=self.config.meteo.precipitation_phase.temp_range,
         )
-        m.snow[roi] = snowfall_frac * m.precip[roi]
-        m.rain[roi] = (1 - snowfall_frac) * m.precip[roi]
+        m.snowfall[roi] = snowfall_frac * m.precip[roi]
+        m.rainfall[roi] = (1 - snowfall_frac) * m.precip[roi]

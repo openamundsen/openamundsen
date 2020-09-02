@@ -17,7 +17,7 @@ def albedo(model):
         s.snow.albedo[roi] = _albedo_usaco(
             s.snow.albedo[roi],
             s.meteo.temp[roi],
-            s.meteo.snow[roi],
+            s.meteo.snowfall[roi],
             model.config.snow.albedo.min,
             model.config.snow.albedo.max,
             model.config.snow.albedo.k_pos,
@@ -29,7 +29,7 @@ def albedo(model):
         s.snow.albedo[roi] = _albedo_fsm(
             s.snow.albedo[roi],
             s.surface.temp[roi],
-            s.meteo.snow[roi],
+            s.meteo.snowfall[roi],
             model.config.snow.albedo.min,
             model.config.snow.albedo.max,
             model.config.snow.albedo.melting_snow_decay_timescale,
@@ -197,7 +197,7 @@ def accumulation(model):
     density = _fresh_snow_density(model.state.meteo.wetbulb_temp[roi])
 
     frost = -np.minimum(s.snow.sublimation[roi], 0)
-    ice_content_change = (s.meteo.snow[roi] + frost) * model.timestep
+    ice_content_change = (s.meteo.snowfall[roi] + frost) * model.timestep
 
     # Initialize first snow layer where necessary
     pos_init_layer = model.roi_mask_to_global((s.snow.num_layers[roi] == 0) & (ice_content_change > 0))
@@ -635,8 +635,8 @@ def runoff(model):
         model.grid.roi_idxs,
         model.timestep,
         model.config.snow.irreducible_liquid_water_content,
-        s.meteo.snow,
-        s.meteo.rain,
+        s.meteo.snowfall,
+        s.meteo.rainfall,
         s.snow.num_layers,
         s.snow.thickness,
         s.snow.temp,
