@@ -219,7 +219,7 @@ def energy_balance(model):
     s = model.state
     roi = model.grid.roi
 
-    surf_moisture_conductance = model.config.soil.saturated_soil_surface_conductance * (
+    surf_moisture_conductance = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
         np.maximum(
             (
                 s.soil.frac_unfrozen_moisture_content[0, roi]
@@ -256,7 +256,7 @@ def energy_balance(model):
         )
         heat_moisture_transfer_coeff *= stability_factor
 
-    moisture_availability = surf_moisture_conductance / (
+    moisture_availability = surf_moisture_conductance / (  # (m s-1 m-1 s = 1)
         surf_moisture_conductance
         + heat_moisture_transfer_coeff * s.meteo.wind_speed[roi]
     )
@@ -270,21 +270,21 @@ def energy_balance(model):
     moisture_availability[sat_spec_hum_surf < s.meteo.spec_hum[roi]] = 1.
     moisture_availability[s.snow.ice_content[0, roi] > 0] = 1.
 
-    latent_heat = np.where(
+    latent_heat = np.where(  # (J kg-1)
         s.surface.temp[roi] > constants.T0,
         constants.LATENT_HEAT_OF_VAPORIZATION,
         constants.LATENT_HEAT_OF_SUBLIMATION,
     )
 
-    air_density = s.meteo.atmos_press[roi] / (constants.GAS_CONSTANT_DRY_AIR * s.meteo.temp[roi])
-    rhoa_CH_Ua = air_density * heat_moisture_transfer_coeff * s.meteo.wind_speed[roi]
+    air_density = s.meteo.atmos_press[roi] / (constants.GAS_CONSTANT_DRY_AIR * s.meteo.temp[roi])  # (kg m-3)
+    rhoa_CH_Ua = air_density * heat_moisture_transfer_coeff * s.meteo.wind_speed[roi]  # (kg m-2 s-1)
 
     # Calculate surface energy balance without melt
     s.snow.melt[roi] = 0
-    D = latent_heat * sat_spec_hum_surf / (  # D = dQsat/dTs (eq. (37))
+    D = latent_heat * sat_spec_hum_surf / (  # D = dQsat/dTs (eq. (37)) (K-1)
         constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[roi]**2
     )
-    surf_moisture_flux = moisture_availability * rhoa_CH_Ua * (sat_spec_hum_surf - s.meteo.spec_hum[roi])
+    surf_moisture_flux = moisture_availability * rhoa_CH_Ua * (sat_spec_hum_surf - s.meteo.spec_hum[roi])  # (kg m-2 s-1)
     s.surface.heat_flux[roi] = (
         2 * s.surface.therm_cond[roi]
         * (s.surface.temp[roi] - s.surface.layer_temp[roi])
@@ -298,7 +298,7 @@ def energy_balance(model):
         + s.meteo.lw_in[roi]
         - constants.STEFAN_BOLTZMANN * s.surface.temp[roi]**4
     )
-    surf_temp_change = (
+    surf_temp_change = (  # (K)
         (net_radiation - s.surface.sens_heat_flux[roi] - s.surface.lat_heat_flux[roi] - s.surface.heat_flux[roi])
         / (
             (constants.SPEC_HEAT_CAP_DRY_AIR + latent_heat * moisture_availability * D) * rhoa_CH_Ua
@@ -306,9 +306,9 @@ def energy_balance(model):
             + 4 * constants.STEFAN_BOLTZMANN * s.surface.temp[roi]**3
         )
     )
-    surf_moisture_flux_change = moisture_availability * rhoa_CH_Ua * D * surf_temp_change
-    surf_heat_flux_change = 2 * s.surface.therm_cond[roi] * surf_temp_change / s.surface.thickness[roi]
-    sens_heat_flux_change = constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua * surf_temp_change
+    surf_moisture_flux_change = moisture_availability * rhoa_CH_Ua * D * surf_temp_change  # (kg m-2 s-1)
+    surf_heat_flux_change = 2 * s.surface.therm_cond[roi] * surf_temp_change / s.surface.thickness[roi]  # (W m-2)
+    sens_heat_flux_change = constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua * surf_temp_change  # (W m-2)
 
     # Calculate melt
     melties_roi = (
