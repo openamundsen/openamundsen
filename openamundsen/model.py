@@ -37,12 +37,67 @@ class Model:
     """
 
     def __init__(self, config):
+        self.config = conf.parse_config(config)
         self.logger = None
-        self.config = None
         self.state = None
         self.dates = None
 
-        self.config = conf.parse_config(config)
+    def initialize(self):
+        """
+        Initialize the model according to the given configuration, i.e. read
+        the required input raster files and meteorological input data,
+        initialize the model grid and all required state variables, etc.
+        """
+        self._initialize_logger()
+
+        self._prepare_time_steps()
+        self._initialize_grid()
+        self._create_state_variables()
+
+        self._read_input_data()
+        self._read_meteo_data()
+        self._calculate_terrain_parameters()
+
+        self.config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
+        self._initialize_point_outputs()
+        self._initialize_field_outputs()
+
+        self._initialize_state_variables()
+
+    def run(self):
+        """
+        Start the model run. Before calling this method, the model must be
+        properly initialized by calling `initialize()`.
+        """
+        if self.config.liveview.enabled:
+            self.logger.info('Creating live view window')
+            lv = liveview.LiveView(self.config.liveview, self.state, self.grid.roi)
+            lv.create_window()
+            self.liveview = lv
+
+        self.logger.info('Starting model run')
+        start_time = time.time()
+        self._time_step_loop()
+        time_diff = pd.Timedelta(seconds=(time.time() - start_time))
+        self.logger.success('Model run finished. Runtime: ' + str(time_diff))
+
+    def roi_mask_to_global(self, mask):
+        if mask.shape[-1] != len(self.grid.roi_idxs_flat):
+            raise Exception('mask does not match ROI size')
+
+        if mask.ndim == 1:
+            global_mask = np.zeros((self.grid.rows, self.grid.cols), dtype=bool)
+            idxs = self.grid.roi_idxs_flat[mask]
+            global_mask.flat[idxs] = True
+        elif mask.ndim == 2:
+            dim3 = mask.shape[0]
+            global_mask = np.zeros((dim3, self.grid.rows, self.grid.cols), dtype=bool)
+
+            for i in range(dim3):
+                idxs = self.grid.roi_idxs_flat[mask[i, :]]
+                global_mask[i, :, :].flat[idxs] = True
+
+        return global_mask
 
     def _prepare_time_steps(self):
         """
@@ -145,24 +200,6 @@ class Model:
         grid = util.ModelGrid(meta)
         grid.prepare_coordinates()
         self.grid = grid
-
-    def roi_mask_to_global(self, mask):
-        if mask.shape[-1] != len(self.grid.roi_idxs_flat):
-            raise Exception('mask does not match ROI size')
-
-        if mask.ndim == 1:
-            global_mask = np.zeros((self.grid.rows, self.grid.cols), dtype=bool)
-            idxs = self.grid.roi_idxs_flat[mask]
-            global_mask.flat[idxs] = True
-        elif mask.ndim == 2:
-            dim3 = mask.shape[0]
-            global_mask = np.zeros((dim3, self.grid.rows, self.grid.cols), dtype=bool)
-
-            for i in range(dim3):
-                idxs = self.grid.roi_idxs_flat[mask[i, :]]
-                global_mask[i, :, :].flat[idxs] = True
-
-        return global_mask
 
     def _prepare_station_coordinates(self):
         """
@@ -390,42 +427,3 @@ class Model:
         )
         m.snow[roi] = snowfall_frac * m.precip[roi]
         m.rain[roi] = (1 - snowfall_frac) * m.precip[roi]
-
-    def initialize(self):
-        """
-        Initialize the model according to the given configuration, i.e. read
-        the required input raster files and meteorological input data,
-        initialize the model grid and all required state variables, etc.
-        """
-        self._initialize_logger()
-
-        self._prepare_time_steps()
-        self._initialize_grid()
-        self._create_state_variables()
-
-        self._read_input_data()
-        self._read_meteo_data()
-        self._calculate_terrain_parameters()
-
-        self.config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
-        self._initialize_point_outputs()
-        self._initialize_field_outputs()
-
-        self._initialize_state_variables()
-
-    def run(self):
-        """
-        Start the model run. Before calling this method, the model must be
-        properly initialized by calling `initialize()`.
-        """
-        if self.config.liveview.enabled:
-            self.logger.info('Creating live view window')
-            lv = liveview.LiveView(self.config.liveview, self.state, self.grid.roi)
-            lv.create_window()
-            self.liveview = lv
-
-        self.logger.info('Starting model run')
-        start_time = time.time()
-        self._time_step_loop()
-        time_diff = pd.Timedelta(seconds=(time.time() - start_time))
-        self.logger.success('Model run finished. Runtime: ' + str(time_diff))
