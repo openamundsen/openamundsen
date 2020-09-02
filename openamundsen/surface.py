@@ -281,7 +281,7 @@ def energy_balance(model):
 
     # Calculate surface energy balance without melt
     s.snow.melt[roi] = 0
-    D = latent_heat * sat_spec_hum_surf / (  # D = dQsat/dTs (eq. (37)) (K-1)
+    dQsat_by_dTs = latent_heat * sat_spec_hum_surf / (  # eq. (37) (K-1)
         constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[roi]**2
     )
     surf_moisture_flux = moisture_availability * rhoa_CH_Ua * (sat_spec_hum_surf - s.meteo.spec_hum[roi])  # (kg m-2 s-1)
@@ -301,12 +301,12 @@ def energy_balance(model):
     surf_temp_change = (  # (K)
         (net_radiation - s.surface.sens_heat_flux[roi] - s.surface.lat_heat_flux[roi] - s.surface.heat_flux[roi])
         / (
-            (constants.SPEC_HEAT_CAP_DRY_AIR + latent_heat * moisture_availability * D) * rhoa_CH_Ua
+            (constants.SPEC_HEAT_CAP_DRY_AIR + latent_heat * moisture_availability * dQsat_by_dTs) * rhoa_CH_Ua
             + 2 * s.surface.therm_cond[roi] / s.surface.thickness[roi]
             + 4 * constants.STEFAN_BOLTZMANN * s.surface.temp[roi]**3
         )
     )
-    surf_moisture_flux_change = moisture_availability * rhoa_CH_Ua * D * surf_temp_change  # (kg m-2 s-1)
+    surf_moisture_flux_change = moisture_availability * rhoa_CH_Ua * dQsat_by_dTs * surf_temp_change  # (kg m-2 s-1)
     surf_heat_flux_change = 2 * s.surface.therm_cond[roi] * surf_temp_change / s.surface.thickness[roi]  # (W m-2)
     sens_heat_flux_change = constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua * surf_temp_change  # (W m-2)
 
@@ -328,7 +328,7 @@ def energy_balance(model):
             ) / (
                 (
                     constants.SPEC_HEAT_CAP_DRY_AIR
-                    + latent_heat[melties_roi] * moisture_availability[melties_roi] * D[melties_roi]
+                    + latent_heat[melties_roi] * moisture_availability[melties_roi] * dQsat_by_dTs[melties_roi]
                 ) * rhoa_CH_Ua[melties_roi]
                 + 2 * s.surface.therm_cond[melties] / s.surface.thickness[melties]
                 + 4 * constants.STEFAN_BOLTZMANN * s.surface.temp[melties]**3
@@ -337,7 +337,7 @@ def energy_balance(model):
 
         surf_moisture_flux_change[melties_roi] = (
             rhoa_CH_Ua[melties_roi]
-            * D[melties_roi]
+            * dQsat_by_dTs[melties_roi]
             * surf_temp_change[melties_roi]
         )
 
