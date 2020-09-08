@@ -1,4 +1,4 @@
-from .init import initialize
+from .init import LayerSnowModel
 from .snow import (
     accumulation,
     albedo,

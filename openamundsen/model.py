@@ -7,6 +7,7 @@ from openamundsen import (
     liveview,
     meteo,
     modules,
+    snowmodel,
     surface,
     statevars,
     terrain,
@@ -61,6 +62,11 @@ class Model:
         self.config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
         self._initialize_point_outputs()
         self._initialize_field_outputs()
+
+        if self.config.snow.model == 'layers':
+            self.snow = modules.snow.LayerSnowModel(self)
+        else:
+            raise NotImplementedError
 
         self._initialize_state_variables()
 
@@ -141,24 +147,23 @@ class Model:
         """
         modules.radiation.irradiance(self)
 
-        modules.snow.albedo(self)
-        modules.snow.accumulation(self)
+        self.snow.albedo_aging()
+        self.snow.accumulation()
         # TODO call update_layers() here?
-        modules.snow.snow_properties(self)
+        self.snow.update_properties()
 
         modules.soil.soil_properties(self)
         surface.surface_properties(self)
         surface.surface_layer_properties(self)
         surface.energy_balance(self)
 
-        modules.snow.heat_conduction(self)
-        modules.snow.melt(self)
-        modules.snow.sublimation(self)
-        modules.snow.runoff(self)
-        modules.snow.compaction(self)
-
-        modules.snow.snow_properties(self)
-        modules.snow.update_layers(self)
+        self.snow.heat_conduction()
+        self.snow.melt()
+        self.snow.sublimation()
+        self.snow.runoff()
+        self.snow.compaction()
+        self.snow.update_properties()
+        self.snow.update_layers()
 
         modules.soil.soil_heat_flux(self)
         modules.soil.soil_temperature(self)
@@ -277,9 +282,7 @@ class Model:
         """
         Fill the state variables arrays with initial values.
         """
-        if self.config.snow.model == 'layers':
-            modules.snow.initialize(self)
-
+        self.snow.initialize()
         modules.soil.initialize(self)
         self.state.surface.temp[self.grid.roi] = self.state.soil.temp[0, self.grid.roi]
 
