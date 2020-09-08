@@ -17,6 +17,10 @@ def surface_properties(model):
     .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
        Geoscientific Model Development, 8(12), 3867–3876.
        https://doi.org/10.5194/gmd-8-3867-2015
+
+    .. [2] Essery, R. L. H., Best, M. J., & Cox, P. M. (2001). MOSES 2.2
+       Technical Documentation, Tech. rep., Hadley Centre, Met Office.
+       http://jules.jchmr.org/sites/default/files/HCTN_30.pdf
     """
     s = model.state
     roi = model.grid.roi
@@ -31,6 +35,20 @@ def surface_properties(model):
         * model.config.soil.roughness_length**(1 - s.snow.area_fraction[roi])
     )
     calculate_heat_moisture_transfer_coefficient(model)
+
+    # Calculate surface conductance (eq. (35) from [2])
+    # (the constant 1/100 therein corresponds to
+    # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2 to
+    # 1 is taken from FSM)
+    s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
+        np.maximum(
+            (
+                s.soil.frac_unfrozen_moisture_content[0, roi]
+                * s.soil.vol_moisture_content_sat[roi] / s.soil.vol_moisture_content_crit[roi]
+            )**2,
+            1,
+        )
+    )
 
 
 def surface_layer_properties(model):
@@ -232,31 +250,16 @@ def energy_balance(model):
     s = model.state
     roi = model.grid.roi
 
-    # Calculate surface conductance (eq. (35) from [2])
-    # (the constant 1/100 therein corresponds to
-    # model.config.soil.saturated_soil_surface_conductance; clipping (theta_1/theta_c)**2 1 is taken
-    # from FSM)
-    surf_moisture_conductance = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
-        np.maximum(
-            (
-                s.soil.frac_unfrozen_moisture_content[0, roi]
-                * s.soil.vol_moisture_content_sat[roi] / s.soil.vol_moisture_content_crit[roi]
-            )**2,
-            1,
-        )
-    )
-
-    moisture_availability = surf_moisture_conductance / (  # (m s-1 m-1 s = 1)  # part of eq. (38) from [2]
-        surf_moisture_conductance
-        + s.surface.heat_moisture_transfer_coeff[roi] * s.meteo.wind_speed[roi]
-    )
-
     sat_vap_press_surf = meteo.saturation_vapor_pressure(s.surface.temp[roi])
     sat_spec_hum_surf = meteo.specific_humidity(  # saturation specific humidity at surface temperature
         s.meteo.atmos_press[roi],
         sat_vap_press_surf,
     )
 
+    moisture_availability = s.surface.conductance[roi] / (  # part of eq. (38) from [2]
+        s.surface.conductance[roi]
+        + s.surface.heat_moisture_transfer_coeff[roi] * s.meteo.wind_speed[roi]
+    )
     moisture_availability[sat_spec_hum_surf < s.meteo.spec_hum[roi]] = 1.
     moisture_availability[s.snow.ice_content[0, roi] > 0] = 1.
 

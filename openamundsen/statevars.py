@@ -281,6 +281,7 @@ def add_default_state_variables(model):
     surf.add_variable('lat_heat_flux', 'W m-2', 'Latent heat flux', 'surface_downward_latent_heat_flux')
     surf.add_variable('roughness_length', 'm', 'Surface roughness length', 'surface_roughness_length')
     surf.add_variable('heat_moisture_transfer_coeff', '1', 'Transfer coefficient for heat and moisture')
+    surf.add_variable('conductance', 'm s-1', 'Surface conductance')
 
     # Snow variables
     snow = state.add_category('snow')
