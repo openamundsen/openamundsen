@@ -4,6 +4,21 @@ from . import snow
 
 
 class LayerSnowModel(SnowModel):
+    def __init__(self, model):
+        self.model = model
+
+        s = model.state.snow
+        num_snow_layers = len(model.config.snow.min_thickness)
+
+        s.add_variable('num_layers', '1', 'Number of snow layers', dtype=int)
+        s.add_variable('thickness', 'm', 'Snow thickness', dim3=num_snow_layers)
+        s.add_variable('density', 'kg m-3', 'Snow density', 'snow_density', dim3=num_snow_layers)
+        s.add_variable('ice_content', 'kg m-2', 'Ice content of snow', dim3=num_snow_layers)
+        s.add_variable('liquid_water_content', 'kg m-2', 'Liquid water content of snow', dim3=num_snow_layers)
+        s.add_variable('temp', 'K', 'Snow temperature', dim3=num_snow_layers)
+        s.add_variable('therm_cond', 'W m-1 K-1', 'Thermal conductivity of snow', dim3=num_snow_layers)
+        s.add_variable('areal_heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_snow_layers)
+
     def initialize(self):
         roi = self.model.grid.roi
         s = self.model.state.snow

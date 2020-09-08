@@ -53,6 +53,13 @@ class Model:
 
         self._prepare_time_steps()
         self._initialize_grid()
+        self._initialize_state_variable_management()
+
+        if self.config.snow.model == 'layers':
+            self.snow = modules.snow.LayerSnowModel(self)
+        else:
+            raise NotImplementedError
+
         self._create_state_variables()
 
         self._read_input_data()
@@ -62,11 +69,6 @@ class Model:
         self.config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
         self._initialize_point_outputs()
         self._initialize_field_outputs()
-
-        if self.config.snow.model == 'layers':
-            self.snow = modules.snow.LayerSnowModel(self)
-        else:
-            raise NotImplementedError
 
         self._initialize_state_variables()
 
@@ -268,14 +270,18 @@ class Model:
                 col = int(dss.col)
                 within_roi_var.loc[station] = self.grid.roi[row, col]
 
+    def _initialize_state_variable_management(self):
+        """
+        Initialize the state variable management and add default state variables.
+        """
+        self.state = statevars.StateVariableManager(self.grid.rows, self.grid.cols)
+        statevars.add_default_state_variables(self)
+
     def _create_state_variables(self):
         """
         Create the state variables (i.e., empty arrays with the shape of the
         model grid) for the model run.
         """
-        state = statevars.StateVariableManager(self.grid.rows, self.grid.cols)
-        self.state = state
-        statevars.add_default_state_variables(self)
         self.state.initialize()
 
     def _initialize_state_variables(self):

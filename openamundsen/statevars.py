@@ -284,26 +284,15 @@ def add_default_state_variables(model):
     surf.add_variable('heat_moisture_transfer_coeff', '1', 'Transfer coefficient for heat and moisture')
     surf.add_variable('conductance', 'm s-1', 'Surface conductance')
 
-    # Snow variables
+    # Snow variables (shared by all snow models, additional ones might be added from the individual models)
     snow = state.add_category('snow')
     snow.add_variable('swe', 'kg m-2', 'Snow water equivalent', 'liquid_water_content_of_surface_snow')
     snow.add_variable('depth', 'm', 'Snow depth', 'surface_snow_thickness')
     snow.add_variable('melt', 'kg m-2', 'Snow melt', 'surface_snow_melt_amount')
     snow.add_variable('sublimation', 'kg m-2', 'Snow sublimation', 'surface_snow_sublimation_amount')
     snow.add_variable('runoff', 'kg m-2', 'Snow runoff')
+    snow.add_variable('albedo', '1', 'Snow albedo')
     snow.add_variable('area_fraction', '1', 'Snow cover fraction', 'surface_snow_area_fraction')
-
-    if model.config.snow.model == 'layers':
-        num_snow_layers = len(model.config.snow.min_thickness)
-        snow.add_variable('albedo', '1', 'Snow albedo')
-        snow.add_variable('num_layers', '1', 'Number of snow layers', dtype=int)
-        snow.add_variable('thickness', 'm', 'Snow thickness', dim3=num_snow_layers)
-        snow.add_variable('density', 'kg m-3', 'Snow density', 'snow_density', dim3=num_snow_layers)
-        snow.add_variable('ice_content', 'kg m-2', 'Ice content of snow', dim3=num_snow_layers)
-        snow.add_variable('liquid_water_content', 'kg m-2', 'Liquid water content of snow', dim3=num_snow_layers)
-        snow.add_variable('temp', 'K', 'Snow temperature', dim3=num_snow_layers)
-        snow.add_variable('therm_cond', 'W m-1 K-1', 'Thermal conductivity of snow', dim3=num_snow_layers)
-        snow.add_variable('areal_heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_snow_layers)
 
     # Soil variables
     soil = state.add_category('soil')
