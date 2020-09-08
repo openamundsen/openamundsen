@@ -149,7 +149,6 @@ def shortwave_irradiance(model, sun_over_horizon):
 
     m.cloud_fraction[roi] = meteo.cloud_fraction_from_cloud_factor(m.cloud_factor[roi])
     m.sw_in[roi] = m.sw_in_clearsky[roi] * m.cloud_factor[roi]
-    m.sw_out[roi] = model.state.surface.albedo[roi] * m.sw_in[roi]
 
 
 def longwave_irradiance(model):
@@ -159,7 +158,6 @@ def longwave_irradiance(model):
     clear_sky_emissivity = meteo.clear_sky_emissivity(m.precipitable_water[roi])
 
     # TODO these are parameters
-    snow_emissivity = 0.99
     cloud_emissivity = 0.976  # emissivity of totally overcast skies (Greuell et al., 1997)
     rock_emission_factor = 0.01  # (K W-1 m2) temperature of emitting rocks during daytime is assumed to be higher than the air temperature by this factor multiplied by the incoming shortwave radiation (Greuell et al., 1997)
 
@@ -192,7 +190,5 @@ def longwave_irradiance(model):
         )
     )
 
-    # Total incoming/outgoing longwave radiation
+    # Total incoming longwave radiation
     m.lw_in[roi] = lw_in_clearsky + lw_in_clouds + lw_in_slopes
-    m.lw_out[roi] = snow_emissivity * constants.STEFAN_BOLTZMANN * model.state.surface.temp[roi]**4
-

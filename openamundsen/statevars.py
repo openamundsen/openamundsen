@@ -252,6 +252,7 @@ def add_default_state_variables(model):
     meteo.add_variable('sw_out', 'W m-2', 'Outgoing shortwave radiation', 'surface_upwelling_shortwave_flux_in_air')
     meteo.add_variable('lw_in', 'W m-2', 'Incoming longwave radiation', 'downwelling_longwave_flux_in_air')
     meteo.add_variable('lw_out', 'W m-2', 'Outgoing longwave radiation', 'surface_upwelling_longwave_flux_in_air')
+    meteo.add_variable('net_radiation', 'W m-2', 'Net radiation', 'surface_net_downward_radiative_flux')
     meteo.add_variable('sw_in_clearsky', 'W m-2', 'Clear-sky incoming shortwave radiation', 'surface_downwelling_shortwave_flux_in_air_assuming_clear_sky')
     meteo.add_variable('dir_in_clearsky', 'W m-2', 'Clear-sky direct incoming shortwave radiation')
     meteo.add_variable('diff_in_clearsky', 'W m-2', 'Clear-sky diffuse incoming shortwave radiation', 'surface_diffuse_downwelling_shortwave_flux_in_air_assuming_clear_sky')
