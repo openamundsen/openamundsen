@@ -412,6 +412,7 @@ class Model:
             m.temp[roi],
             m.vap_press[roi],
         )
+        m.dry_air_density[roi] = m.atmos_press[roi] / (constants.GAS_CONSTANT_DRY_AIR * m.temp[roi])
 
         # Calculate precipitation phase
         precip_phase_method = self.config.meteo.precipitation_phase.method

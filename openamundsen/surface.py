@@ -284,8 +284,7 @@ def energy_balance(model):
         constants.LATENT_HEAT_OF_SUBLIMATION,
     )
 
-    air_density = s.meteo.atmos_press[roi] / (constants.GAS_CONSTANT_DRY_AIR * s.meteo.temp[roi])  # (kg m-3)
-    rhoa_CH_Ua = air_density * heat_moisture_transfer_coeff * s.meteo.wind_speed[roi]  # (kg m-2 s-1)
+    rhoa_CH_Ua = s.meteo.dry_air_density[roi] * heat_moisture_transfer_coeff * s.meteo.wind_speed[roi]  # (kg m-2 s-1)
 
     # Calculate surface energy balance without melt
     s.snow.melt[roi] = 0

@@ -267,6 +267,7 @@ def add_default_state_variables(model):
     meteo.add_variable('psych_const', 'Pa K-1', 'Psychrometric constant')
     meteo.add_variable('lat_heat_vap', 'J kg-1', 'Latent heat of vaporization')
     meteo.add_variable('precipitable_water', 'kg m-2', 'Precipitable water')
+    meteo.add_variable('dry_air_density', 'kg m-3', 'Dry air density')
 
     # Surface variables
     surf = state.add_category('surface')
