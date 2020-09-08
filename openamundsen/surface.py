@@ -30,6 +30,7 @@ def surface_properties(model):
         model.config.snow.roughness_length**s.snow.area_fraction[roi]
         * model.config.soil.roughness_length**(1 - s.snow.area_fraction[roi])
     )
+    calculate_heat_moisture_transfer_coefficient(model)
 
 
 def surface_layer_properties(model):
@@ -160,30 +161,15 @@ def _stability_factor(
     return stability_factor
 
 
-def _heat_moisture_transfer_coefficient(
-    surface_roughness_length,
-    temp_measurement_height,
-    wind_measurement_height,
-):
+def calculate_heat_moisture_transfer_coefficient(model):
     """
-    Calculate the transfer coefficient C_H from [1] (eq. (22)), without the
+    Calculate the transfer coefficient C_H from [1] (eq. (22)) including the
     possible adjustment for atmospheric stability.
 
     Parameters
     ----------
-    surface_roughness_length : ndarray
-        Surface roughness length (m).
-
-    temp_measurement_height : float
-        Temperature/humidity measurement height.
-
-    wind_measurement_height : float
-        Wind measurement height.
-
-    Returns
-    -------
-    coeff : ndarray
-        Transfer coefficient.
+    model : Model
+        Model instance.
 
     References
     ----------
@@ -191,14 +177,37 @@ def _heat_moisture_transfer_coefficient(
        Geoscientific Model Development, 8(12), 3867–3876.
        https://doi.org/10.5194/gmd-8-3867-2015
     """
-    heat_moisture_roughness_length = 0.1 * surface_roughness_length
+    s = model.state
+    roi = model.grid.roi
 
+    temp_measurement_height = model.config.meteo.measurement_height.temperature
+    wind_measurement_height = model.config.meteo.measurement_height.wind
+
+    if model.config.snow.measurement_height_adjustment:
+        temp_measurement_height -= s.snow.depth[roi]
+        temp_measurement_height = np.maximum(temp_measurement_height, 1.)  # as implemented in FSM
+
+    heat_moisture_roughness_length = 0.1 * s.surface.roughness_length[roi]
     coeff = constants.VON_KARMAN**2 / (
-        np.log(wind_measurement_height / surface_roughness_length)
+        np.log(wind_measurement_height / s.surface.roughness_length[roi])
         * np.log(temp_measurement_height / heat_moisture_roughness_length)
     )
 
-    return coeff
+    if model.config.meteo.stability_correction:
+        stability_factor = _stability_factor(
+            s.meteo.temp[roi],
+            s.surface.temp[roi],
+            s.meteo.wind_speed[roi],
+            s.snow.area_fraction[roi],
+            model.config.snow.roughness_length,
+            model.config.soil.roughness_length,
+            temp_measurement_height,
+            wind_measurement_height,
+            model.config.meteo.stability_adjustment_parameter,
+        )
+        coeff *= stability_factor
+
+    s.surface.heat_moisture_transfer_coeff[roi] = coeff
 
 
 def energy_balance(model):
@@ -237,36 +246,9 @@ def energy_balance(model):
         )
     )
 
-    temp_measurement_height = model.config.meteo.measurement_height.temperature
-    wind_measurement_height = model.config.meteo.measurement_height.wind
-
-    if model.config.snow.measurement_height_adjustment:
-        temp_measurement_height -= s.snow.depth[roi]
-        temp_measurement_height = np.maximum(temp_measurement_height, 1.)  # as implemented in FSM
-
-    heat_moisture_transfer_coeff = _heat_moisture_transfer_coefficient(
-        s.surface.roughness_length[roi],
-        temp_measurement_height,
-        wind_measurement_height,
-    )
-
-    if model.config.meteo.stability_correction:
-        stability_factor = _stability_factor(
-            s.meteo.temp[roi],
-            s.surface.temp[roi],
-            s.meteo.wind_speed[roi],
-            s.snow.area_fraction[roi],
-            model.config.snow.roughness_length,
-            model.config.soil.roughness_length,
-            temp_measurement_height,
-            wind_measurement_height,
-            model.config.meteo.stability_adjustment_parameter,
-        )
-        heat_moisture_transfer_coeff *= stability_factor
-
     moisture_availability = surf_moisture_conductance / (  # (m s-1 m-1 s = 1)  # part of eq. (38) from [2]
         surf_moisture_conductance
-        + heat_moisture_transfer_coeff * s.meteo.wind_speed[roi]
+        + s.surface.heat_moisture_transfer_coeff[roi] * s.meteo.wind_speed[roi]
     )
 
     sat_vap_press_surf = meteo.saturation_vapor_pressure(s.surface.temp[roi])
@@ -284,7 +266,7 @@ def energy_balance(model):
         constants.LATENT_HEAT_OF_SUBLIMATION,
     )
 
-    rhoa_CH_Ua = s.meteo.dry_air_density[roi] * heat_moisture_transfer_coeff * s.meteo.wind_speed[roi]  # (kg m-2 s-1)
+    rhoa_CH_Ua = s.meteo.dry_air_density[roi] * s.surface.heat_moisture_transfer_coeff[roi] * s.meteo.wind_speed[roi]  # (kg m-2 s-1)
 
     # Calculate surface energy balance without melt
     s.snow.melt[roi] = 0
