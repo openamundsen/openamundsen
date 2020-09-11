@@ -388,8 +388,7 @@ snow:
       type: string
       allowed:
         - layers
-        - bulk
-        - bulk_layers
+        - cryolayers
       default: layers
 
     melt:
@@ -485,6 +484,38 @@ snow:
         refresh_snowfall: # snowfall to refresh albedo (kg m-2)
           type: number
           default: 10
+
+        # Firn and ice albedo (only relevant for the cryo layer model)
+        firn:
+          type: number
+          default: 0.4
+        ice:
+          type: number
+          default: 0.2
+
+    # Parameters for the cryo layer model
+    cryolayers:
+      type: dict
+      default: {}
+      schema:
+        transition:
+          type: dict
+          default: {}
+          schema:
+            # New snow -> old snow transition (density, kg m-3)
+            old_snow:
+              type: number
+              default: 200.
+
+            # Old snow -> firn transition (start of calendar month)
+            firn:
+              type: integer
+              default: 10
+
+            # Firn -> ice transition (density, kg m-3)
+            ice:
+              type: number
+              default: 900.
 
 soil:
   type: dict

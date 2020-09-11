@@ -57,6 +57,8 @@ class Model:
 
         if self.config.snow.model == 'layers':
             self.snow = modules.snow.LayerSnowModel(self)
+        elif self.config.snow.model == 'cryolayers':
+            self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
             raise NotImplementedError
 
@@ -128,9 +130,12 @@ class Model:
         methods for preparing the meteorological fields and the interface to
         the submodules.
         """
-        for date in self.dates:
+        for date_idx, date in enumerate(self.dates):
             self.logger.info(f'Processing time step {date:%Y-%m-%d %H:%M}')
+
             self.date = date
+            self.date_idx = date_idx
+
             meteo.interpolate_station_data(self)
             self._process_meteo_data()
             self._model_interface()
@@ -155,10 +160,14 @@ class Model:
         # TODO call update_layers() here?
         self.snow.update_properties()
 
-        modules.soil.soil_properties(self)
+        if self.config.snow.model == 'layers':  # TODO check this
+            modules.soil.soil_properties(self)
+
         surface.surface_properties(self)
-        surface.surface_layer_properties(self)
-        surface.energy_balance(self)
+
+        if self.config.snow.model == 'layers':  # TODO check this
+            surface.surface_layer_properties(self)
+            surface.energy_balance(self)
 
         self.snow.heat_conduction()
         self.snow.melt()
@@ -167,8 +176,9 @@ class Model:
         self.snow.update_properties()
         self.snow.update_layers()
 
-        modules.soil.soil_heat_flux(self)
-        modules.soil.soil_temperature(self)
+        if self.config.snow.model == 'layers':  # TODO check this
+            modules.soil.soil_heat_flux(self)
+            modules.soil.soil_temperature(self)
 
     def _calculate_diagnostic_variables(self):
         """

@@ -6,18 +6,20 @@ from openamundsen import (
 )
 
 
-def albedo(model):
+def albedo(model, pos=None):
     """
     Update snow albedo using an exponential decay function.
     """
     s = model.state
-    roi = model.grid.roi
+
+    if pos is None:
+        pos = model.grid.roi
 
     if model.config.snow.albedo.method == 'usaco':
-        s.snow.albedo[roi] = _albedo_usaco(
-            s.snow.albedo[roi],
-            s.meteo.temp[roi],
-            s.meteo.snowfall[roi],
+        s.snow.albedo[pos] = _albedo_usaco(
+            s.snow.albedo[pos],
+            s.meteo.temp[pos],
+            s.meteo.snowfall[pos],
             model.config.snow.albedo.min,
             model.config.snow.albedo.max,
             model.config.snow.albedo.k_pos,
@@ -26,10 +28,10 @@ def albedo(model):
             model.timestep,
         )
     elif model.config.snow.albedo.method == 'fsm':
-        s.snow.albedo[roi] = _albedo_fsm(
-            s.snow.albedo[roi],
-            s.surface.temp[roi],
-            s.meteo.snowfall[roi],
+        s.snow.albedo[pos] = _albedo_fsm(
+            s.snow.albedo[pos],
+            s.surface.temp[pos],
+            s.meteo.snowfall[pos],
             model.config.snow.albedo.min,
             model.config.snow.albedo.max,
             model.config.snow.albedo.melting_snow_decay_timescale,

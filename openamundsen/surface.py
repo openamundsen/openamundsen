@@ -1,6 +1,7 @@
 from numba import njit, prange
 import numpy as np
 from openamundsen import constants, meteo
+from openamundsen.modules.snow import CryoLayerID
 
 
 def surface_properties(model):
@@ -30,25 +31,33 @@ def surface_properties(model):
         s.snow.area_fraction[roi] * s.snow.albedo[roi] + (1 - s.snow.area_fraction[roi]) * model.config.soil.albedo,
         model.config.soil.albedo,
     )
-    s.surface.roughness_length[roi] = (
-        model.config.snow.roughness_length**s.snow.area_fraction[roi]
-        * model.config.soil.roughness_length**(1 - s.snow.area_fraction[roi])
-    )
-    calculate_heat_moisture_transfer_coefficient(model)
 
-    # Calculate surface conductance (eq. (35) from [2])
-    # (the constant 1/100 therein corresponds to
-    # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2 to
-    # 1 is taken from FSM)
-    s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
-        np.maximum(
-            (
-                s.soil.frac_unfrozen_moisture_content[0, roi]
-                * s.soil.vol_moisture_content_sat[roi] / s.soil.vol_moisture_content_crit[roi]
-            )**2,
-            1,
+    if model.config.snow.model == 'layers':
+        s.surface.roughness_length[roi] = (
+            model.config.snow.roughness_length**s.snow.area_fraction[roi]
+            * model.config.soil.roughness_length**(1 - s.snow.area_fraction[roi])
         )
-    )
+        calculate_heat_moisture_transfer_coefficient(model)
+
+        # Calculate surface conductance (eq. (35) from [2])
+        # (the constant 1/100 therein corresponds to
+        # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2 to
+        # 1 is taken from FSM)
+        s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
+            np.maximum(
+                (
+                    s.soil.frac_unfrozen_moisture_content[0, roi]
+                    * s.soil.vol_moisture_content_sat[roi] / s.soil.vol_moisture_content_crit[roi]
+                )**2,
+                1,
+            )
+        )
+    elif model.config.snow.model == 'cryolayers':
+        s.surface.layer_type[roi] = CryoLayerID.SNOW_FREE
+
+        for i in reversed(range(model.snow.num_layers)):
+            pos = model.roi_mask_to_global(s.snow.ice_content[i, roi] > 0)
+            s.surface.layer_type[pos] = i
 
 
 def surface_layer_properties(model):
