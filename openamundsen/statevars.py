@@ -279,6 +279,7 @@ def add_default_state_variables(model):
     surf.add_variable('lat_heat_flux', 'W m-2', 'Latent heat flux', 'surface_downward_latent_heat_flux')
     surf.add_variable('sat_vap_press', 'Pa', 'Saturation vapor pressure at surface temperature')
     surf.add_variable('sat_spec_hum', 'kg kg-1', 'Saturation specific humidity at surface temperature')
+    surf.add_variable('moisture_availability', '1', 'Moisture availability factor')
     if model.config.snow.model == 'layers':
         surf.add_variable('layer_temp', 'K', 'Surface layer temperature')
         surf.add_variable('thickness', 'm', 'Surface layer thickness')
