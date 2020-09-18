@@ -260,14 +260,7 @@ def energy_balance(model):
     roi = model.grid.roi
 
     _calc_sat_spec_hum(model, roi)
-
-    moisture_availability = s.surface.conductance[roi] / (  # eq. (38) from [2]
-        s.surface.conductance[roi]
-        + s.surface.heat_moisture_transfer_coeff[roi] * s.meteo.wind_speed[roi]
-    )
-    moisture_availability[s.surface.sat_spec_hum[roi] < s.meteo.spec_hum[roi]] = 1.
-    moisture_availability[s.snow.ice_content[0, roi] > 0] = 1.
-    s.surface.moisture_availability[roi] = moisture_availability
+    _calc_moisture_availability(model, roi)
 
     s.surface.lat_heat[roi] = np.where(
         (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0),
@@ -489,3 +482,15 @@ def _calc_sat_spec_hum(model, pos):
         s.meteo.atmos_press[pos],
         sat_vap_press_surf,
     )
+
+
+def _calc_moisture_availability(model, pos):
+    s = model.state
+
+    moisture_availability = s.surface.conductance[pos] / (  # eq. (38) from [2]
+        s.surface.conductance[pos]
+        + s.surface.heat_moisture_transfer_coeff[pos] * s.meteo.wind_speed[pos]
+    )
+    moisture_availability[s.surface.sat_spec_hum[pos] < s.meteo.spec_hum[pos]] = 1.
+    moisture_availability[s.snow.ice_content[0, pos] > 0] = 1.
+    s.surface.moisture_availability[pos] = moisture_availability
