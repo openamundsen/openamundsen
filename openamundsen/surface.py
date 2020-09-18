@@ -259,11 +259,7 @@ def energy_balance(model):
     s = model.state
     roi = model.grid.roi
 
-    sat_vap_press_surf = meteo.saturation_vapor_pressure(s.surface.temp[roi])
-    s.surface.sat_spec_hum[roi] = meteo.specific_humidity(
-        s.meteo.atmos_press[roi],
-        sat_vap_press_surf,
-    )
+    _calc_sat_spec_hum(model, roi)
 
     moisture_availability = s.surface.conductance[roi] / (  # eq. (38) from [2]
         s.surface.conductance[roi]
@@ -393,11 +389,7 @@ def energy_balance(model):
 
             s.surface.temp[melties2] = constants.T0
 
-            sat_vap_press_surf = meteo.saturation_vapor_pressure(s.surface.temp[melties2])
-            s.surface.sat_spec_hum[melties2] = meteo.specific_humidity(
-                s.meteo.atmos_press[melties2],
-                sat_vap_press_surf,
-            )
+            _calc_sat_spec_hum(model, melties2)
 
             s.surface.moisture_flux[melties2] = (
                 s.surface.moisture_availability[melties2]
@@ -487,4 +479,13 @@ def radiation_balance(model, pos=None):
         - s.meteo.sw_out[pos]
         + s.meteo.lw_in[pos]
         - s.meteo.lw_out[pos]
+    )
+
+
+def _calc_sat_spec_hum(model, pos):
+    s = model.state
+    sat_vap_press_surf = meteo.saturation_vapor_pressure(s.surface.temp[pos])
+    s.surface.sat_spec_hum[pos] = meteo.specific_humidity(
+        s.meteo.atmos_press[pos],
+        sat_vap_press_surf,
     )
