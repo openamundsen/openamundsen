@@ -261,12 +261,7 @@ def energy_balance(model):
 
     _calc_sat_spec_hum(model, roi)
     _calc_moisture_availability(model, roi)
-
-    s.surface.lat_heat[roi] = np.where(
-        (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0),
-        constants.LATENT_HEAT_OF_SUBLIMATION,
-        constants.LATENT_HEAT_OF_VAPORIZATION,
-    )
+    _calc_lat_heat(model, roi)
 
     rhoa_CH_Ua = (  # (kg m-2 s-1)
         s.meteo.dry_air_density[roi]
@@ -435,11 +430,7 @@ def energy_balance(model):
     pos_roi = (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0)
     pos = model.roi_mask_to_global(pos_roi)
     s.snow.sublimation[pos] = s.surface.moisture_flux[pos]
-    s.surface.lat_heat[roi] = np.where(
-        pos_roi,
-        constants.LATENT_HEAT_OF_SUBLIMATION,
-        constants.LATENT_HEAT_OF_VAPORIZATION,
-    )
+    _calc_lat_heat(model, roi)
     s.surface.lat_heat_flux[roi] = s.surface.lat_heat[roi] * s.surface.moisture_flux[roi]
     # soil_evaporation[model.roi_mask_to_global(~pos)] = surf_moisture_flux[~pos]
 
@@ -494,3 +485,12 @@ def _calc_moisture_availability(model, pos):
     moisture_availability[s.surface.sat_spec_hum[pos] < s.meteo.spec_hum[pos]] = 1.
     moisture_availability[s.snow.ice_content[0, pos] > 0] = 1.
     s.surface.moisture_availability[pos] = moisture_availability
+
+
+def _calc_lat_heat(model, pos):
+    s = model.state
+    s.surface.lat_heat[pos] = np.where(
+        (s.snow.ice_content[0, pos] > 0) | (s.surface.temp[pos] < constants.T0),
+        constants.LATENT_HEAT_OF_SUBLIMATION,
+        constants.LATENT_HEAT_OF_VAPORIZATION,
+    )
