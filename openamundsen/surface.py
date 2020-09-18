@@ -259,17 +259,17 @@ def energy_balance(model):
     s = model.state
     roi = model.grid.roi
 
-    sat_vap_press_surf = meteo.saturation_vapor_pressure(s.surface.temp[roi])
-    sat_spec_hum_surf = meteo.specific_humidity(  # saturation specific humidity at surface temperature
+    s.surface.sat_vap_press[roi] = meteo.saturation_vapor_pressure(s.surface.temp[roi])
+    s.surface.sat_spec_hum[roi] = meteo.specific_humidity(
         s.meteo.atmos_press[roi],
-        sat_vap_press_surf,
+        s.surface.sat_vap_press[roi],
     )
 
     moisture_availability = s.surface.conductance[roi] / (  # part of eq. (38) from [2]
         s.surface.conductance[roi]
         + s.surface.heat_moisture_transfer_coeff[roi] * s.meteo.wind_speed[roi]
     )
-    moisture_availability[sat_spec_hum_surf < s.meteo.spec_hum[roi]] = 1.
+    moisture_availability[s.surface.sat_spec_hum[roi] < s.meteo.spec_hum[roi]] = 1.
     moisture_availability[s.snow.ice_content[0, roi] > 0] = 1.
 
     latent_heat = np.where(  # (J kg-1)
@@ -282,10 +282,10 @@ def energy_balance(model):
 
     # Calculate surface energy balance without melt
     s.snow.melt[roi] = 0
-    dQsat_by_dTs = latent_heat * sat_spec_hum_surf / (  # eq. (37) (K-1)
+    dQsat_by_dTs = latent_heat * s.surface.sat_spec_hum[roi] / (  # eq. (37) (K-1)
         constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[roi]**2
     )
-    surf_moisture_flux = moisture_availability * rhoa_CH_Ua * (sat_spec_hum_surf - s.meteo.spec_hum[roi])  # (kg m-2 s-1)
+    surf_moisture_flux = moisture_availability * rhoa_CH_Ua * (s.surface.sat_spec_hum[roi] - s.meteo.spec_hum[roi])  # (kg m-2 s-1)
     s.surface.heat_flux[roi] = (
         2 * s.surface.therm_cond[roi]
         * (s.surface.temp[roi] - s.surface.layer_temp[roi])
@@ -353,16 +353,16 @@ def energy_balance(model):
         if melties2_roi.any():
             melties2 = model.roi_mask_to_global(melties2_roi)
 
-            sat_vap_press_surf[melties2_roi] = meteo.saturation_vapor_pressure(constants.T0)
-            sat_spec_hum_surf[melties2_roi] = meteo.specific_humidity(
+            s.surface.sat_vap_press[melties2] = meteo.saturation_vapor_pressure(constants.T0)
+            s.surface.sat_spec_hum[melties2] = meteo.specific_humidity(
                 s.meteo.atmos_press[melties2],
-                sat_vap_press_surf[melties2_roi],
+                s.surface.sat_vap_press[melties2],
             )
 
             surf_moisture_flux[melties2_roi] = (
                 moisture_availability[melties2_roi]
                 * rhoa_CH_Ua[melties2_roi]
-                * (sat_spec_hum_surf[melties2_roi] - s.meteo.spec_hum[melties2])
+                * (s.surface.sat_spec_hum[melties2] - s.meteo.spec_hum[melties2])
             )
 
             s.surface.heat_flux[melties2] = (
