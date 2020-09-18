@@ -274,22 +274,7 @@ def energy_balance(model):
     dQsat_by_dTs = s.surface.lat_heat[roi] * s.surface.sat_spec_hum[roi] / (  # eq. (37) (K-1)
         constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[roi]**2
     )
-    s.surface.moisture_flux[roi] = (  # (kg m-2 s-1)
-        s.surface.moisture_availability[roi]
-        * rhoa_CH_Ua
-        * (s.surface.sat_spec_hum[roi] - s.meteo.spec_hum[roi])
-    )
-    s.surface.heat_flux[roi] = (
-        2 * s.surface.therm_cond[roi]
-        * (s.surface.temp[roi] - s.surface.layer_temp[roi])
-        / s.surface.thickness[roi]
-    )
-    s.surface.sens_heat_flux[roi] = (
-        constants.SPEC_HEAT_CAP_DRY_AIR
-        * rhoa_CH_Ua
-        * (s.surface.temp[roi] - s.meteo.temp[roi])
-    )
-    s.surface.lat_heat_flux[roi] = s.surface.lat_heat[roi] * s.surface.moisture_flux[roi]
+    _calc_fluxes(model, roi)
     radiation_balance(model)
     surf_temp_change = (  # eq. (38) (K)
         (
@@ -377,29 +362,9 @@ def energy_balance(model):
 
             s.surface.temp[melties2] = constants.T0
 
+            _calc_lat_heat(model, melties2)
             _calc_sat_spec_hum(model, melties2)
-
-            s.surface.moisture_flux[melties2] = (
-                s.surface.moisture_availability[melties2]
-                * rhoa_CH_Ua[melties2_roi]
-                * (s.surface.sat_spec_hum[melties2] - s.meteo.spec_hum[melties2])
-            )
-
-            s.surface.heat_flux[melties2] = (
-                2 * s.surface.therm_cond[melties2]
-                * (s.surface.temp[melties2] - s.surface.layer_temp[melties2])
-                / s.surface.thickness[melties2]
-            )
-
-            s.surface.sens_heat_flux[melties2] = (
-                constants.SPEC_HEAT_CAP_DRY_AIR
-                * rhoa_CH_Ua[melties2_roi]
-                * (s.surface.temp[melties2] - s.meteo.temp[melties2])
-            )
-            s.surface.lat_heat_flux[melties2] = (
-                constants.LATENT_HEAT_OF_SUBLIMATION
-                * s.surface.moisture_flux[melties2]
-            )
+            _calc_fluxes(model, melties2)
             radiation_balance(model, melties2)  # update net radiation
 
             s.snow.melt[melties2] = np.maximum(
@@ -431,7 +396,7 @@ def energy_balance(model):
     pos = model.roi_mask_to_global(pos_roi)
     s.snow.sublimation[pos] = s.surface.moisture_flux[pos]
     _calc_lat_heat(model, roi)
-    s.surface.lat_heat_flux[roi] = s.surface.lat_heat[roi] * s.surface.moisture_flux[roi]
+    _calc_fluxes(model, roi, surface=False, moisture=False, sensible=False, latent=True)
     # soil_evaporation[model.roi_mask_to_global(~pos)] = surf_moisture_flux[~pos]
 
 
@@ -494,3 +459,37 @@ def _calc_lat_heat(model, pos):
         constants.LATENT_HEAT_OF_SUBLIMATION,
         constants.LATENT_HEAT_OF_VAPORIZATION,
     )
+
+
+def _calc_fluxes(model, pos, surface=True, moisture=True, sensible=True, latent=True):
+    s = model.state
+
+    rhoa_CH_Ua = (  # (kg m-2 s-1)
+        s.meteo.dry_air_density[pos]
+        * s.surface.heat_moisture_transfer_coeff[pos]
+        * s.meteo.wind_speed[pos]
+    )
+
+    if surface:
+        s.surface.heat_flux[pos] = (
+            2 * s.surface.therm_cond[pos]
+            * (s.surface.temp[pos] - s.surface.layer_temp[pos])
+            / s.surface.thickness[pos]
+        )
+
+    if moisture:
+        s.surface.moisture_flux[pos] = (
+            s.surface.moisture_availability[pos]
+            * rhoa_CH_Ua
+            * (s.surface.sat_spec_hum[pos] - s.meteo.spec_hum[pos])
+        )
+
+    if sensible:
+        s.surface.sens_heat_flux[pos] = (
+            constants.SPEC_HEAT_CAP_DRY_AIR
+            * rhoa_CH_Ua
+            * (s.surface.temp[pos] - s.meteo.temp[pos])
+        )
+
+    if latent:
+        s.surface.lat_heat_flux[pos] = s.surface.lat_heat[pos] * s.surface.moisture_flux[pos]
