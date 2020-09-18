@@ -268,12 +268,12 @@ def energy_balance(model):
         * s.surface.heat_moisture_transfer_coeff[roi]
         * s.meteo.wind_speed[roi]
     )
-
-    # Calculate surface energy balance without melt
-    s.snow.melt[roi] = 0
     dQsat_by_dTs = s.surface.lat_heat[roi] * s.surface.sat_spec_hum[roi] / (  # eq. (37) (K-1)
         constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[roi]**2
     )
+
+    # Calculate surface energy balance without melt
+    s.snow.melt[roi] = 0
     _calc_fluxes(model, roi)
     radiation_balance(model)
     surf_temp_change = (  # eq. (38) (K)
@@ -389,14 +389,14 @@ def energy_balance(model):
     s.surface.moisture_flux[roi] += surf_moisture_flux_change
     s.surface.heat_flux[roi] += surf_heat_flux_change
     s.surface.sens_heat_flux[roi] += sens_heat_flux_change
+    _calc_lat_heat(model, roi)
+    _calc_fluxes(model, roi, surface=False, moisture=False, sensible=False, latent=True)
 
     # Snow sublimation
     s.snow.sublimation[roi] = 0.
     pos_roi = (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0)
     pos = model.roi_mask_to_global(pos_roi)
     s.snow.sublimation[pos] = s.surface.moisture_flux[pos]
-    _calc_lat_heat(model, roi)
-    _calc_fluxes(model, roi, surface=False, moisture=False, sensible=False, latent=True)
     # soil_evaporation[model.roi_mask_to_global(~pos)] = surf_moisture_flux[~pos]
 
 
@@ -442,7 +442,6 @@ def _calc_sat_spec_hum(model, pos):
 
 def _calc_moisture_availability(model, pos):
     s = model.state
-
     moisture_availability = s.surface.conductance[pos] / (  # eq. (38) from [2]
         s.surface.conductance[pos]
         + s.surface.heat_moisture_transfer_coeff[pos] * s.meteo.wind_speed[pos]
