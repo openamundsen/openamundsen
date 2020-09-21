@@ -194,8 +194,9 @@ class CryoLayerSnowModel(SnowModel):
         w2 = s.ice_content[dst_layer, pos_existing] + s.liquid_water_content[dst_layer, pos_existing]
 
         # Normalize weights
-        w1 /= (w1 + w2)
-        w2 /= (w1 + w2)
+        sum_weights = w1 + w2
+        w1 /= sum_weights
+        w2 /= sum_weights
 
         s.ice_content[dst_layer, pos_existing] += s.ice_content[src_layer, pos_existing]
         s.liquid_water_content[dst_layer, pos_existing] += s.liquid_water_content[src_layer, pos_existing]
