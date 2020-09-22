@@ -91,16 +91,18 @@ class CryoLayerSnowModel(SnowModel):
         density = _fresh_snow_density(s.meteo.wetbulb_temp[roi])
         ice_content_change = s.meteo.snowfall[roi] * model.timestep
 
-        pos_accum = model.roi_mask_to_global(ice_content_change > 0)
-        pos_init_layer = model.roi_mask_to_global((s.snow.ice_content[0, roi] == 0) & (ice_content_change > 0))
+        pos_accum_roi = ice_content_change > 0
+        pos_init_layer_roi = (s.snow.ice_content[0, roi] == 0) & (ice_content_change > 0)
+        pos_accum = model.roi_mask_to_global(pos_accum_roi)
+        pos_init_layer = model.roi_mask_to_global(pos_init_layer_roi)
 
         # Initialize new snow layer where required
         s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer] = model.config.snow.albedo.max
-        s.snow.density[CryoLayerID.NEW_SNOW, pos_init_layer] = density
+        s.snow.density[CryoLayerID.NEW_SNOW, pos_init_layer] = density[pos_init_layer_roi]
 
         # Add snow to new snow layer
-        s.snow.ice_content[CryoLayerID.NEW_SNOW, pos_accum] += ice_content_change
-        s.snow.thickness[CryoLayerID.NEW_SNOW, pos_accum] += ice_content_change / density
+        s.snow.ice_content[CryoLayerID.NEW_SNOW, pos_accum] += ice_content_change[pos_accum_roi]
+        s.snow.thickness[CryoLayerID.NEW_SNOW, pos_accum] += ice_content_change[pos_accum_roi] / density[pos_accum_roi]
         s.snow.density[CryoLayerID.NEW_SNOW, pos_accum] = (
             (s.snow.ice_content[CryoLayerID.NEW_SNOW, pos_accum] + s.snow.liquid_water_content[CryoLayerID.NEW_SNOW, pos_accum])
             / s.snow.thickness[CryoLayerID.NEW_SNOW, pos_accum]
@@ -128,7 +130,7 @@ class CryoLayerSnowModel(SnowModel):
         self.layer_transition(
             CryoLayerID.NEW_SNOW,
             CryoLayerID.OLD_SNOW,
-            s.density[CryoLayerID.NEW_SNOW, roi] >= transition_params.old_snow,
+            model.roi_mask_to_global(s.density[CryoLayerID.NEW_SNOW, roi] >= transition_params.old_snow),
         )
 
         # Transition old snow -> firn at the first timestep of the "transition month"
@@ -143,7 +145,7 @@ class CryoLayerSnowModel(SnowModel):
         self.layer_transition(
             CryoLayerID.FIRN,
             CryoLayerID.ICE,
-            s.density[CryoLayerID.FIRN, roi] >= transition_params.ice,
+            model.roi_mask_to_global(s.density[CryoLayerID.FIRN, roi] >= transition_params.ice),
         )
 
     def update_properties(self):
