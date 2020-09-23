@@ -370,7 +370,7 @@ def cryo_layer_energy_balance(model):
         # radiation_balance(model, possible_melties)
 
         advect_heat_flux = 0.  # XXX
-        surf_heat_flux = 2.  # XXX
+        surf_heat_flux = -2.  # XXX
 
         en_bal[possible_melties] = (
             s.meteo.net_radiation[possible_melties]
@@ -426,7 +426,7 @@ def cryo_layer_energy_balance(model):
             s.surface.temp[iteraties] = surf_temp_iter
 
             advect_heat_flux = 0.  # XXX
-            surf_heat_flux = 2.  # XXX
+            surf_heat_flux = -2.  # XXX
 
             radiation_balance(model, iteraties)
             _calc_fluxes(model, iteraties, surface=False, moisture=True, sensible=True, latent=True)
@@ -488,7 +488,7 @@ def _calc_moisture_availability(model, pos):
         + s.surface.heat_moisture_transfer_coeff[pos] * s.meteo.wind_speed[pos]
     )
     moisture_availability[s.surface.sat_spec_hum[pos] < s.meteo.spec_hum[pos]] = 1.
-    moisture_availability[s.snow.ice_content[0, pos] > 0] = 1.
+    moisture_availability[s.snow.swe[pos] > 0] = 1.
     s.surface.moisture_availability[pos] = moisture_availability
 
 

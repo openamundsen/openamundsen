@@ -112,13 +112,43 @@ class CryoLayerSnowModel(SnowModel):
         pass
 
     def melt(self):
-        pass
+        model = self.model
+        roi = model.grid.roi
+        s = model.state
+
+        ice_content_change = s.snow.melt[roi].copy()
+
+        for i in range(model.snow.num_layers):
+            pos_roi = (ice_content_change > 0) & (s.snow.ice_content[i, roi] > 0)
+            pos = model.roi_mask_to_global(pos_roi)
+
+            cur_ice_content_change = np.minimum(ice_content_change[pos_roi], s.snow.ice_content[i, pos])
+            s.snow.thickness[i, pos] *= (1 - cur_ice_content_change / s.snow.ice_content[i, pos])
+            s.snow.ice_content[i, pos] -= cur_ice_content_change
+            s.snow.liquid_water_content[i, pos] += cur_ice_content_change
+            ice_content_change[pos_roi] -= cur_ice_content_change
 
     def sublimation(self):
         pass
 
     def runoff(self):
-        pass
+        model = self.model
+        roi = model.grid.roi
+        s = model.state
+
+        max_lwc_frac = 0.05  # XXX
+
+        runoff = model.state.meteo.rainfall_amount[roi].copy()
+
+        for i in range(model.snow.num_layers):
+            pos_roi = s.snow.thickness[i, roi] > 0
+            pos = model.roi_mask_to_global(pos_roi)
+
+            max_lwc = max_lwc_frac * s.snow.ice_content[i, pos]
+            s.snow.liquid_water_content[i, pos] += runoff[pos_roi]
+            runoff_cur = (s.snow.liquid_water_content[i, pos] - max_lwc).clip(min=0)
+            runoff[pos_roi] = runoff_cur
+            s.snow.liquid_water_content[i, pos] -= runoff_cur
 
     def update_layers(self):
         model = self.model
