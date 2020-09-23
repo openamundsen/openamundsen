@@ -106,10 +106,14 @@ class CryoLayerSnowModel(SnowModel):
 
         # Add snow to new snow layer
         s.snow.ice_content[CryoLayerID.NEW_SNOW, pos_accum] += ice_content_change[pos_accum_roi]
-        s.snow.thickness[CryoLayerID.NEW_SNOW, pos_accum] += ice_content_change[pos_accum_roi] / density[pos_accum_roi]
+        s.snow.thickness[CryoLayerID.NEW_SNOW, pos_accum] += (
+            ice_content_change[pos_accum_roi] / density[pos_accum_roi]
+        )
         s.snow.density[CryoLayerID.NEW_SNOW, pos_accum] = (
-            (s.snow.ice_content[CryoLayerID.NEW_SNOW, pos_accum] + s.snow.liquid_water_content[CryoLayerID.NEW_SNOW, pos_accum])
-            / s.snow.thickness[CryoLayerID.NEW_SNOW, pos_accum]
+            (
+                s.snow.ice_content[CryoLayerID.NEW_SNOW, pos_accum]
+                + s.snow.liquid_water_content[CryoLayerID.NEW_SNOW, pos_accum]
+            ) / s.snow.thickness[CryoLayerID.NEW_SNOW, pos_accum]
         )
 
     def heat_conduction(self):
@@ -126,7 +130,10 @@ class CryoLayerSnowModel(SnowModel):
             pos_roi = (ice_content_change > 0) & (s.snow.ice_content[i, roi] > 0)
             pos = model.roi_mask_to_global(pos_roi)
 
-            cur_ice_content_change = np.minimum(ice_content_change[pos_roi], s.snow.ice_content[i, pos])
+            cur_ice_content_change = np.minimum(
+                ice_content_change[pos_roi],
+                s.snow.ice_content[i, pos],
+            )
             s.snow.thickness[i, pos] *= (1 - cur_ice_content_change / s.snow.ice_content[i, pos])
             s.snow.ice_content[i, pos] -= cur_ice_content_change
             s.snow.liquid_water_content[i, pos] += cur_ice_content_change
@@ -164,7 +171,9 @@ class CryoLayerSnowModel(SnowModel):
         self.layer_transition(
             CryoLayerID.NEW_SNOW,
             CryoLayerID.OLD_SNOW,
-            model.roi_mask_to_global(s.density[CryoLayerID.NEW_SNOW, roi] >= transition_params.old_snow),
+            model.roi_mask_to_global(
+                s.density[CryoLayerID.NEW_SNOW, roi] >= transition_params.old_snow
+            ),
         )
 
         # Transition old snow -> firn at the first timestep of the "transition month"
@@ -214,34 +223,40 @@ class CryoLayerSnowModel(SnowModel):
         if pos is None:
             pos = self.model.grid.roi
 
-        pos_existing = pos & (s.thickness[dst_layer, :] > 0.)
-        pos_new = pos & (s.thickness[dst_layer, :] == 0.)
+        pos_merge = pos & (s.thickness[dst_layer, :] > 0.)
+        pos_init = pos & (s.thickness[dst_layer, :] == 0.)
 
         # Initialize the destination layer for pixels where SWE = 0
-        s.thickness[dst_layer, pos_new] = s.thickness[src_layer, pos_new]
-        s.ice_content[dst_layer, pos_new] = s.ice_content[src_layer, pos_new]
-        s.liquid_water_content[dst_layer, pos_new] = s.liquid_water_content[src_layer, pos_new]
-        s.cold_content[dst_layer, pos_new] = s.cold_content[src_layer, pos_new]
-        s.density[dst_layer, pos_new] = s.density[src_layer, pos_new]
-        s.layer_albedo[dst_layer, pos_new] = s.layer_albedo[src_layer, pos_new]
+        s.thickness[dst_layer, pos_init] = s.thickness[src_layer, pos_init]
+        s.ice_content[dst_layer, pos_init] = s.ice_content[src_layer, pos_init]
+        s.liquid_water_content[dst_layer, pos_init] = s.liquid_water_content[src_layer, pos_init]
+        s.cold_content[dst_layer, pos_init] = s.cold_content[src_layer, pos_init]
+        s.density[dst_layer, pos_init] = s.density[src_layer, pos_init]
+        s.layer_albedo[dst_layer, pos_init] = s.layer_albedo[src_layer, pos_init]
 
         # Take weighted mean for pixels where destination layer already exists
-        w1 = s.ice_content[src_layer, pos_existing] + s.liquid_water_content[src_layer, pos_existing]
-        w2 = s.ice_content[dst_layer, pos_existing] + s.liquid_water_content[dst_layer, pos_existing]
+        w1 = s.ice_content[src_layer, pos_merge] + s.liquid_water_content[src_layer, pos_merge]
+        w2 = s.ice_content[dst_layer, pos_merge] + s.liquid_water_content[dst_layer, pos_merge]
 
         # Normalize weights
         sum_weights = w1 + w2
         w1 /= sum_weights
         w2 /= sum_weights
 
-        s.ice_content[dst_layer, pos_existing] += s.ice_content[src_layer, pos_existing]
-        s.liquid_water_content[dst_layer, pos_existing] += s.liquid_water_content[src_layer, pos_existing]
-        s.cold_content[dst_layer, pos_existing] += s.cold_content[src_layer, pos_existing]
-        s.density[dst_layer, pos_existing] = w1 * s.density[src_layer, pos_existing] + w2 * s.density[dst_layer, pos_existing]
-        s.layer_albedo[dst_layer, pos_existing] = w1 * s.layer_albedo[src_layer, pos_existing] + w2 * s.layer_albedo[dst_layer, pos_existing]
-        s.thickness[dst_layer, pos_existing] = (
-            (s.ice_content[dst_layer, pos_existing] + s.liquid_water_content[dst_layer, pos_existing])
-            / s.density[dst_layer, pos_existing]
+        s.ice_content[dst_layer, pos_merge] += s.ice_content[src_layer, pos_merge]
+        s.liquid_water_content[dst_layer, pos_merge] += s.liquid_water_content[src_layer, pos_merge]
+        s.cold_content[dst_layer, pos_merge] += s.cold_content[src_layer, pos_merge]
+        s.density[dst_layer, pos_merge] = (
+            w1 * s.density[src_layer, pos_merge]
+            + w2 * s.density[dst_layer, pos_merge]
+        )
+        s.layer_albedo[dst_layer, pos_merge] = (
+            w1 * s.layer_albedo[src_layer, pos_merge]
+            + w2 * s.layer_albedo[dst_layer, pos_merge]
+        )
+        s.thickness[dst_layer, pos_merge] = (
+            (s.ice_content[dst_layer, pos_merge] + s.liquid_water_content[dst_layer, pos_merge])
+            / s.density[dst_layer, pos_merge]
         )
 
         self.reset_layer(src_layer, pos)

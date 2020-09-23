@@ -28,7 +28,10 @@ def surface_properties(model):
 
     s.surface.albedo[roi] = np.where(
         s.snow.area_fraction[roi] > 0,
-        s.snow.area_fraction[roi] * s.snow.albedo[roi] + (1 - s.snow.area_fraction[roi]) * model.config.soil.albedo,
+        (
+            s.snow.area_fraction[roi] * s.snow.albedo[roi]
+            + (1 - s.snow.area_fraction[roi]) * model.config.soil.albedo
+        ),
         model.config.soil.albedo,
     )
 
@@ -41,9 +44,9 @@ def surface_properties(model):
     if model.config.snow.model == 'layers':
         # Calculate surface conductance (eq. (35) from [2])
         # (the constant 1/100 therein corresponds to
-        # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2 to
-        # 1 is taken from FSM)
-        s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
+        # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2
+        # to 1 is taken from FSM)
+        s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (
             np.maximum(
                 (
                     s.soil.frac_unfrozen_moisture_content[0, roi]
@@ -95,7 +98,9 @@ def surface_layer_properties(model):
         s.soil.thickness[0, pos1]
         / (
             2 * s.snow.thickness[0, pos1] / s.snow.therm_cond[0, pos1]
-            + (s.soil.thickness[0, pos1] - 2 * s.snow.thickness[0, pos1]) / s.soil.therm_cond[0, pos1]
+            + (
+                s.soil.thickness[0, pos1] - 2 * s.snow.thickness[0, pos1]
+            ) / s.soil.therm_cond[0, pos1]
         )
     )
 
@@ -273,11 +278,17 @@ def cryo_layer_energy_balance(model):
         s.snow.cold_content[layer_num, total_melties] = 0.
 
         # Process pixels where the available energy cannot melt the entire layer
-        layer_melt = en_bal[partial_melties] * available_melt_time[partial_melties] / constants.LATENT_HEAT_OF_FUSION  # actual melt and cold content reduction
+        layer_melt = (  # actual melt and cold content reduction
+            en_bal[partial_melties]
+            * available_melt_time[partial_melties]
+            / constants.LATENT_HEAT_OF_FUSION
+        )
         s.snow.cold_content[layer_num, partial_melties] -= layer_melt
         actual_layer_melt = -1 * np.minimum(s.snow.cold_content[layer_num, partial_melties], 0.)  # actual melt not used for reducing the cold content
         s.snow.melt[partial_melties] += actual_layer_melt
-        s.snow.cold_content[layer_num, partial_melties] = s.snow.cold_content[layer_num, partial_melties].clip(min=0)
+        s.snow.cold_content[layer_num, partial_melties] = (
+            s.snow.cold_content[layer_num, partial_melties].clip(min=0)
+        )
 
         available_melt_time[melties] -= layer_melt_time[melties]
 
