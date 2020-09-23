@@ -36,7 +36,7 @@ def surface_properties(model):
         model.config.snow.roughness_length**s.snow.area_fraction[roi]
         * model.config.soil.roughness_length**(1 - s.snow.area_fraction[roi])
     )
-    calc_heat_moisture_transfer_coefficient(model)
+    calc_turbulent_exchange_coefficient(model)
 
     if model.config.snow.model == 'layers':
         # Calculate surface conductance (eq. (35) from [2])
@@ -393,7 +393,7 @@ def stability_factor(
     return stability_factor
 
 
-def calc_heat_moisture_transfer_coefficient(model):
+def calc_turbulent_exchange_coefficient(model):
     """
     Calculate the transfer coefficient C_H from [1] (eq. (22)) including the
     possible adjustment for atmospheric stability.
@@ -439,7 +439,7 @@ def calc_heat_moisture_transfer_coefficient(model):
         )
         coeff *= sf
 
-    s.surface.heat_moisture_transfer_coeff[roi] = coeff
+    s.surface.turbulent_exchange_coeff[roi] = coeff
 
 
 def calc_radiation_balance(model, pos=None):
@@ -486,7 +486,7 @@ def calc_moisture_availability(model, pos):
     s = model.state
     moisture_availability = s.surface.conductance[pos] / (  # eq. (38) from [2]
         s.surface.conductance[pos]
-        + s.surface.heat_moisture_transfer_coeff[pos] * s.meteo.wind_speed[pos]
+        + s.surface.turbulent_exchange_coeff[pos] * s.meteo.wind_speed[pos]
     )
     moisture_availability[s.surface.sat_spec_hum[pos] < s.meteo.spec_hum[pos]] = 1.
     moisture_availability[s.snow.swe[pos] > 0] = 1.
@@ -507,7 +507,7 @@ def calc_fluxes(model, pos, surface=True, moisture=True, sensible=True, latent=T
 
     rhoa_CH_Ua = (  # (kg m-2 s-1)
         s.meteo.dry_air_density[pos]
-        * s.surface.heat_moisture_transfer_coeff[pos]
+        * s.surface.turbulent_exchange_coeff[pos]
         * s.meteo.wind_speed[pos]
     )
 
@@ -541,7 +541,7 @@ def solve_energy_balance(model, pos):
 
     rhoa_CH_Ua = (  # (kg m-2 s-1)
         s.meteo.dry_air_density[pos]
-        * s.surface.heat_moisture_transfer_coeff[pos]
+        * s.surface.turbulent_exchange_coeff[pos]
         * s.meteo.wind_speed[pos]
     )
 
