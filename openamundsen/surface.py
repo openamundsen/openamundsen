@@ -38,21 +38,21 @@ def surface_properties(model):
     )
     calc_heat_moisture_transfer_coefficient(model)
 
-    # Calculate surface conductance (eq. (35) from [2])
-    # (the constant 1/100 therein corresponds to
-    # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2 to
-    # 1 is taken from FSM)
-    s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
-        np.maximum(
-            (
-                s.soil.frac_unfrozen_moisture_content[0, roi]
-                * s.soil.vol_moisture_content_sat[roi] / s.soil.vol_moisture_content_crit[roi]
-            )**2,
-            1,
+    if model.config.snow.model == 'layers':
+        # Calculate surface conductance (eq. (35) from [2])
+        # (the constant 1/100 therein corresponds to
+        # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2 to
+        # 1 is taken from FSM)
+        s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
+            np.maximum(
+                (
+                    s.soil.frac_unfrozen_moisture_content[0, roi]
+                    * s.soil.vol_moisture_content_sat[roi] / s.soil.vol_moisture_content_crit[roi]
+                )**2,
+                1,
+            )
         )
-    )
-
-    if model.config.snow.model == 'cryolayers':
+    elif model.config.snow.model == 'cryolayers':
         s.surface.layer_type[roi] = CryoLayerID.SNOW_FREE
 
         for i in reversed(range(model.snow.num_layers)):
