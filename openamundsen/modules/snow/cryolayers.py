@@ -67,7 +67,11 @@ class CryoLayerSnowModel(SnowModel):
         model = self.model
         snow = model.state.snow
 
-        num_layers = (snow.thickness[:2] > 0).sum(axis=0)  # consider only new snow and old snow
+        # Consider only old snow and new snow, but always set the number of layers to 2 regardless
+        # if both layers exist, due to the loop over the layers in _compaction_anderson (and the
+        # fact that an old snow layer could exist without a new snow layer (so using 1 as the number
+        # of layers would not work here)
+        num_layers = np.full(model.grid.roi.shape, 2)
 
         if model.config.snow.compaction.method == 'anderson':
             _compaction_anderson(
