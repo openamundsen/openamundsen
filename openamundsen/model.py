@@ -168,6 +168,8 @@ class Model:
         if self.config.snow.model == 'layers':  # TODO check this
             surface.surface_layer_properties(self)
             surface.energy_balance(self)
+        elif self.config.snow.model == 'cryolayers':
+            surface.cryo_layer_energy_balance(self)
 
         self.snow.heat_conduction()
         self.snow.melt()

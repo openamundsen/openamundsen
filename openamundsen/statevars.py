@@ -281,13 +281,13 @@ def add_default_state_variables(model):
     surf.add_variable('lat_heat', 'J kg-1', 'Latent heat')
     surf.add_variable('sat_spec_hum', 'kg kg-1', 'Saturation specific humidity at surface temperature')
     surf.add_variable('moisture_availability', '1', 'Moisture availability factor')
+    surf.add_variable('roughness_length', 'm', 'Surface roughness length', 'surface_roughness_length')
+    surf.add_variable('heat_moisture_transfer_coeff', '1', 'Transfer coefficient for heat and moisture')
+    surf.add_variable('conductance', 'm s-1', 'Surface conductance')
     if model.config.snow.model == 'layers':
         surf.add_variable('layer_temp', 'K', 'Surface layer temperature')
         surf.add_variable('thickness', 'm', 'Surface layer thickness')
         surf.add_variable('therm_cond', 'W m-1 K-1', 'Surface thermal conductivity')
-        surf.add_variable('roughness_length', 'm', 'Surface roughness length', 'surface_roughness_length')
-        surf.add_variable('heat_moisture_transfer_coeff', '1', 'Transfer coefficient for heat and moisture')
-        surf.add_variable('conductance', 'm s-1', 'Surface conductance')
     elif model.config.snow.model == 'cryolayers':
         surf.add_variable('layer_type', '1', 'Surface layer type', dtype=int)
 

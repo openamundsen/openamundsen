@@ -32,31 +32,31 @@ def surface_properties(model):
         model.config.soil.albedo,
     )
 
-    if model.config.snow.model == 'layers':
-        s.surface.roughness_length[roi] = (
-            model.config.snow.roughness_length**s.snow.area_fraction[roi]
-            * model.config.soil.roughness_length**(1 - s.snow.area_fraction[roi])
-        )
-        calculate_heat_moisture_transfer_coefficient(model)
+    s.surface.roughness_length[roi] = (
+        model.config.snow.roughness_length**s.snow.area_fraction[roi]
+        * model.config.soil.roughness_length**(1 - s.snow.area_fraction[roi])
+    )
+    calculate_heat_moisture_transfer_coefficient(model)
 
-        # Calculate surface conductance (eq. (35) from [2])
-        # (the constant 1/100 therein corresponds to
-        # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2 to
-        # 1 is taken from FSM)
-        s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
-            np.maximum(
-                (
-                    s.soil.frac_unfrozen_moisture_content[0, roi]
-                    * s.soil.vol_moisture_content_sat[roi] / s.soil.vol_moisture_content_crit[roi]
-                )**2,
-                1,
-            )
+    # Calculate surface conductance (eq. (35) from [2])
+    # (the constant 1/100 therein corresponds to
+    # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2 to
+    # 1 is taken from FSM)
+    s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (  # (m s-1)
+        np.maximum(
+            (
+                s.soil.frac_unfrozen_moisture_content[0, roi]
+                * s.soil.vol_moisture_content_sat[roi] / s.soil.vol_moisture_content_crit[roi]
+            )**2,
+            1,
         )
-    elif model.config.snow.model == 'cryolayers':
+    )
+
+    if model.config.snow.model == 'cryolayers':
         s.surface.layer_type[roi] = CryoLayerID.SNOW_FREE
 
         for i in reversed(range(model.snow.num_layers)):
-            pos = model.roi_mask_to_global(s.snow.ice_content[i, roi] > 0)
+            pos = model.roi_mask_to_global(s.snow.thickness[i, roi] > 0)
             s.surface.layer_type[pos] = i
 
 
@@ -331,6 +331,115 @@ def energy_balance(model):
     s.snow.sublimation[pos] = s.surface.moisture_flux[pos]
     # soil_evaporation[model.roi_mask_to_global(~pos)] = surf_moisture_flux[~pos]
 
+
+def cryo_layer_energy_balance(model):
+    s = model.state
+    roi = model.grid.roi
+
+    s.surface.temp[roi] = s.meteo.temp[roi]
+
+    snowies_roi = s.snow.swe[roi] > 0.
+    melties_roi = snowies_roi & (s.meteo.temp[roi] >= constants.T0)
+    frosties_roi = snowies_roi & (s.meteo.temp[roi] < constants.T0)
+    snowies = model.roi_mask_to_global(snowies_roi)
+    melties = model.roi_mask_to_global(melties_roi)
+    frosties = model.roi_mask_to_global(frosties_roi)
+
+    _calc_sat_spec_hum(model, snowies)
+    _calc_moisture_availability(model, snowies)
+    _calc_lat_heat(model, snowies)
+    radiation_balance(model, roi)
+
+    s.snow.melt[roi] = 0
+
+    # Where air temperature >= 0 °C -> potential melt, no iteration
+    _calc_fluxes(model, melties, surface=False, moisture=True, sensible=True, latent=True)
+    available_melt_time = np.zeros(roi.shape)
+    en_bal = np.zeros(roi.shape)
+    available_melt_time[melties] = model.timestep  # contains the time (in seconds) available for melt in this time step for each pixel
+    s.surface.temp[melties] = constants.T0
+
+    for layer_num in range(model.snow.num_layers):
+        possible_melties = model.roi_mask_to_global(
+            melties_roi
+            & (s.snow.thickness[layer_num, roi] > 0)
+            & (available_melt_time[roi] > 0)
+        )
+
+        # TODO update radiation balance with possibly updated albedo?
+        # radiation_balance(model, possible_melties)
+
+        advect_heat_flux = 0.  # XXX
+        surf_heat_flux = 2.  # XXX
+
+        en_bal[possible_melties] = (
+            s.meteo.net_radiation[possible_melties]
+            - s.surface.sens_heat_flux[possible_melties]
+            - s.surface.lat_heat_flux[possible_melties]
+            - advect_heat_flux
+            - surf_heat_flux
+        )
+
+        layer_melties = model.roi_mask_to_global(possible_melties[roi] & (en_bal[roi] > 0.))
+
+        layer_we = (
+            s.snow.ice_content[layer_num, :]
+            # + s.snow.liquid_water_content[layer_num, :]
+            + s.snow.cold_content[layer_num, :]
+        )
+
+        layer_melt_time = np.zeros(roi.shape)
+        layer_melt_time[layer_melties] = (  # time needed to melt the entire layer
+            constants.LATENT_HEAT_OF_FUSION
+            * layer_we[layer_melties]
+            / en_bal[layer_melties]
+        )
+        total_melties = model.roi_mask_to_global(
+            layer_melties[roi]
+            & (layer_melt_time[roi] < available_melt_time[roi])
+        )
+        partial_melties = model.roi_mask_to_global(
+            layer_melties[roi]
+            & (layer_melt_time[roi] >= available_melt_time[roi])
+        )
+
+        # Process pixels where the entire layer melts (and energy is left to melt the lower layers)
+        s.snow.melt[total_melties] += s.snow.ice_content[layer_num, total_melties]
+        s.snow.cold_content[layer_num, total_melties] = 0.
+
+        # Process pixels where the available energy cannot melt the entire layer
+        layer_melt = en_bal[partial_melties] * available_melt_time[partial_melties] / constants.LATENT_HEAT_OF_FUSION  # actual melt and cold content reduction
+        s.snow.cold_content[layer_num, partial_melties] -= layer_melt
+        actual_layer_melt = -1 * np.minimum(s.snow.cold_content[layer_num, partial_melties], 0.)  # actual melt not used for reducing the cold content
+        s.snow.melt[partial_melties] += actual_layer_melt
+        s.snow.cold_content[layer_num, partial_melties] = s.snow.cold_content[layer_num, partial_melties].clip(min=0)
+
+        available_melt_time[melties] -= layer_melt_time[melties]
+
+    # Iteration for calculating snow surface temperature
+    if frosties.any():
+        iteraties = frosties
+        max_temp = constants.T0
+        min_temp = s.meteo.temp[frosties].min() - 3.  # TODO this might be not realistic
+        temp_inc = -0.25
+        for surf_temp_iter in np.arange(max_temp, min_temp - 1e-6, temp_inc):
+            s.surface.temp[iteraties] = surf_temp_iter
+
+            advect_heat_flux = 0.  # XXX
+            surf_heat_flux = 2.  # XXX
+
+            radiation_balance(model, iteraties)
+            _calc_fluxes(model, iteraties, surface=False, moisture=True, sensible=True, latent=True)
+
+            en_bal[iteraties] = (
+                s.meteo.net_radiation[iteraties]
+                - s.surface.sens_heat_flux[iteraties]
+                - s.surface.lat_heat_flux[iteraties]
+                - advect_heat_flux
+                - surf_heat_flux
+            )
+
+            iteraties = model.roi_mask_to_global(frosties[roi] & (en_bal[roi] < 0.))
 
 def radiation_balance(model, pos=None):
     """
