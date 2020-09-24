@@ -177,7 +177,7 @@ def clear_sky_shortwave_irradiance(
     )
     diff_irr_atmos_ref = (
         (
-            dir_irr * np.cos(zenith_angle)  # XXX in AMUNDSEN this term is only dir_irr and not dir_irr * np.cos(theta)
+            dir_irr * np.cos(zenith_angle)
             + diff_irr_rayleigh
             + diff_irr_aerosols
         )
