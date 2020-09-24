@@ -136,7 +136,7 @@ def energy_balance(model):
     # Calculate surface energy balance without melt
     s.snow.melt[roi] = 0
     calc_fluxes(model, roi)
-    calc_radiation_balance(model)
+    calc_radiation_balance(model, roi)
 
     (
         surf_temp_change,
@@ -193,6 +193,7 @@ def energy_balance(model):
     s.surface.sens_heat_flux[roi] += sens_heat_flux_change
     calc_latent_heat(model, roi)
     calc_fluxes(model, roi, surface=False, moisture=False, sensible=False, latent=True)
+    calc_radiation_balance(model, roi)
 
     # Snow sublimation
     s.snow.sublimation[roi] = 0.
@@ -453,7 +454,7 @@ def calc_turbulent_exchange_coefficient(model):
     s.surface.turbulent_exchange_coeff[roi] = coeff
 
 
-def calc_radiation_balance(model, pos=None):
+def calc_radiation_balance(model, pos):
     """
     Calculate outgoing shortwave and longwave radiation and net radiation.
 
@@ -462,14 +463,10 @@ def calc_radiation_balance(model, pos=None):
     model : Model
         Model instance.
 
-    pos : ndarray(bool), default None
-        Pixels for which the radiation fluxes should be calculated. If None,
-        calculation is performed for the entire ROI.
+    pos : ndarray(bool)
+        Pixels for which the radiation fluxes should be calculated.
     """
     s = model.state
-
-    if pos is None:
-        pos = model.grid.roi
 
     # TODO this is a parameter
     snow_emissivity = 0.99
