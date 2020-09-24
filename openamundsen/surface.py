@@ -224,9 +224,9 @@ def cryo_layer_energy_balance(model):
     s.snow.melt[roi] = 0
 
     # Where air temperature >= 0 °C -> potential melt, no iteration
-    calc_fluxes(model, melties, surface=False, moisture=True, sensible=True, latent=True)
+    calc_fluxes(model, melties, surface=False)
     available_melt_time = np.zeros(roi.shape)
-    en_bal = np.zeros(roi.shape)
+    en_bal = np.full(roi.shape, np.nan)
     available_melt_time[melties] = model.timestep  # contains the time (in seconds) available for melt in this time step for each pixel
     s.surface.temp[melties] = constants.T0
 
@@ -294,29 +294,38 @@ def cryo_layer_energy_balance(model):
         available_melt_time[melties] -= layer_melt_time[melties]
 
     # Iteration for calculating snow surface temperature
-    if frosties.any():
-        iteraties = frosties
-        max_temp = constants.T0
-        min_temp = s.meteo.temp[frosties].min() - 3.  # TODO this might be not realistic
-        temp_inc = -0.25
-        for surf_temp_iter in np.arange(max_temp, min_temp - 1e-6, temp_inc):
-            s.surface.temp[iteraties] = surf_temp_iter
+    iterate_surface_temperature(model, frosties, en_bal)
 
-            advect_heat_flux = 0.  # XXX
-            surf_heat_flux = -2.  # XXX
 
-            calc_radiation_balance(model, iteraties)
-            calc_fluxes(model, iteraties, surface=False, moisture=True, sensible=True, latent=True)
+def iterate_surface_temperature(model, frosties, en_bal):
+    if not frosties.any():
+        return
 
-            en_bal[iteraties] = (
-                s.meteo.net_radiation[iteraties]
-                - s.surface.sens_heat_flux[iteraties]
-                - s.surface.lat_heat_flux[iteraties]
-                - advect_heat_flux
-                - surf_heat_flux
-            )
+    s = model.state
+    roi = model.grid.roi
 
-            iteraties = model.roi_mask_to_global(frosties[roi] & (en_bal[roi] < 0.))
+    iteraties = frosties
+    max_temp = constants.T0
+    min_temp = s.meteo.temp[frosties].min() - 3.
+    temp_inc = -0.25
+    for surf_temp_iter in np.arange(max_temp, min_temp - 1e-6, temp_inc):
+        s.surface.temp[iteraties] = surf_temp_iter
+
+        advect_heat_flux = 0.  # XXX
+        surf_heat_flux = -2.  # XXX
+
+        calc_radiation_balance(model, iteraties)
+        calc_fluxes(model, iteraties, surface=False)
+
+        en_bal[iteraties] = (
+            s.meteo.net_radiation[iteraties]
+            - s.surface.sens_heat_flux[iteraties]
+            - s.surface.lat_heat_flux[iteraties]
+            - advect_heat_flux
+            - surf_heat_flux
+        )
+
+        iteraties = model.roi_mask_to_global(frosties[roi] & (en_bal[roi] < 0.))
 
 
 def stability_factor(
