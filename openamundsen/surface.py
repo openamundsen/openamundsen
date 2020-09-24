@@ -109,7 +109,7 @@ def surface_layer_properties(model):
 
 def energy_balance(model):
     """
-    Calculate the surface energy balance following [1].
+    Calculate the surface energy balance for the layer model following [1].
 
     Parameters
     ----------
@@ -204,6 +204,26 @@ def energy_balance(model):
 
 
 def cryo_layer_energy_balance(model):
+    """
+    Calculate the surface energy balance for the cryo layer model following [1-2].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    References
+    ----------
+    .. [1] Strasser, U. (2008). Die Modellierung der Gebirgsschneedecke im
+       Nationalpark Berchtesgaden. Modelling of the mountain snow cover in the
+       Berchtesgaden National Park, Berchtesgaden National Park research report,
+       No. 55, Berchtesgaden.
+
+    .. [2] Hanzer, F., Helfricht, K., Marke, T., & Strasser, U. (2016).
+       Multilevel spatiotemporal validation of snow/ice mass balance and runoff
+       modeling in glacierized catchments. The Cryosphere, 10(4), 1859–1881.
+       https://doi.org/10.5194/tc-10-1859-2016
+    """
     s = model.state
     roi = model.grid.roi
 
@@ -237,8 +257,8 @@ def cryo_layer_energy_balance(model):
 
         en_bal[possible_melties] = energy_balance_remainder(
             model,
-            s.surface.temp[possible_melties],
             possible_melties,
+            s.surface.temp[possible_melties],
         )
 
         layer_melties = model.roi_mask_to_global(possible_melties[roi] & (en_bal[roi] > 0.))
@@ -284,58 +304,10 @@ def cryo_layer_energy_balance(model):
         available_melt_time[melties] -= layer_melt_time[melties]
 
     # Iteration for calculating snow surface temperature
-    iterate_surface_temperature(model, frosties, en_bal)
+    iterate_surface_temperature(model, frosties)
 
     calc_fluxes(model, roi, surface=False)
     calc_radiation_balance(model, roi)
-
-
-def iterate_surface_temperature(model, frosties, en_bal):
-    if not frosties.any():
-        return
-
-    s = model.state
-
-    # Original AMUNDSEN method:
-    # iteraties = frosties
-    # max_temp = constants.T0
-    # min_temp = s.meteo.temp[frosties].min() - 3.
-    # temp_inc = -0.25
-    # for surf_temp_iter in np.arange(max_temp, min_temp - 1e-6, temp_inc):
-    #     en_bal[iteraties] = energy_balance_remainder(model, surf_temp_iter, iteraties)
-    #     iteraties = model.roi_mask_to_global(frosties[roi] & (en_bal[roi] < 0.))
-
-    tol = 1e-2
-
-    iteraties = frosties.copy()
-    iteraties_idxs = np.where(iteraties.flat)[0]
-    x0 = np.full(len(iteraties_idxs), constants.T0 - 10.)
-    x1 = np.full(len(iteraties_idxs), constants.T0)
-    y0 = energy_balance_remainder(model, x0, iteraties)
-    y1 = energy_balance_remainder(model, x1, iteraties)
-
-    while True:
-        d = (x1 - x0) / (y1 - y0) * y1  # secant method
-        iter_pos = np.abs(d) > tol
-
-        if iter_pos.sum() == 0:
-            break
-
-        d = d[iter_pos]
-        x0 = x0[iter_pos]
-        x1 = x1[iter_pos]
-        y0 = y0[iter_pos]
-        y1 = y1[iter_pos]
-
-        x0 = x1.copy()
-        y0 = y1.copy()
-        x1 -= d
-        iteraties.flat[iteraties_idxs[~iter_pos]] = False
-        y1 = energy_balance_remainder(model, x1, iteraties)
-        iteraties_idxs = iteraties_idxs[iter_pos]
-
-    # TODO calculate melt when surface temperature is positive after iteration?
-    s.surface.temp[frosties] = s.surface.temp[frosties].clip(max=constants.T0)
 
 
 def stability_factor(
@@ -501,6 +473,17 @@ def calc_radiation_balance(model, pos):
 
 
 def calc_saturation_specific_humidity(model, pos):
+    """
+    Calculate saturation specific humidity at surface temperature.
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    pos : ndarray(bool)
+        Pixels to be considered.
+    """
     s = model.state
     sat_vap_press_surf = meteo.saturation_vapor_pressure(s.surface.temp[pos])
     s.surface.sat_spec_hum[pos] = meteo.specific_humidity(
@@ -510,6 +493,27 @@ def calc_saturation_specific_humidity(model, pos):
 
 
 def calc_moisture_availability(model, pos):
+    """
+    Calculate moisture availability following [1-2].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    pos : ndarray(bool)
+        Pixels to be considered.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+
+    .. [2] Essery, R. L. H., Best, M. J., & Cox, P. M. (2001). MOSES 2.2
+       Technical Documentation, Tech. rep., Hadley Centre, Met Office.
+       http://jules.jchmr.org/sites/default/files/HCTN_30.pdf
+    """
     s = model.state
     moisture_availability = s.surface.conductance[pos] / (  # eq. (38) from [2]
         s.surface.conductance[pos]
@@ -521,6 +525,20 @@ def calc_moisture_availability(model, pos):
 
 
 def calc_latent_heat(model, pos):
+    """
+    Calculate latent heat.
+
+    Latent heat is set to the latent heat of sublimation for snow covered
+    surfaces, and to the latent heat of vaporization elsewhere.
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    pos : ndarray(bool)
+        Pixels to be considered.
+    """
     s = model.state
     s.surface.lat_heat[pos] = np.where(
         (s.snow.ice_content[0, pos] > 0) | (s.surface.temp[pos] < constants.T0),
@@ -530,6 +548,35 @@ def calc_latent_heat(model, pos):
 
 
 def calc_fluxes(model, pos, surface=True, moisture=True, sensible=True, latent=True):
+    """
+    Calculate surface fluxes following [1].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    pos : ndarray(bool)
+        Pixels to be considered.
+
+    surface : bool, default True
+        Calculate the surface heat flux.
+
+    moisture : bool, default True
+        Calculate the surface moisture flux.
+
+    sensible : bool, default True
+        Calculate the sensible heat flux.
+
+    latent : bool, default True
+        Calculate the latent heat flux.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     s = model.state
 
     rhoa_CH_Ua = (  # (kg m-2 s-1)
@@ -564,6 +611,30 @@ def calc_fluxes(model, pos, surface=True, moisture=True, sensible=True, latent=T
 
 
 def solve_energy_balance(model, pos):
+    """
+    Calculate surface temperature and flux changes following [1] (eqs.
+    (32)-(35)).
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    pos : ndarray(bool)
+        Pixels to be considered.
+
+    Returns
+    -------
+    length-4 ndarray tuple
+        Tuple containing the surface temperature change, moisture flux change,
+        surface heat flux change and sensible heat flux change.
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
     s = model.state
 
     rhoa_CH_Ua = (  # (kg m-2 s-1)
@@ -621,7 +692,40 @@ def solve_energy_balance(model, pos):
     )
 
 
-def energy_balance_remainder(model, surf_temp, pos):
+def energy_balance_remainder(model, pos, surf_temp):
+    """
+    Update the radiation balance and turbulent fluxes and calculate the
+    remainder of the surface energy balance assuming no melt for a given surface
+    temperature following [1-2].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    pos : ndarray(bool)
+        Pixels to be considered.
+
+    surf_temp : ndarray
+        Surface temperature (K).
+
+    Returns
+    -------
+    en_bal : ndarray
+        Surface energy balance remainder.
+
+    References
+    ----------
+    .. [1] Strasser, U. (2008). Die Modellierung der Gebirgsschneedecke im
+       Nationalpark Berchtesgaden. Modelling of the mountain snow cover in the
+       Berchtesgaden National Park, Berchtesgaden National Park research report,
+       No. 55, Berchtesgaden.
+
+    .. [2] Hanzer, F., Helfricht, K., Marke, T., & Strasser, U. (2016).
+       Multilevel spatiotemporal validation of snow/ice mass balance and runoff
+       modeling in glacierized catchments. The Cryosphere, 10(4), 1859–1881.
+       https://doi.org/10.5194/tc-10-1859-2016
+    """
     s = model.state
     s.surface.temp[pos] = surf_temp
 
@@ -640,3 +744,65 @@ def energy_balance_remainder(model, surf_temp, pos):
     )
 
     return en_bal
+
+
+def iterate_surface_temperature(model, frosties):
+    """
+    Iterate the snow surface temperature to find the zeros of the energy balance
+    equation assuming no melt.
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    frosties : ndarray(bool)
+        Pixels to be considered.
+    """
+    if not frosties.any():
+        return
+
+    s = model.state
+
+    # Original AMUNDSEN method:
+    # roi = model.grid.roi
+    # en_bal = np.zeros(roi.shape)
+    # iteraties = frosties
+    # max_temp = constants.T0
+    # min_temp = s.meteo.temp[frosties].min() - 3.
+    # temp_inc = -0.25
+    # for surf_temp_iter in np.arange(max_temp, min_temp - 1e-6, temp_inc):
+    #     en_bal[iteraties] = energy_balance_remainder(model, iteraties, surf_temp_iter)
+    #     iteraties = model.roi_mask_to_global(frosties[roi] & (en_bal[roi] < 0.))
+
+    tol = 1e-2
+
+    iteraties = frosties.copy()
+    iteraties_idxs = np.where(iteraties.flat)[0]
+    x0 = np.full(len(iteraties_idxs), constants.T0 - 10.)
+    x1 = np.full(len(iteraties_idxs), constants.T0)
+    y0 = energy_balance_remainder(model, iteraties, x0)
+    y1 = energy_balance_remainder(model, iteraties, x1)
+
+    while True:
+        d = (x1 - x0) / (y1 - y0) * y1  # secant method
+        iter_pos = np.abs(d) > tol
+
+        if iter_pos.sum() == 0:
+            break
+
+        d = d[iter_pos]
+        x0 = x0[iter_pos]
+        x1 = x1[iter_pos]
+        y0 = y0[iter_pos]
+        y1 = y1[iter_pos]
+
+        x0 = x1.copy()
+        y0 = y1.copy()
+        x1 -= d
+        iteraties.flat[iteraties_idxs[~iter_pos]] = False
+        y1 = energy_balance_remainder(model, iteraties, x1)
+        iteraties_idxs = iteraties_idxs[iter_pos]
+
+    # TODO calculate melt when surface temperature is positive after iteration?
+    s.surface.temp[frosties] = s.surface.temp[frosties].clip(max=constants.T0)
