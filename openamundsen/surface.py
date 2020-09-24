@@ -302,30 +302,47 @@ def iterate_surface_temperature(model, frosties, en_bal):
         return
 
     s = model.state
-    roi = model.grid.roi
 
-    iteraties = frosties
-    max_temp = constants.T0
-    min_temp = s.meteo.temp[frosties].min() - 3.
-    temp_inc = -0.25
-    for surf_temp_iter in np.arange(max_temp, min_temp - 1e-6, temp_inc):
-        s.surface.temp[iteraties] = surf_temp_iter
+    # Original AMUNDSEN method:
+    # iteraties = frosties
+    # max_temp = constants.T0
+    # min_temp = s.meteo.temp[frosties].min() - 3.
+    # temp_inc = -0.25
+    # for surf_temp_iter in np.arange(max_temp, min_temp - 1e-6, temp_inc):
+    #     en_bal[iteraties] = energy_balance_remainder(model, surf_temp_iter, iteraties)
+    #     iteraties = model.roi_mask_to_global(frosties[roi] & (en_bal[roi] < 0.))
 
-        advect_heat_flux = 0.  # XXX
-        surf_heat_flux = -2.  # XXX
+    tol = 1e-2
 
-        calc_radiation_balance(model, iteraties)
-        calc_fluxes(model, iteraties, surface=False)
+    iteraties = frosties.copy()
+    iteraties_idxs = np.where(iteraties.flat)[0]
+    x0 = np.full(len(iteraties_idxs), constants.T0 - 10.)
+    x1 = np.full(len(iteraties_idxs), constants.T0)
+    y0 = energy_balance_remainder(model, x0, iteraties)
+    y1 = energy_balance_remainder(model, x1, iteraties)
 
-        en_bal[iteraties] = (
-            s.meteo.net_radiation[iteraties]
-            - s.surface.sens_heat_flux[iteraties]
-            - s.surface.lat_heat_flux[iteraties]
-            - advect_heat_flux
-            - surf_heat_flux
-        )
+    while True:
+        d = (x1 - x0) / (y1 - y0) * y1  # secant method
+        iter_pos = np.abs(d) > tol
 
-        iteraties = model.roi_mask_to_global(frosties[roi] & (en_bal[roi] < 0.))
+        if iter_pos.sum() == 0:
+            break
+
+        d = d[iter_pos]
+        x0 = x0[iter_pos]
+        x1 = x1[iter_pos]
+        y0 = y0[iter_pos]
+        y1 = y1[iter_pos]
+
+        x0 = x1.copy()
+        y0 = y1.copy()
+        x1 -= d
+        iteraties.flat[iteraties_idxs[~iter_pos]] = False
+        y1 = energy_balance_remainder(model, x1, iteraties)
+        iteraties_idxs = iteraties_idxs[iter_pos]
+
+    # TODO calculate melt when surface temperature is positive after iteration?
+    s.surface.temp[frosties] = s.surface.temp[frosties].clip(max=constants.T0)
 
 
 def stability_factor(
@@ -609,3 +626,24 @@ def solve_energy_balance(model, pos):
         surf_heat_flux_change,
         sens_heat_flux_change,
     )
+
+
+def energy_balance_remainder(model, surf_temp, pos):
+    s = model.state
+    s.surface.temp[pos] = surf_temp
+
+    advect_heat_flux = 0.  # XXX
+    surf_heat_flux = -2.  # XXX
+
+    calc_radiation_balance(model, pos)
+    calc_fluxes(model, pos, surface=False)
+
+    en_bal = (
+        s.meteo.net_radiation[pos]
+        - s.surface.sens_heat_flux[pos]
+        - s.surface.lat_heat_flux[pos]
+        - advect_heat_flux
+        - surf_heat_flux
+    )
+
+    return en_bal
