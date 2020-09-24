@@ -161,30 +161,30 @@ def energy_balance(model):
             sens_heat_flux_change[melties_roi],
         ) = solve_energy_balance(model, melties)
 
-        melties2_roi = melties_roi & (s.surface.temp[roi] + surf_temp_change < constants.T0)
-        if melties2_roi.any():
-            melties2 = model.roi_mask_to_global(melties2_roi)
+        partial_melties_roi = melties_roi & (s.surface.temp[roi] + surf_temp_change < constants.T0)
+        if partial_melties_roi.any():
+            partial_melties = model.roi_mask_to_global(partial_melties_roi)
 
-            s.surface.temp[melties2] = constants.T0
+            s.surface.temp[partial_melties] = constants.T0
 
-            calc_latent_heat(model, melties2)
-            calc_saturation_specific_humidity(model, melties2)
-            calc_fluxes(model, melties2)
-            calc_radiation_balance(model, melties2)  # update net radiation
+            calc_latent_heat(model, partial_melties)
+            calc_saturation_specific_humidity(model, partial_melties)
+            calc_fluxes(model, partial_melties)
+            calc_radiation_balance(model, partial_melties)  # update net radiation
 
-            s.snow.melt[melties2] = (
+            s.snow.melt[partial_melties] = (
                 (
-                    s.meteo.net_radiation[melties2]
-                    - s.surface.sens_heat_flux[melties2]
-                    - s.surface.lat_heat_flux[melties2]
-                    - s.surface.heat_flux[melties2]
+                    s.meteo.net_radiation[partial_melties]
+                    - s.surface.sens_heat_flux[partial_melties]
+                    - s.surface.lat_heat_flux[partial_melties]
+                    - s.surface.heat_flux[partial_melties]
                 ) / constants.LATENT_HEAT_OF_FUSION
             ).clip(min=0)
 
-            surf_temp_change[melties2_roi] = 0.
-            surf_moisture_flux_change[melties2_roi] = 0.
-            surf_heat_flux_change[melties2_roi] = 0.
-            sens_heat_flux_change[melties2_roi] = 0.
+            surf_temp_change[partial_melties_roi] = 0.
+            surf_moisture_flux_change[partial_melties_roi] = 0.
+            surf_heat_flux_change[partial_melties_roi] = 0.
+            sens_heat_flux_change[partial_melties_roi] = 0.
 
     # Update surface temperature and fluxes
     s.surface.temp[roi] += surf_temp_change
