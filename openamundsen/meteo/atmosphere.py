@@ -289,31 +289,31 @@ def wet_bulb_temperature(temp, rel_hum, vap_press, psych_const):
     vap_press = np.asarray(vap_press)
     psych_const = np.asarray(psych_const)
 
-    tol = 1e-2  # stopping criterion (iteration continues until abs(xk_1 - xk) < tol)
+    tol = 1e-2  # stopping criterion (iteration continues until abs(x0 - x1) < tol)
 
-    xk_1 = temp - 10  # first start value (x_(k-1))
-    xk = temp.copy()  # second start value (x_k)
-    yk_1 = _water_vapor_pressure_difference(temp, xk_1, vap_press, psych_const)
-    yk = _water_vapor_pressure_difference(temp, xk, vap_press, psych_const)
+    x0 = temp - 10  # first start value (x_(k-1))
+    x1 = temp.copy()  # second start value (x_k)
+    y0 = _water_vapor_pressure_difference(temp, x0, vap_press, psych_const)
+    y1 = _water_vapor_pressure_difference(temp, x1, vap_press, psych_const)
 
     while True:
-        d = (xk - xk_1) / (yk - yk_1) * yk  # secant method
+        d = (x1 - x0) / (y1 - y0) * y1  # secant method
         iter_pos = np.abs(d) > tol
 
         if iter_pos.sum() == 0:
             break
 
-        xk_1[iter_pos] = xk[iter_pos]
-        yk_1[iter_pos] = yk[iter_pos]
-        xk[iter_pos] -= d[iter_pos]
-        yk[iter_pos] = _water_vapor_pressure_difference(
+        x0[iter_pos] = x1[iter_pos]
+        y0[iter_pos] = y1[iter_pos]
+        x1[iter_pos] -= d[iter_pos]
+        y1[iter_pos] = _water_vapor_pressure_difference(
             temp[iter_pos],
-            xk[iter_pos],
+            x1[iter_pos],
             vap_press[iter_pos],
             psych_const[iter_pos],
         )
 
-    return xk
+    return x1
 
 
 def dew_point_temperature(temp, rel_hum):
