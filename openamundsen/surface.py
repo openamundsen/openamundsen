@@ -219,16 +219,14 @@ def cryo_layer_energy_balance(model):
     calc_saturation_specific_humidity(model, snowies)
     calc_moisture_availability(model, snowies)
     calc_latent_heat(model, snowies)
-    calc_radiation_balance(model, roi)
 
     s.snow.melt[roi] = 0
 
     # Where air temperature >= 0 °C -> potential melt, no iteration
-    calc_fluxes(model, melties, surface=False)
+    s.surface.temp[melties] = constants.T0
     available_melt_time = np.zeros(roi.shape)
     en_bal = np.full(roi.shape, np.nan)
     available_melt_time[melties] = model.timestep  # contains the time (in seconds) available for melt in this time step for each pixel
-    s.surface.temp[melties] = constants.T0
 
     for layer_num in range(model.snow.num_layers):
         possible_melties = model.roi_mask_to_global(
@@ -237,18 +235,10 @@ def cryo_layer_energy_balance(model):
             & (available_melt_time[roi] > 0)
         )
 
-        # TODO update radiation balance with possibly updated albedo?
-        # radiation_balance(model, possible_melties)
-
-        advect_heat_flux = 0.  # XXX
-        surf_heat_flux = -2.  # XXX
-
-        en_bal[possible_melties] = (
-            s.meteo.net_radiation[possible_melties]
-            - s.surface.sens_heat_flux[possible_melties]
-            - s.surface.lat_heat_flux[possible_melties]
-            - advect_heat_flux
-            - surf_heat_flux
+        en_bal[possible_melties] = energy_balance_remainder(
+            model,
+            s.surface.temp[possible_melties],
+            possible_melties,
         )
 
         layer_melties = model.roi_mask_to_global(possible_melties[roi] & (en_bal[roi] > 0.))
@@ -295,6 +285,9 @@ def cryo_layer_energy_balance(model):
 
     # Iteration for calculating snow surface temperature
     iterate_surface_temperature(model, frosties, en_bal)
+
+    calc_fluxes(model, roi, surface=False)
+    calc_radiation_balance(model, roi)
 
 
 def iterate_surface_temperature(model, frosties, en_bal):
