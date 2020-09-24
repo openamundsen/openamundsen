@@ -17,7 +17,7 @@ class LayerSnowModel(SnowModel):
         s.add_variable('liquid_water_content', 'kg m-2', 'Liquid water content of snow', dim3=num_snow_layers)
         s.add_variable('temp', 'K', 'Snow temperature', dim3=num_snow_layers)
         s.add_variable('therm_cond', 'W m-1 K-1', 'Thermal conductivity of snow', dim3=num_snow_layers)
-        s.add_variable('areal_heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_snow_layers)
+        s.add_variable('heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_snow_layers)
 
     def initialize(self):
         roi = self.model.grid.roi

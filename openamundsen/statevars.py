@@ -315,7 +315,7 @@ def add_default_state_variables(model):
     soil.add_variable('vol_moisture_content', 'm3 m-3', 'Volumetric soil moisture content', dim3=num_soil_layers)
     soil.add_variable('temp', 'K', 'Soil temperature', dim3=num_soil_layers)
     soil.add_variable('thickness', 'm', 'Soil thickness', dim3=num_soil_layers)
-    soil.add_variable('areal_heat_cap', 'J K-1 m-2', 'Areal heat capacity of soil', dim3=num_soil_layers)
+    soil.add_variable('heat_cap', 'J K-1 m-2', 'Areal heat capacity of soil', dim3=num_soil_layers)
     soil.add_variable('therm_cond', 'W m-1 K-1', 'Thermal conductivity of soil', dim3=num_soil_layers)
     soil.add_variable('therm_cond_minerals', 'W m-1 K-1', 'Thermal conductivity of soil minerals')
     soil.add_variable('therm_cond_dry', 'W m-1 K-1', 'Thermal conductivity of dry soil')

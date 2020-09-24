@@ -474,7 +474,7 @@ def melt(model):
         snow.temp,
         snow.ice_content,
         snow.liquid_water_content,
-        snow.areal_heat_cap,
+        snow.heat_cap,
     )
 
 
@@ -488,7 +488,7 @@ def _melt(
     temp,
     ice_content,
     liquid_water_content,
-    areal_heat_cap,
+    heat_cap,
 ):
     """
     Calculate snowmelt following [1].
@@ -520,7 +520,7 @@ def _melt(
     liquid_water_content : ndarray(float, ndim=3)
         Liquid water content of snow (kg m-2).
 
-    areal_heat_cap : ndarray(float, ndim=3)
+    heat_cap : ndarray(float, ndim=3)
         Areal heat capacity of snow (J K-1 m-2).
 
     References
@@ -536,7 +536,7 @@ def _melt(
         ice_content_change = melt[i, j] * timestep
 
         for k in range(num_layers[i, j]):
-            cold_content = areal_heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
+            cold_content = heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
             if cold_content < 0:
                 ice_content_change -= cold_content / c.LATENT_HEAT_OF_FUSION
                 temp[k, i, j] = c.T0
@@ -645,7 +645,7 @@ def runoff(model):
         s.snow.ice_content,
         s.snow.liquid_water_content,
         s.snow.runoff,
-        s.snow.areal_heat_cap,
+        s.snow.heat_cap,
     )
 
 
@@ -662,7 +662,7 @@ def _runoff(
     ice_content,
     liquid_water_content,
     runoff,
-    areal_heat_cap,
+    heat_cap,
 ):
     """
     Calculate snowmelt runoff following [1].
@@ -703,7 +703,7 @@ def _runoff(
     runoff : ndarray(float, ndim=2)
         Snow runoff (kg m-2).
 
-    areal_heat_cap : ndarray(float, ndim=3)
+    heat_cap : ndarray(float, ndim=3)
         Areal heat capacity of snow (J K-1 m-2).
 
     References
@@ -740,7 +740,7 @@ def _runoff(
                 runoff[i, j] = 0.
 
             # Refreeze liquid water
-            cold_content = areal_heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
+            cold_content = heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
             if cold_content > 0:
                 ice_content_change = min(
                     liquid_water_content[k, i, j],
@@ -748,7 +748,7 @@ def _runoff(
                 )
                 liquid_water_content[k, i, j] -= ice_content_change
                 ice_content[k, i, j] += ice_content_change
-                temp[k, i, j] += c.LATENT_HEAT_OF_FUSION * ice_content_change / areal_heat_cap[k, i, j]
+                temp[k, i, j] += c.LATENT_HEAT_OF_FUSION * ice_content_change / heat_cap[k, i, j]
 
 
 def heat_conduction(model):
@@ -765,7 +765,7 @@ def heat_conduction(model):
         model.state.snow.therm_cond,
         model.state.soil.therm_cond,
         model.state.surface.heat_flux,
-        model.state.snow.areal_heat_cap,
+        model.state.snow.heat_cap,
     )
 
 
@@ -780,7 +780,7 @@ def _heat_conduction(
     therm_cond_snow,
     therm_cond_soil,
     heat_flux,
-    areal_heat_cap,
+    heat_cap,
 ):
     """
     Update snow layer temperatures.
@@ -815,7 +815,7 @@ def _heat_conduction(
     heat_flux : ndarray(float, ndim=2)
         Surface heat flux (W m-2).
 
-    areal_heat_cap : ndarray(float, ndim=3)
+    heat_cap : ndarray(float, ndim=3)
         Areal heat capacity of snow (J K-1 m-2).
 
     References
@@ -840,7 +840,7 @@ def _heat_conduction(
                 soil_thickness[0, i, j],
                 therm_cond_soil[0, i, j],
                 heat_flux[i, j],
-                areal_heat_cap[:ns, i, j],
+                heat_cap[:ns, i, j],
             )
 
 
@@ -857,7 +857,7 @@ def update_layers(model):
         snow.thickness,
         snow.ice_content,
         snow.liquid_water_content,
-        snow.areal_heat_cap,
+        snow.heat_cap,
         snow.temp,
         snow.depth,
     )
@@ -871,7 +871,7 @@ def _update_layers(
     thickness,
     ice_content,
     liquid_water_content,
-    areal_heat_cap,
+    heat_cap,
     temp,
     depth,
 ):
@@ -899,7 +899,7 @@ def _update_layers(
     liquid_water_content : ndarray(float, ndim=3)
         Liquid water content of snow (kg m-2).
 
-    areal_heat_cap : ndarray(float, ndim=3)
+    heat_cap : ndarray(float, ndim=3)
         Areal heat capacity of snow (J K-1 m-2).
 
     temp : ndarray(float, ndim=3)
@@ -919,7 +919,7 @@ def _update_layers(
     thickness_prev = thickness.copy()
     ice_content_prev = ice_content.copy()
     liquid_water_content_prev = liquid_water_content.copy()
-    energy_prev = areal_heat_cap * (temp - c.T0)  # energy content (J m-2)
+    energy_prev = heat_cap * (temp - c.T0)  # energy content (J m-2)
 
     num_pixels = len(roi_idxs)
     for idx_num in prange(num_pixels):
@@ -983,11 +983,11 @@ def _update_layers(
             num_layers[i, j] = ns
 
             # Update areal heat capacity and snow temperature
-            areal_heat_cap[:ns, i, j] = (  # TODO use snow_heat_capacity() for this
+            heat_cap[:ns, i, j] = (  # TODO use snow_heat_capacity() for this
                 ice_content[:ns, i, j] * c.SPEC_HEAT_CAP_ICE
                 + liquid_water_content[:ns, i, j] * c.SPEC_HEAT_CAP_WATER
             )
-            temp[:ns, i, j] = c.T0 + internal_energy[:ns] / areal_heat_cap[:ns, i, j]
+            temp[:ns, i, j] = c.T0 + internal_energy[:ns] / heat_cap[:ns, i, j]
 
 
 def snow_properties(model):
@@ -1015,7 +1015,7 @@ def snow_properties(model):
     snow.area_fraction[roi] = np.tanh(snow.depth[roi] / model.config.snow.snow_cover_fraction_depth_scale)
 
     # Areal heat capacity of snow (eq. (9))
-    snow.areal_heat_cap[:, roi] = (
+    snow.heat_cap[:, roi] = (
         snow.ice_content[:, roi] * c.SPEC_HEAT_CAP_ICE
         + snow.liquid_water_content[:, roi] * c.SPEC_HEAT_CAP_WATER
     )

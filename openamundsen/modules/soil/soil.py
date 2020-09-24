@@ -16,7 +16,7 @@ def soil_properties(model):
         model.grid.roi_idxs,
         s.soil.thickness,
         s.soil.temp,
-        s.soil.areal_heat_cap,
+        s.soil.heat_cap,
         s.soil.vol_heat_cap_dry,
         s.soil.therm_cond,
         s.soil.therm_cond_dry,
@@ -34,7 +34,7 @@ def _soil_properties(
     roi_idxs,
     thickness,
     temp,
-    areal_heat_cap,
+    heat_cap,
     vol_heat_cap_dry,
     therm_cond,
     therm_cond_dry,
@@ -61,7 +61,7 @@ def _soil_properties(
     temp : ndarray(float, ndim=3)
         Soil temperature (K).
 
-    areal_heat_cap : ndarray(float, ndim=3)
+    heat_cap : ndarray(float, ndim=3)
         Soil areal heat capacity (J K-1 m-2).
 
     vol_heat_cap_dry : ndarray(float, ndim=2)
@@ -178,7 +178,7 @@ def _soil_properties(
                 )
 
                 # Areal heat capacity
-                areal_heat_cap[k, i, j] = vol_heat_cap * thickness[k, i, j]
+                heat_cap[k, i, j] = vol_heat_cap * thickness[k, i, j]
 
                 # Saturation concentration of liquid water for the current liquid water to
                 # ice mass ratio (eq. (74))
@@ -202,7 +202,7 @@ def _soil_properties(
                     + therm_cond_dry[i, j]
                 )
             else:  # vol_moisture_content[k, i, j] == 0
-                areal_heat_cap[k, i, j] = vol_heat_cap_dry[i, j] * thickness[k, i, j]
+                heat_cap[k, i, j] = vol_heat_cap_dry[i, j] * thickness[k, i, j]
                 therm_cond[k, i, j] = therm_cond_dry[i, j]
 
 
@@ -217,7 +217,7 @@ def soil_temperature(model):
         model.state.soil.temp,
         model.state.soil.therm_cond,
         model.state.soil.heat_flux,
-        model.state.soil.areal_heat_cap,
+        model.state.soil.heat_cap,
     )
 
 
@@ -229,7 +229,7 @@ def _soil_temperature(
     temp,
     therm_cond,
     heat_flux,
-    areal_heat_cap,
+    heat_cap,
 ):
     """
     Update soil layer temperatures.
@@ -255,7 +255,7 @@ def _soil_temperature(
     heat_flux : ndarray(float, ndim=2)
         Soil heat flux (W m-2).
 
-    areal_heat_cap : ndarray(float, ndim=3)
+    heat_cap : ndarray(float, ndim=3)
         Areal heat capacity (J K-1 m-2).
 
     References
@@ -278,7 +278,7 @@ def _soil_temperature(
             thickness[-1, i, j],
             therm_cond[-1, i, j],
             heat_flux[i, j],
-            areal_heat_cap[:, i, j],
+            heat_cap[:, i, j],
         )
 
 

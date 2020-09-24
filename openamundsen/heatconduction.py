@@ -13,7 +13,7 @@ def temp_change(
     dx_bottom,
     therm_cond_bottom,
     top_heat_flux,
-    areal_heat_cap,
+    heat_cap,
 ):
     """
     Calculate the change in temperature over time by implicitly solving the
@@ -42,7 +42,7 @@ def temp_change(
     top_heat_flux : float
         Heat flux from the top (W m-2).
 
-    areal_heat_cap : ndarray
+    heat_cap : ndarray
         Areal heat capacities (J K-1 m-2).
 
     Returns
@@ -69,7 +69,7 @@ def temp_change(
             [
                 (top_heat_flux + therm_cond_between[0] * (T_bottom - T[0]))
                 * dt
-                / (areal_heat_cap[0] + therm_cond_between[0] * dt)
+                / (heat_cap[0] + therm_cond_between[0] * dt)
             ]
         )
     else:
@@ -79,13 +79,13 @@ def temp_change(
         d = np.zeros(N)  # right hand side of the matrix equation
 
         a[0] = 0
-        b[0] = areal_heat_cap[0] + therm_cond_between[0] * dt
+        b[0] = heat_cap[0] + therm_cond_between[0] * dt
         c[0] = -therm_cond_between[0] * dt
         d[0] = (top_heat_flux - therm_cond_between[0] * (T[0] - T[1])) * dt
 
         for k in range(1, N - 1):
             a[k] = c[k - 1]
-            b[k] = areal_heat_cap[k] + (therm_cond_between[k - 1] + therm_cond_between[k]) * dt
+            b[k] = heat_cap[k] + (therm_cond_between[k - 1] + therm_cond_between[k]) * dt
             c[k] = -therm_cond_between[k] * dt
             d[k] = (
                 therm_cond_between[k - 1] * (T[k - 1] - T[k]) * dt
@@ -94,7 +94,7 @@ def temp_change(
 
         k = N - 1
         a[k] = c[k - 1]
-        b[k] = areal_heat_cap[k] + (therm_cond_between[k - 1] + therm_cond_between[k]) * dt
+        b[k] = heat_cap[k] + (therm_cond_between[k - 1] + therm_cond_between[k]) * dt
         c[k] = 0
         d[k] = (
             therm_cond_between[k - 1] * (T[k - 1] - T[k]) * dt

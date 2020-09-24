@@ -25,7 +25,7 @@ class CryoLayerSnowModel(SnowModel):
         s.add_variable('cold_content', 'kg m-2', 'Cold content of snow', dim3=num_layers)
         s.add_variable('temp', 'K', 'Snow temperature', dim3=num_layers)  # XXX only added because this is in the default point outputs
         s.add_variable('layer_albedo', '1', 'Snow layer albedo', dim3=num_layers)
-        s.add_variable('areal_heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_layers)  # XXX only added because of snow.snow_properties()
+        s.add_variable('heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_layers)  # XXX only added because of snow.snow_properties()
 
         self.model = model
         self.num_layers = num_layers
