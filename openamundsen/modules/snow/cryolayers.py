@@ -171,11 +171,17 @@ class CryoLayerSnowModel(SnowModel):
         s = model.state.snow
         transition_params = model.config.snow.cryolayers.transition
 
-        # Reset empty layers
         total_we = s.ice_content[:, roi] + s.liquid_water_content[:, roi]
+
+        # Reset empty layers
         for i in range(self.num_layers):
             pos = model.roi_mask_to_global(total_we[i, :] <= 0.)
             self.reset_layer(i, pos)
+
+        # Update thickness
+        pos_roi = total_we > 0.
+        pos = model.roi_mask_to_global(pos_roi)
+        s.thickness[pos] = total_we[pos_roi] / s.density[pos]
 
         # Transition new snow -> old snow
         self.layer_transition(
