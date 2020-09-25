@@ -309,6 +309,10 @@ def cryo_layer_energy_balance(model):
     calc_fluxes(model, roi, surface=False)
     calc_radiation_balance(model, roi)
 
+    # Snow sublimation
+    s.snow.sublimation[roi] = 0.
+    s.snow.sublimation[snowies] = s.surface.moisture_flux[snowies] * model.timestep
+
 
 def stability_factor(
     temp,
