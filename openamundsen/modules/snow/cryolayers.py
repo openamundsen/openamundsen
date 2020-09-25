@@ -152,7 +152,7 @@ class CryoLayerSnowModel(SnowModel):
         runoff = model.state.meteo.rainfall_amount[roi].copy()
 
         for i in range(model.snow.num_layers):
-            pos_roi = s.snow.thickness[i, roi] > 0
+            pos_roi = (s.snow.ice_content[i, roi] + s.snow.liquid_water_content[i, roi]) > 0.
             pos = model.roi_mask_to_global(pos_roi)
 
             max_lwc = max_lwc_frac * s.snow.ice_content[i, pos]
