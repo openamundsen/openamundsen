@@ -636,7 +636,7 @@ def runoff(model):
     _runoff(
         model.grid.roi_idxs,
         model.timestep,
-        model.config.snow.irreducible_liquid_water_content,
+        max_liquid_water_content(model),
         s.meteo.snowfall,
         s.meteo.rainfall,
         s.snow.num_layers,
@@ -653,7 +653,7 @@ def runoff(model):
 def _runoff(
     roi_idxs,
     timestep,
-    irreducible_liquid_water_content,
+    max_liquid_water_content,
     snowfall,
     rainfall,
     num_layers,
@@ -676,8 +676,8 @@ def _runoff(
     timestep : float
         Model timestep (s).
 
-    irreducible_liquid_water_content : float
-        Irreducible liquid water content (-).
+    max_liquid_water_content : ndarray(float, ndim=3)
+        Maximum liquid water content (kg m-2).
 
     snowfall : ndarray(float, ndim=2)
         Snowfall flux (kg m-2 s-1).
@@ -719,23 +719,11 @@ def _runoff(
         runoff[i, j] = rainfall[i, j] * timestep  # TODO optimize this
 
         for k in range(num_layers[i, j]):
-            if thickness[k, i, j] > 0:
-                porosity = 1 - ice_content[k, i, j] / (c.ICE_DENSITY * thickness[k, i, j])  # eq. (27)
-            else:
-                porosity = 0.
-
-            max_liquid_water_content = (  # eq. (28)
-                c.WATER_DENSITY
-                * thickness[k, i, j]
-                * porosity
-                * irreducible_liquid_water_content
-            )
-
             liquid_water_content[k, i, j] += runoff[i, j]
 
-            if liquid_water_content[k, i, j] > max_liquid_water_content:
-                runoff[i, j] = liquid_water_content[k, i, j] - max_liquid_water_content
-                liquid_water_content[k, i, j] = max_liquid_water_content
+            if liquid_water_content[k, i, j] > max_liquid_water_content[k, i, j]:
+                runoff[i, j] = liquid_water_content[k, i, j] - max_liquid_water_content[k, i, j]
+                liquid_water_content[k, i, j] = max_liquid_water_content[k, i, j]
             else:
                 runoff[i, j] = 0.
 
@@ -1019,3 +1007,51 @@ def snow_properties(model):
         snow.ice_content[:, roi] * c.SPEC_HEAT_CAP_ICE
         + snow.liquid_water_content[:, roi] * c.SPEC_HEAT_CAP_WATER
     )
+
+
+def max_liquid_water_content(model):
+    """
+    Calculate the maximum liquid water content of snow.
+
+    The following options for calculating the maximum liquid water content are
+    supported:
+        - 'pore_volume_fraction': maximum LWC is set to a fraction of the snow
+          pore volume following [1].
+        - 'mass_fraction': maximum LWC is set to a fraction of the snow
+          ice mass.
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    Returns
+    -------
+    max_lwc : ndarray(float, ndim=3)
+        Maximum liquid water content (kg m-2).
+
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
+    s = model.state
+    method = model.config.snow.liquid_water_content.method
+
+    if method == 'pore_volume_fraction':
+        pos = s.snow.thickness > 0.
+        porosity = np.zeros(s.snow.ice_content.shape)
+
+        porosity[pos] = 1 - s.snow.ice_content[pos] / (c.ICE_DENSITY * s.snow.thickness[pos])  # eq. (27)
+
+        max_lwc = (  # eq. (28)
+            c.WATER_DENSITY
+            * s.snow.thickness
+            * porosity
+            * model.config.snow.liquid_water_content.max
+        )
+    elif method == 'mass_fraction':
+        max_lwc = model.config.snow.liquid_water_content.max * s.snow.ice_content
+
+    return max_lwc

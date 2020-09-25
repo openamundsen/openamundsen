@@ -419,9 +419,20 @@ snow:
     snow_cover_fraction_depth_scale:  # snow cover fraction depth scale (m)
       type: number
       default: 0.1
-    irreducible_liquid_water_content:  # irreducible liquid water content of snow
-      type: number
-      default: 0.03
+
+    liquid_water_content:
+      type: dict
+      default: {}
+      schema:
+        method:
+          type: string
+          allowed:
+            - pore_volume_fraction
+            - mass_fraction
+          default: pore_volume_fraction
+        max:
+          type: number
+          default: 0.03
 
     compaction:
       type: dict

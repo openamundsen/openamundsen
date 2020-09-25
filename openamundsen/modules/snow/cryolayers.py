@@ -1,7 +1,13 @@
 import numpy as np
 from openamundsen import constants
 from openamundsen.snowmodel import SnowModel
-from .snow import _compaction_anderson, _fresh_snow_density, albedo, snow_properties
+from .snow import (
+    _compaction_anderson,
+    _fresh_snow_density,
+    albedo,
+    max_liquid_water_content,
+    snow_properties,
+)
 
 
 class CryoLayerID:
@@ -147,17 +153,15 @@ class CryoLayerSnowModel(SnowModel):
         roi = model.grid.roi
         s = model.state
 
-        max_lwc_frac = 0.05  # XXX
-
+        max_lwc = max_liquid_water_content(model)
         runoff = model.state.meteo.rainfall_amount[roi].copy()
 
         for i in range(model.snow.num_layers):
             pos_roi = (s.snow.ice_content[i, roi] + s.snow.liquid_water_content[i, roi]) > 0.
             pos = model.roi_mask_to_global(pos_roi)
 
-            max_lwc = max_lwc_frac * s.snow.ice_content[i, pos]
             s.snow.liquid_water_content[i, pos] += runoff[pos_roi]
-            runoff_cur = (s.snow.liquid_water_content[i, pos] - max_lwc).clip(min=0)
+            runoff_cur = (s.snow.liquid_water_content[i, pos] - max_lwc[i, pos]).clip(min=0)
             runoff[pos_roi] = runoff_cur
             s.snow.liquid_water_content[i, pos] -= runoff_cur
 
