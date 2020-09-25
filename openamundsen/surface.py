@@ -152,7 +152,7 @@ def energy_balance(model):
     )
     if melties_roi.any():
         melties = model.roi_mask_to_global(melties_roi)
-        s.snow.melt[melties] = s.snow.ice_content[:, melties].sum(axis=0) / model.timestep
+        s.snow.melt[melties] = s.snow.ice_content[:, melties].sum(axis=0)
 
         (
             surf_temp_change[melties_roi],
@@ -178,7 +178,7 @@ def energy_balance(model):
                     - s.surface.sens_heat_flux[partial_melties]
                     - s.surface.lat_heat_flux[partial_melties]
                     - s.surface.heat_flux[partial_melties]
-                ) / constants.LATENT_HEAT_OF_FUSION
+                ) / constants.LATENT_HEAT_OF_FUSION * model.timestep
             ).clip(min=0)
 
             surf_temp_change[partial_melties_roi] = 0.
@@ -199,8 +199,8 @@ def energy_balance(model):
     s.snow.sublimation[roi] = 0.
     pos_roi = (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0)
     pos = model.roi_mask_to_global(pos_roi)
-    s.snow.sublimation[pos] = s.surface.moisture_flux[pos]
-    # soil_evaporation[model.roi_mask_to_global(~pos)] = surf_moisture_flux[~pos]
+    s.snow.sublimation[pos] = s.surface.moisture_flux[pos] * model.timestep
+    # soil_evaporation[model.roi_mask_to_global(~pos)] = surf_moisture_flux[~pos] * model.timestep
 
 
 def cryo_layer_energy_balance(model):
@@ -653,7 +653,7 @@ def solve_energy_balance(model, pos):
             - s.surface.sens_heat_flux[pos]
             - s.surface.lat_heat_flux[pos]
             - s.surface.heat_flux[pos]
-            - constants.LATENT_HEAT_OF_FUSION * s.snow.melt[pos]
+            - constants.LATENT_HEAT_OF_FUSION * (s.snow.melt[pos] / model.timestep)
         ) / (
             (
                 constants.SPEC_HEAT_CAP_DRY_AIR

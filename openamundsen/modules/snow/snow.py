@@ -199,7 +199,7 @@ def accumulation(model):
     density = _fresh_snow_density(model.state.meteo.wetbulb_temp[roi])
 
     frost = -np.minimum(s.snow.sublimation[roi], 0)
-    ice_content_change = (s.meteo.snowfall[roi] + frost) * model.timestep
+    ice_content_change = s.meteo.snowfall[roi] * model.timestep + frost
     ice_content_change = np.nan_to_num(ice_content_change, nan=0., copy=False)
 
     # Initialize first snow layer where necessary
@@ -534,7 +534,7 @@ def _melt(
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
 
-        ice_content_change = melt[i, j] * timestep
+        ice_content_change = melt[i, j]
 
         for k in range(num_layers[i, j]):
             cold_content = heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
@@ -614,7 +614,7 @@ def _sublimation(
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
 
-        ice_content_change = max(sublimation[i, j], 0.) * timestep
+        ice_content_change = max(sublimation[i, j], 0.)
 
         if ice_content_change > 0:
             for k in range(num_layers[i, j]):
