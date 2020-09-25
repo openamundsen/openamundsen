@@ -154,6 +154,8 @@ class CryoLayerSnowModel(SnowModel):
         s = model.state
 
         max_lwc = max_liquid_water_content(model)
+        max_lwc[2:, :] = 0.  # no LWC for firn and ice
+
         runoff = model.state.meteo.rainfall_amount[roi].copy()
         runoff[np.isnan(runoff)] = 0.
 
