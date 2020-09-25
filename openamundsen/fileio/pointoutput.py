@@ -112,6 +112,7 @@ _default_output_vars = [
     PointOutputVariable('snow.liquid_water_content'),
     PointOutputVariable('snow.melt'),
     PointOutputVariable('snow.runoff'),
+    PointOutputVariable('snow.sublimation'),
 ]
 
 
