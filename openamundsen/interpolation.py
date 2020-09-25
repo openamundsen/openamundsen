@@ -84,6 +84,10 @@ def idw(x, y, z, x_targets, y_targets, power=2, smoothing=0):
     """
     assert len(x) == len(y) == len(z)
 
+    # If no input points are available return an all-nan array
+    if len(x) == 0:
+        return np.full(x_targets.shape, np.nan)
+
     return _idw(
         np.asarray(x, dtype=float),
         np.asarray(y, dtype=float),

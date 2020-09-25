@@ -200,6 +200,7 @@ def accumulation(model):
 
     frost = -np.minimum(s.snow.sublimation[roi], 0)
     ice_content_change = (s.meteo.snowfall[roi] + frost) * model.timestep
+    ice_content_change = np.nan_to_num(ice_content_change, nan=0., copy=False)
 
     # Initialize first snow layer where necessary
     pos_init_layer = model.roi_mask_to_global((s.snow.num_layers[roi] == 0) & (ice_content_change > 0))

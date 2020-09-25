@@ -14,6 +14,7 @@ def temp_change(
     therm_cond_bottom,
     top_heat_flux,
     heat_cap,
+    replace_nan=True,
 ):
     """
     Calculate the change in temperature over time by implicitly solving the
@@ -44,6 +45,9 @@ def temp_change(
 
     heat_cap : ndarray
         Areal heat capacities (J K-1 m-2).
+
+    replace_nan : bool, default True
+        Replace nan values in the calculated temperature changes with 0.
 
     Returns
     -------
@@ -102,5 +106,8 @@ def temp_change(
         )
 
         temp_change = tridiag.solve_tridiag(a, b, c, d)
+
+    if replace_nan:
+        temp_change[np.isnan(temp_change)] = 0.
 
     return temp_change

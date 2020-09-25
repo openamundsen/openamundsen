@@ -684,6 +684,11 @@ def solve_energy_balance(model, pos):
         * surf_temp_change
     )
 
+    surf_temp_change = np.nan_to_num(surf_temp_change, nan=0., copy=False)
+    surf_moisture_flux_change = np.nan_to_num(surf_moisture_flux_change, nan=0., copy=False)
+    surf_heat_flux_change = np.nan_to_num(surf_heat_flux_change, nan=0., copy=False)
+    sens_heat_flux_change = np.nan_to_num(sens_heat_flux_change, nan=0., copy=False)
+
     return (
         surf_temp_change,
         surf_moisture_flux_change,
