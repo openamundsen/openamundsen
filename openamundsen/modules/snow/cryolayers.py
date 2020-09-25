@@ -167,6 +167,12 @@ class CryoLayerSnowModel(SnowModel):
         s = model.state.snow
         transition_params = model.config.snow.cryolayers.transition
 
+        # Reset empty layers
+        total_we = s.ice_content[:, roi] + s.liquid_water_content[:, roi]
+        for i in range(self.num_layers):
+            pos = model.roi_mask_to_global(total_we[i, :] <= 0.)
+            self.reset_layer(i, pos)
+
         # Transition new snow -> old snow
         self.layer_transition(
             CryoLayerID.NEW_SNOW,
