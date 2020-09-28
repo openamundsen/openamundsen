@@ -742,6 +742,7 @@ def energy_balance_remainder(model, pos, surf_temp):
     surf_heat_flux = -2.  # XXX
 
     calc_radiation_balance(model, pos)
+    calc_saturation_specific_humidity(model, pos)
     calc_fluxes(model, pos, surface=False)
 
     en_bal = (
