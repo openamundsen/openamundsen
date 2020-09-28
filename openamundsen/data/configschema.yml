@@ -528,6 +528,13 @@ snow:
               type: number
               default: 900.
 
+        surface_temperature_iteration_method:
+          type: string
+          allowed:
+            - legacy
+            - secant
+          default: secant
+
 soil:
   type: dict
   default: {}
