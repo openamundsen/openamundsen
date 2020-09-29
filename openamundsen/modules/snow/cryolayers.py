@@ -58,10 +58,13 @@ class CryoLayerSnowModel(SnowModel):
         roi = model.grid.roi
         s = model.state
 
+        self.update_surface_layer_type()
+
         for i in range(model.snow.num_layers):
             pos = model.roi_mask_to_global(s.surface.layer_type[roi] == i)
 
             if i in (CryoLayerID.NEW_SNOW, CryoLayerID.OLD_SNOW):
+                s.snow.albedo[pos] = s.snow.layer_albedo[i, pos]
                 albedo(model, pos)
                 s.snow.layer_albedo[i, pos] = s.snow.albedo[pos]
             elif i == CryoLayerID.FIRN:
@@ -108,6 +111,7 @@ class CryoLayerSnowModel(SnowModel):
 
         # Initialize new snow layer where required
         s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer] = model.config.snow.albedo.max
+        s.snow.albedo[pos_init_layer] = s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer]
         s.snow.density[CryoLayerID.NEW_SNOW, pos_init_layer] = density[pos_init_layer_roi]
 
         # Add snow to new snow layer
@@ -297,3 +301,14 @@ class CryoLayerSnowModel(SnowModel):
         )
 
         self.reset_layer(src_layer, pos)
+
+    def update_surface_layer_type(self):
+        model = self.model
+        roi = model.grid.roi
+        s = model.state
+
+        s.surface.layer_type[roi] = CryoLayerID.SNOW_FREE
+
+        for i in reversed(range(model.snow.num_layers)):
+            pos = model.roi_mask_to_global(s.snow.thickness[i, roi] > 0)
+            s.surface.layer_type[pos] = i

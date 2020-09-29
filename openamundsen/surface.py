@@ -55,12 +55,6 @@ def surface_properties(model):
                 1,
             )
         )
-    elif model.config.snow.model == 'cryolayers':
-        s.surface.layer_type[roi] = CryoLayerID.SNOW_FREE
-
-        for i in reversed(range(model.snow.num_layers)):
-            pos = model.roi_mask_to_global(s.snow.thickness[i, roi] > 0)
-            s.surface.layer_type[pos] = i
 
 
 def surface_layer_properties(model):
