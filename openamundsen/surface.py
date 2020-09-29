@@ -538,10 +538,11 @@ def calc_latent_heat(model, pos):
         Pixels to be considered.
     """
     s = model.state
+    lat_heat_vap = meteo.latent_heat_of_vaporization(s.meteo.temp[pos])
     s.surface.lat_heat[pos] = np.where(
         (s.snow.ice_content[0, pos] > 0) | (s.surface.temp[pos] < constants.T0),
-        constants.LATENT_HEAT_OF_SUBLIMATION,
-        constants.LATENT_HEAT_OF_VAPORIZATION,
+        lat_heat_vap + constants.LATENT_HEAT_OF_FUSION,
+        lat_heat_vap,
     )
 
 
