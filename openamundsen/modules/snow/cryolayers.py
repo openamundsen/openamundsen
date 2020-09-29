@@ -150,6 +150,8 @@ class CryoLayerSnowModel(SnowModel):
         roi = model.grid.roi
         s = model.state
 
+        # Ice content change is positive for sublimation (mass loss) and negative for mass gain
+        # (resublimation)
         ice_content_change = s.snow.sublimation[roi].copy()
 
         for i in range(model.snow.num_layers):
@@ -162,7 +164,6 @@ class CryoLayerSnowModel(SnowModel):
             )
             s.snow.thickness[i, pos] *= (1 - cur_ice_content_change / s.snow.ice_content[i, pos])
             s.snow.ice_content[i, pos] -= cur_ice_content_change
-            s.snow.liquid_water_content[i, pos] += cur_ice_content_change
             ice_content_change[pos_roi] -= cur_ice_content_change
 
     def runoff(self):
