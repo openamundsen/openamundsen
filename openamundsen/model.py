@@ -154,9 +154,9 @@ class Model:
         """
         modules.radiation.irradiance(self)
 
-        self.snow.albedo_aging()
         self.snow.compaction()
         self.snow.accumulation()
+        self.snow.albedo_aging()
         # TODO call update_layers() here?
         self.snow.update_properties()
 
