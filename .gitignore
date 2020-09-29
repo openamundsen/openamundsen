@@ -2,3 +2,4 @@ __pycache__
 .idea
 svf_*.asc
 examples/results
+scratch
