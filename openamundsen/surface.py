@@ -172,10 +172,10 @@ def energy_balance(model):
             s.snow.melt[partial_melties] = (
                 (
                     s.meteo.net_radiation[partial_melties]
-                    - s.surface.sens_heat_flux[partial_melties]
-                    - s.surface.lat_heat_flux[partial_melties]
+                    + s.surface.sens_heat_flux[partial_melties]
+                    + s.surface.lat_heat_flux[partial_melties]
+                    + s.surface.advective_heat_flux[partial_melties]
                     - s.surface.heat_flux[partial_melties]
-                    - s.surface.advective_heat_flux[partial_melties]
                 ) / constants.LATENT_HEAT_OF_FUSION * model.timestep
             ).clip(min=0)
 
@@ -197,8 +197,8 @@ def energy_balance(model):
     s.snow.sublimation[roi] = 0.
     pos_roi = (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0)
     pos = model.roi_mask_to_global(pos_roi)
-    s.snow.sublimation[pos] = s.surface.moisture_flux[pos] * model.timestep
-    # soil_evaporation[model.roi_mask_to_global(~pos)] = surf_moisture_flux[~pos] * model.timestep
+    s.snow.sublimation[pos] = -1 * s.surface.moisture_flux[pos] * model.timestep
+    # soil_evaporation[model.roi_mask_to_global(~pos)] = -1 * surf_moisture_flux[~pos] * model.timestep
 
 
 def cryo_layer_energy_balance(model):
@@ -310,7 +310,7 @@ def cryo_layer_energy_balance(model):
 
     # Snow sublimation
     s.snow.sublimation[roi] = 0.
-    s.snow.sublimation[snowies] = s.surface.moisture_flux[snowies] * model.timestep
+    s.snow.sublimation[snowies] = -1 * s.surface.moisture_flux[snowies] * model.timestep
 
 
 def stability_factor(
@@ -579,7 +579,8 @@ def calc_surface_flux(model, pos):
 
 def calc_turbulent_fluxes(model, pos, sensible=True, latent=True):
     """
-    Calculate turbulent fluxes following [1].
+    Calculate turbulent fluxes following [1] (opposed to [1] however, the fluxes
+    are here oriented towards the surface).
 
     Parameters
     ----------
@@ -613,14 +614,14 @@ def calc_turbulent_fluxes(model, pos, sensible=True, latent=True):
         s.surface.sens_heat_flux[pos] = (
             constants.SPEC_HEAT_CAP_DRY_AIR
             * rhoa_CH_Ua
-            * (s.surface.temp[pos] - s.meteo.temp[pos])
+            * (s.meteo.temp[pos] - s.surface.temp[pos])
         )
 
     if latent:
         s.surface.moisture_flux[pos] = (
             s.surface.moisture_availability[pos]
             * rhoa_CH_Ua
-            * (s.surface.sat_spec_hum[pos] - s.meteo.spec_hum[pos])
+            * (s.meteo.spec_hum[pos] - s.surface.sat_spec_hum[pos])
         )
         s.surface.lat_heat_flux[pos] = s.surface.lat_heat[pos] * s.surface.moisture_flux[pos]
 
@@ -648,11 +649,11 @@ def calc_advective_heat(model, pos):
     s.surface.advective_heat_flux[pos] = (
         (  # rainfall on snow
             constants.SPEC_HEAT_CAP_WATER
-            * (constants.T0 - s.meteo.temp[pos])
+            * (s.meteo.temp[pos] - constants.T0)
             * s.meteo.rainfall[pos]
         ) + (  # snowfall on snow
             constants.SPEC_HEAT_CAP_ICE
-            * (constants.T0 - s.meteo.wetbulb_temp[pos])
+            * (s.meteo.wetbulb_temp[pos] - constants.T0)
             * s.meteo.snowfall[pos]
         )
     )
@@ -698,10 +699,10 @@ def solve_energy_balance(model, pos):
     surf_temp_change = (  # eq. (38) plus heat advected by precipitation
         (
             s.meteo.net_radiation[pos]
-            - s.surface.sens_heat_flux[pos]
-            - s.surface.lat_heat_flux[pos]
+            + s.surface.sens_heat_flux[pos]
+            + s.surface.lat_heat_flux[pos]
+            + s.surface.advective_heat_flux[pos]
             - s.surface.heat_flux[pos]
-            - s.surface.advective_heat_flux[pos]
             - constants.LATENT_HEAT_OF_FUSION * (s.snow.melt[pos] / model.timestep)
         ) / (
             (
@@ -783,7 +784,7 @@ def energy_balance_remainder(model, pos, surf_temp):
     s = model.state
     s.surface.temp[pos] = surf_temp
 
-    surf_heat_flux = -2.  # XXX
+    ground_heat_flux = 2.  # XXX
 
     calc_radiation_balance(model, pos)
     calc_saturation_specific_humidity(model, pos)
@@ -791,10 +792,10 @@ def energy_balance_remainder(model, pos, surf_temp):
 
     en_bal = (
         s.meteo.net_radiation[pos]
-        - s.surface.sens_heat_flux[pos]
-        - s.surface.lat_heat_flux[pos]
-        - s.surface.advective_heat_flux[pos]
-        - surf_heat_flux
+        + s.surface.sens_heat_flux[pos]
+        + s.surface.lat_heat_flux[pos]
+        + s.surface.advective_heat_flux[pos]
+        + ground_heat_flux
     )
 
     return en_bal
