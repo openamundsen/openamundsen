@@ -168,6 +168,7 @@ def energy_balance(model):
             calc_radiation_balance(model, partial_melties)  # update net radiation
             calc_surface_flux(model, partial_melties)
             calc_turbulent_fluxes(model, partial_melties)
+            calc_advective_heat(model, partial_melties)
 
             s.snow.melt[partial_melties] = (
                 (
@@ -237,7 +238,6 @@ def cryo_layer_energy_balance(model):
     calc_saturation_specific_humidity(model, snowies)
     calc_moisture_availability(model, snowies)
     calc_latent_heat(model, snowies)
-    calc_advective_heat(model, roi)
 
     s.snow.melt[roi] = 0
 
@@ -307,6 +307,7 @@ def cryo_layer_energy_balance(model):
 
     calc_radiation_balance(model, roi)
     calc_turbulent_fluxes(model, roi)
+    calc_advective_heat(model, roi)
 
     # Snow sublimation
     s.snow.sublimation[roi] = 0.
@@ -649,11 +650,11 @@ def calc_advective_heat(model, pos):
     s.surface.advective_heat_flux[pos] = (
         (  # rainfall on snow
             constants.SPEC_HEAT_CAP_WATER
-            * (s.meteo.temp[pos] - constants.T0)
+            * (s.meteo.temp[pos] - s.surface.temp[pos])
             * s.meteo.rainfall[pos]
         ) + (  # snowfall on snow
             constants.SPEC_HEAT_CAP_ICE
-            * (s.meteo.wetbulb_temp[pos] - constants.T0)
+            * (s.meteo.wetbulb_temp[pos] - s.surface.temp[pos])
             * s.meteo.snowfall[pos]
         )
     )
@@ -789,6 +790,7 @@ def energy_balance_remainder(model, pos, surf_temp):
     calc_radiation_balance(model, pos)
     calc_saturation_specific_humidity(model, pos)
     calc_turbulent_fluxes(model, pos)
+    calc_advective_heat(model, pos)
 
     en_bal = (
         s.meteo.net_radiation[pos]
