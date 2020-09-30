@@ -785,7 +785,7 @@ def energy_balance_remainder(model, pos, surf_temp):
     s = model.state
     s.surface.temp[pos] = surf_temp
 
-    ground_heat_flux = 2.  # XXX
+    ground_heat_flux = 2.  # TODO this is a parameter
 
     calc_radiation_balance(model, pos)
     calc_saturation_specific_humidity(model, pos)
