@@ -129,8 +129,9 @@ def energy_balance(model):
 
     # Calculate surface energy balance without melt
     s.snow.melt[roi] = 0
-    calc_fluxes(model, roi)
     calc_radiation_balance(model, roi)
+    calc_surface_flux(model, roi)
+    calc_turbulent_fluxes(model, roi)
 
     (
         surf_temp_change,
@@ -163,8 +164,9 @@ def energy_balance(model):
 
             calc_latent_heat(model, partial_melties)
             calc_saturation_specific_humidity(model, partial_melties)
-            calc_fluxes(model, partial_melties)
             calc_radiation_balance(model, partial_melties)  # update net radiation
+            calc_surface_flux(model, partial_melties)
+            calc_turbulent_fluxes(model, partial_melties)
 
             s.snow.melt[partial_melties] = (
                 (
@@ -185,9 +187,9 @@ def energy_balance(model):
     s.surface.moisture_flux[roi] += surf_moisture_flux_change
     s.surface.heat_flux[roi] += surf_heat_flux_change
     s.surface.sens_heat_flux[roi] += sens_heat_flux_change
-    calc_latent_heat(model, roi)
-    calc_fluxes(model, roi, surface=False, moisture=False, sensible=False, latent=True)
     calc_radiation_balance(model, roi)
+    calc_latent_heat(model, roi)
+    calc_turbulent_fluxes(model, roi, sensible=False)
 
     # Snow sublimation
     s.snow.sublimation[roi] = 0.
@@ -300,8 +302,8 @@ def cryo_layer_energy_balance(model):
     # Iteration for calculating snow surface temperature
     iterate_surface_temperature(model, frosties)
 
-    calc_fluxes(model, roi, surface=False)
     calc_radiation_balance(model, roi)
+    calc_turbulent_fluxes(model, roi)
 
     # Snow sublimation
     s.snow.sublimation[roi] = 0.
@@ -546,9 +548,9 @@ def calc_latent_heat(model, pos):
     )
 
 
-def calc_fluxes(model, pos, surface=True, moisture=True, sensible=True, latent=True):
+def calc_surface_flux(model, pos):
     """
-    Calculate surface fluxes following [1].
+    Calculate the surface flux following [1].
 
     Parameters
     ----------
@@ -558,11 +560,31 @@ def calc_fluxes(model, pos, surface=True, moisture=True, sensible=True, latent=T
     pos : ndarray(bool)
         Pixels to be considered.
 
-    surface : bool, default True
-        Calculate the surface heat flux.
+    References
+    ----------
+    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
+       Geoscientific Model Development, 8(12), 3867–3876.
+       https://doi.org/10.5194/gmd-8-3867-2015
+    """
+    s = model.state
+    s.surface.heat_flux[pos] = (
+        2 * s.surface.therm_cond[pos]
+        * (s.surface.temp[pos] - s.surface.layer_temp[pos])
+        / s.surface.thickness[pos]
+    )
 
-    moisture : bool, default True
-        Calculate the surface moisture flux.
+
+def calc_turbulent_fluxes(model, pos, sensible=True, latent=True):
+    """
+    Calculate turbulent fluxes following [1].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    pos : ndarray(bool)
+        Pixels to be considered.
 
     sensible : bool, default True
         Calculate the sensible heat flux.
@@ -584,20 +606,6 @@ def calc_fluxes(model, pos, surface=True, moisture=True, sensible=True, latent=T
         * s.meteo.wind_speed[pos]
     )
 
-    if surface:
-        s.surface.heat_flux[pos] = (
-            2 * s.surface.therm_cond[pos]
-            * (s.surface.temp[pos] - s.surface.layer_temp[pos])
-            / s.surface.thickness[pos]
-        )
-
-    if moisture:
-        s.surface.moisture_flux[pos] = (
-            s.surface.moisture_availability[pos]
-            * rhoa_CH_Ua
-            * (s.surface.sat_spec_hum[pos] - s.meteo.spec_hum[pos])
-        )
-
     if sensible:
         s.surface.sens_heat_flux[pos] = (
             constants.SPEC_HEAT_CAP_DRY_AIR
@@ -606,6 +614,11 @@ def calc_fluxes(model, pos, surface=True, moisture=True, sensible=True, latent=T
         )
 
     if latent:
+        s.surface.moisture_flux[pos] = (
+            s.surface.moisture_availability[pos]
+            * rhoa_CH_Ua
+            * (s.surface.sat_spec_hum[pos] - s.meteo.spec_hum[pos])
+        )
         s.surface.lat_heat_flux[pos] = s.surface.lat_heat[pos] * s.surface.moisture_flux[pos]
 
 
@@ -738,7 +751,7 @@ def energy_balance_remainder(model, pos, surf_temp):
 
     calc_radiation_balance(model, pos)
     calc_saturation_specific_humidity(model, pos)
-    calc_fluxes(model, pos, surface=False)
+    calc_turbulent_fluxes(model, pos)
 
     en_bal = (
         s.meteo.net_radiation[pos]
