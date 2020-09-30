@@ -278,6 +278,7 @@ def add_default_state_variables(model):
     surf.add_variable('sens_heat_flux', 'W m-2', 'Sensible heat flux', 'surface_downward_sensible_heat_flux')
     surf.add_variable('lat_heat_flux', 'W m-2', 'Latent heat flux', 'surface_downward_latent_heat_flux')
     surf.add_variable('moisture_flux', 'kg m-2 s-1', 'Moisture flux')
+    surf.add_variable('advective_heat_flux', 'W m-2', 'Heat advected by precipitation')
     surf.add_variable('lat_heat', 'J kg-1', 'Latent heat')
     surf.add_variable('sat_spec_hum', 'kg kg-1', 'Saturation specific humidity at surface temperature')
     surf.add_variable('moisture_availability', '1', 'Moisture availability factor')

@@ -132,6 +132,7 @@ def energy_balance(model):
     calc_radiation_balance(model, roi)
     calc_surface_flux(model, roi)
     calc_turbulent_fluxes(model, roi)
+    calc_advective_heat(model, roi)
 
     (
         surf_temp_change,
@@ -174,6 +175,7 @@ def energy_balance(model):
                     - s.surface.sens_heat_flux[partial_melties]
                     - s.surface.lat_heat_flux[partial_melties]
                     - s.surface.heat_flux[partial_melties]
+                    - s.surface.advective_heat_flux[partial_melties]
                 ) / constants.LATENT_HEAT_OF_FUSION * model.timestep
             ).clip(min=0)
 
@@ -235,6 +237,7 @@ def cryo_layer_energy_balance(model):
     calc_saturation_specific_humidity(model, snowies)
     calc_moisture_availability(model, snowies)
     calc_latent_heat(model, snowies)
+    calc_advective_heat(model, roi)
 
     s.snow.melt[roi] = 0
 
@@ -622,6 +625,39 @@ def calc_turbulent_fluxes(model, pos, sensible=True, latent=True):
         s.surface.lat_heat_flux[pos] = s.surface.lat_heat[pos] * s.surface.moisture_flux[pos]
 
 
+def calc_advective_heat(model, pos):
+    """
+    Calculate heat advected by precipitation following [1].
+
+    Parameters
+    ----------
+    model : Model
+        Model instance.
+
+    pos : ndarray(bool)
+        Pixels to be considered.
+
+    References
+    ----------
+    .. [1] Strasser, U. (2008). Die Modellierung der Gebirgsschneedecke im
+       Nationalpark Berchtesgaden. Modelling of the mountain snow cover in the
+       Berchtesgaden National Park, Berchtesgaden National Park research report,
+       No. 55, Berchtesgaden.
+    """
+    s = model.state
+    s.surface.advective_heat_flux[pos] = (
+        (  # rainfall on snow
+            constants.SPEC_HEAT_CAP_WATER
+            * (constants.T0 - s.meteo.temp[pos])
+            * s.meteo.rainfall[pos]
+        ) + (  # snowfall on snow
+            constants.SPEC_HEAT_CAP_ICE
+            * (constants.T0 - s.meteo.wetbulb_temp[pos])
+            * s.meteo.snowfall[pos]
+        )
+    )
+
+
 def solve_energy_balance(model, pos):
     """
     Calculate surface temperature and flux changes following [1] (eqs.
@@ -659,12 +695,13 @@ def solve_energy_balance(model, pos):
         constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[pos]**2
     )
 
-    surf_temp_change = (  # eq. (38) (K)
+    surf_temp_change = (  # eq. (38) plus heat advected by precipitation
         (
             s.meteo.net_radiation[pos]
             - s.surface.sens_heat_flux[pos]
             - s.surface.lat_heat_flux[pos]
             - s.surface.heat_flux[pos]
+            - s.surface.advective_heat_flux[pos]
             - constants.LATENT_HEAT_OF_FUSION * (s.snow.melt[pos] / model.timestep)
         ) / (
             (
@@ -746,7 +783,6 @@ def energy_balance_remainder(model, pos, surf_temp):
     s = model.state
     s.surface.temp[pos] = surf_temp
 
-    advect_heat_flux = 0.  # XXX
     surf_heat_flux = -2.  # XXX
 
     calc_radiation_balance(model, pos)
@@ -757,7 +793,7 @@ def energy_balance_remainder(model, pos, surf_temp):
         s.meteo.net_radiation[pos]
         - s.surface.sens_heat_flux[pos]
         - s.surface.lat_heat_flux[pos]
-        - advect_heat_flux
+        - s.surface.advective_heat_flux[pos]
         - surf_heat_flux
     )
 
