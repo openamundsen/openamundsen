@@ -368,6 +368,10 @@ def stability_factor(
        Geoscientific Model Development, 8(12), 3867–3876.
        https://doi.org/10.5194/gmd-8-3867-2015
     """
+    # Replace zero wind speeds (would lead to a divide by zero) with a plausible value
+    wind_speed = wind_speed.copy()
+    wind_speed[wind_speed == 0.] = 0.5
+
     # Bulk Richardson number (eq. (24))
     richardson = (
         constants.GRAVITATIONAL_ACCELERATION
@@ -382,20 +386,21 @@ def stability_factor(
         * snow_free_roughness_length**(1 - snow_cover_fraction)
     )
 
+    pos = richardson >= 0
+
     # eq. (26)
     c = (
         3 * stability_adjustment_parameter**2 * constants.VON_KARMAN**2
-        * np.sqrt(wind_measurement_height / momentum_roughness_length)
-        / (np.log(wind_measurement_height / momentum_roughness_length))**2
+        * np.sqrt(wind_measurement_height / momentum_roughness_length[~pos])
+        / (np.log(wind_measurement_height / momentum_roughness_length[~pos]))**2
     )
 
     # eq. (25)
-    pos = richardson >= 0
     stability_factor = np.empty(pos.shape)
     stability_factor[pos] = 1 / (1 + 3 * stability_adjustment_parameter * richardson[pos] * np.sqrt(
         1 + stability_adjustment_parameter * richardson[pos]))
-    stability_factor[~pos] = 1 / (1 - 3 * stability_adjustment_parameter * richardson[~pos] * (
-        1 + c[~pos] * np.sqrt(-richardson[~pos])))
+    stability_factor[~pos] = 1 - 3 * stability_adjustment_parameter * richardson[~pos] / (
+        1 + c * np.sqrt(-richardson[~pos]))
 
     return stability_factor
 
