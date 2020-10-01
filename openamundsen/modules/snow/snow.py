@@ -178,39 +178,35 @@ def _albedo_fsm(
     return albedo
 
 
-def accumulation(model):
+def add_snow(
+        model,
+        pos,
+        ice_content,
+        liquid_water_content,
+        density,
+        albedo,
+):
     """
-    Add fresh snowfall and frost to the first snow layer.
+    Add snow to the top of the snowpack.
 
     Parameters
     ----------
     model : Model
         Model instance.
-
-    References
-    ----------
-    .. [1] Essery, R. (2015). A factorial snowpack model (FSM 1.0).
-       Geoscientific Model Development, 8(12), 3867–3876.
-       https://doi.org/10.5194/gmd-8-3867-2015
     """
-    roi = model.grid.roi
     s = model.state
 
-    density = _fresh_snow_density(model.state.meteo.wetbulb_temp[roi])
-
-    frost = -np.minimum(s.snow.sublimation[roi], 0)
-    ice_content_change = s.meteo.snowfall[roi] * model.timestep + frost
-    ice_content_change = np.nan_to_num(ice_content_change, nan=0., copy=False)
+    ice_content = np.nan_to_num(ice_content, nan=0., copy=True)
 
     # Initialize first snow layer where necessary
-    pos_init_layer = model.roi_mask_to_global((s.snow.num_layers[roi] == 0) & (ice_content_change > 0))
+    pos_init_layer = model.roi_mask_to_global((s.snow.num_layers[pos] == 0) & (ice_content > 0))
     s.snow.num_layers[pos_init_layer] = 1
     s.snow.temp[0, pos_init_layer] = np.minimum(s.meteo.temp[pos_init_layer], c.T0)
     s.snow.albedo[pos_init_layer] = model.config.snow.albedo.max
 
     # Add snow to first layer
-    s.snow.ice_content[0, roi] += ice_content_change
-    s.snow.thickness[0, roi] += ice_content_change / density
+    s.snow.ice_content[0, pos] += ice_content
+    s.snow.thickness[0, pos] += ice_content / density
 
 
 def _fresh_snow_density(temp):

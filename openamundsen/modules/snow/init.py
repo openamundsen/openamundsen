@@ -1,3 +1,4 @@
+import numpy as np
 from openamundsen import constants
 from openamundsen.snowmodel import SnowModel
 from . import snow
@@ -41,7 +42,14 @@ class LayerSnowModel(SnowModel):
         snow.compaction(self.model)
 
     def accumulation(self):
-        snow.accumulation(self.model)
+        model = self.model
+        s = model.state
+        roi = model.grid.roi
+
+        frost = -np.minimum(s.snow.sublimation[roi], 0)
+        ice_content_change = s.meteo.snowfall[roi] * model.timestep + frost
+        density = snow._fresh_snow_density(s.meteo.wetbulb_temp[roi])
+        self.add_snow(roi, ice_content_change, density=density)
 
     def heat_conduction(self):
         snow.heat_conduction(self.model)
@@ -60,3 +68,38 @@ class LayerSnowModel(SnowModel):
 
     def update_properties(self):
         snow.snow_properties(self.model)
+
+    def add_snow(
+            self,
+            pos,
+            ice_content,
+            liquid_water_content=0,
+            density=None,
+            albedo=None,
+    ):
+        """
+        Add snow to the top of the snowpack.
+        """
+        model = self.model
+        s = model.state
+
+        ice_content = np.nan_to_num(ice_content, nan=0., copy=True)
+
+        pos_init = (s.snow.num_layers[pos] == 0) & (ice_content > 0)
+        pos_init_global = model.global_mask(pos_init, pos)
+
+        # If albedo is None, set it to the maximum albedo for currently snow-free pixels and keep
+        # the current albedo for the other pixels
+        if albedo is None:
+            albedo = s.snow.albedo[pos]
+            albedo[pos_init] = model.config.snow.albedo.max
+            s.snow.albedo[pos] = albedo
+
+        # Initialize first snow layer where necessary
+        s.snow.num_layers[pos_init_global] = 1
+        s.snow.temp[0, pos_init_global] = np.minimum(s.meteo.temp[pos_init_global], constants.T0)
+
+        # Add snow to first layer
+        s.snow.ice_content[0, pos] += ice_content
+        s.snow.liquid_water_content[0, pos] += liquid_water_content
+        s.snow.thickness[0, pos] += ice_content / density
