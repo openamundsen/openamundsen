@@ -329,10 +329,15 @@ meteo:
                   - wmo
                   - kochendorfer
                 dependencies: gauge
+              - allowed:
+                  - srf
+                dependencies: file
           gauge:
             type: string
           scf:
             type: number
+          file:
+            type: string
 
     # Radiation related parameters
     radiation:

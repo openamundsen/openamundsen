@@ -62,6 +62,12 @@ class Model:
         else:
             raise NotImplementedError
 
+        # Create snow redistribution factor state variables
+        for precip_corr in self.config.meteo.precipitation_correction:
+            if precip_corr['method'] == 'srf':
+                self.state.base.add_variable('srf', '1', 'Snow redistribution factor')
+                break  # multiple SRFs are not allowed
+
         self._create_state_variables()
 
         self._read_input_data()
@@ -365,6 +371,14 @@ class Model:
             self.logger.debug(f'Writing sky view factor file ({svf_file})')
             fileio.write_raster_file(svf_file, svf, self.grid.transform)
 
+        # Read snow redistribution factor files
+        for precip_corr in self.config.meteo.precipitation_correction:
+            if precip_corr['method'] == 'srf':
+                srf_file = precip_corr['file']
+                self.logger.info(f'Reading snow redistribution factor ({srf_file})')
+                self.state.base.srf[:] = fileio.read_raster_file(srf_file, check_meta=self.grid)
+                break
+
         self.grid.prepare_roi_coordinates()
 
     def _read_meteo_data(self):
@@ -458,3 +472,8 @@ class Model:
         )
         m.snowfall[roi] = snowfall_frac * m.precip[roi]
         m.rainfall[roi] = (1 - snowfall_frac) * m.precip[roi]
+
+        # Redistribute snow
+        if 'srf' in self.state.base:
+            m.snowfall[roi] *= self.state.base.srf[roi]
+            m.precip[roi] = m.snowfall[roi] + m.precip[roi]
