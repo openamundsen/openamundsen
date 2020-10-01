@@ -28,3 +28,13 @@ class SnowModel:
 
     def update_properties(self):
         pass
+
+    def add_snow(
+            self,
+            pos,
+            ice_content,
+            liquid_water_content=0,
+            density=None,
+            albedo=None,
+    ):
+        pass
