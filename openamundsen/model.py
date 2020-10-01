@@ -91,23 +91,32 @@ class Model:
         time_diff = pd.Timedelta(seconds=(time.time() - start_time))
         self.logger.success('Model run finished. Runtime: ' + str(time_diff))
 
-    def roi_mask_to_global(self, mask):
-        if mask.shape[-1] != len(self.grid.roi_idxs_flat):
-            raise Exception('mask does not match ROI size')
+    def global_mask(self, mask, global_mask=None, global_idxs=None):
+        if global_idxs is None:
+            if global_mask is None:
+                global_idxs = self.grid.roi_idxs_flat
+            else:
+                global_idxs = np.flatnonzero(global_mask)
+
+        if mask.shape[-1] != len(global_idxs):
+            raise Exception('Local mask does not match global mask size')
 
         if mask.ndim == 1:
             global_mask = np.zeros((self.grid.rows, self.grid.cols), dtype=bool)
-            idxs = self.grid.roi_idxs_flat[mask]
+            idxs = global_idxs[mask]
             global_mask.flat[idxs] = True
         elif mask.ndim == 2:
             dim3 = mask.shape[0]
             global_mask = np.zeros((dim3, self.grid.rows, self.grid.cols), dtype=bool)
 
             for i in range(dim3):
-                idxs = self.grid.roi_idxs_flat[mask[i, :]]
+                idxs = global_idxs[mask[i, :]]
                 global_mask[i, :, :].flat[idxs] = True
 
         return global_mask
+
+    def roi_mask_to_global(self, mask):
+        return self.global_mask(mask)
 
     def _prepare_time_steps(self):
         """
