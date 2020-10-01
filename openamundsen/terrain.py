@@ -1,3 +1,4 @@
+from numba import njit, prange
 import numpy as np
 import openamundsen.modules.radiation
 
@@ -198,3 +199,133 @@ def sky_view_factor(dem, res, azim_step=10, elev_step=1, logger=None):
 
     svf /= len(azim_angles)
     return svf
+
+
+def openness(dem, res, L, negative=False, mean=True):
+    """
+    Calculate topographic openness for a DEM following [1].
+
+    Parameters
+    ----------
+    dem : ndarray
+        Terrain elevation (m).
+
+    res : float
+        DEM resolution (m).
+
+    L : float
+        Radial distance to consider for calculating openness for each pixel (m).
+
+    negative : bool, default False
+        Calculate negative instead of positive openness.
+
+    mean : bool, default True
+        Return openness averaged over all eight compass directions.
+
+    Returns
+    -------
+    opn : ndarray
+        Openness (radians).
+
+    References
+    ----------
+    .. [1] Yokoyama, R., Shirasawa, M., & Pike, R. J. (2002). Visualizing
+       topography by openness: A new application of image processing to digital
+       elevation models. Photogrammetric Engineering and Remote Sensing, 68(3),
+       257–266.
+    """
+    dirs = np.arange(8)
+    opn = np.full((len(dirs), dem.shape[0], dem.shape[1]), np.inf)
+
+    if negative:
+        dem = -dem
+
+    for dir in dirs:
+        opn[dir, :, :] = _openness_dir(dem, res, L, dir)
+
+    if mean:
+        opn = opn.mean(axis=0)
+
+    return opn
+
+
+@njit(cache=True, parallel=True)
+def _openness_dir(dem, res, L, dir):
+    """
+    Calculate topographic openness for a DEM and a single compass direction.
+
+    Parameters
+    ----------
+    dem : ndarray
+        Terrain elevation (m).
+
+    res : float
+        DEM resolution (m).
+
+    L : float
+        Radial distance to consider for calculating openness for each pixel (m).
+
+    dir : int
+        Direction for which to calculate openness, ranging from 0 (northwest) to
+        7 (west).
+
+    Returns
+    -------
+    opn_dir : ndarray
+        Openness (radians).
+    """
+    opn_dir = np.full(dem.shape, np.inf)
+
+    for i in prange(int(np.ceil(L / res))):
+        dist = res * (i + 1) * [1, np.sqrt(2)][dir % 2]
+        Z_shift = _shift_arr(dem, dir, i)
+        angle = np.pi / 2 - np.arctan2(Z_shift - dem, dist)
+
+        idxs = np.flatnonzero(angle < opn_dir)
+        opn_dir.ravel()[idxs] = angle.ravel()[idxs]
+
+    return opn_dir
+
+
+@njit(cache=True)
+def _shift_arr(M, dir, n):
+    """
+    Shift an array along one of the eight compass directions.
+
+    Parameters
+    ----------
+    M : ndarray
+        Input array.
+
+    dir : int
+        Direction along to shift the array, ranging from 0 (northwest) to 7
+        (west).
+
+    n : int
+        Number of pixels to be shifted.
+
+    Returns
+    -------
+    S : ndarray
+        Shifted array.
+    """
+    S = M.copy()
+
+    if dir == 0:
+        S[1 + n:, 1 + n:] = M[:-n - 1, :-n - 1]
+    elif dir == 1:
+        S[1 + n:, :] = M[:-n - 1, :]
+    elif dir == 2:
+        S[1 + n:, :-n - 1] = M[:-n - 1, 1 + n:]
+    elif dir == 3:
+        S[:, :-n - 1] = M[:, 1 + n:]
+    elif dir == 4:
+        S[:-n - 1, :-n - 1] = M[1 + n:, 1 + n:]
+    elif dir == 5:
+        S[:-n - 1, :] = M[1 + n:, :]
+    elif dir == 6:
+        S[:-n - 1, 1 + n:] = M[1 + n:, :-n - 1]
+    elif dir == 7:
+        S[:, 1 + n:] = M[:, :-n - 1]
+
+    return S
