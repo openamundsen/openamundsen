@@ -46,10 +46,11 @@ class LayerSnowModel(SnowModel):
         s = model.state
         roi = model.grid.roi
 
-        frost = -np.minimum(s.snow.sublimation[roi], 0)
-        ice_content_change = s.meteo.snowfall[roi] * model.timestep + frost
-        density = snow._fresh_snow_density(s.meteo.wetbulb_temp[roi])
-        self.add_snow(roi, ice_content_change, density=density)
+        self.add_snow(
+            roi,
+            s.meteo.snowfall_amount[roi],
+            density=snow._fresh_snow_density(s.meteo.wetbulb_temp[roi]),
+        )
 
     def heat_conduction(self):
         snow.heat_conduction(self.model)
@@ -58,6 +59,19 @@ class LayerSnowModel(SnowModel):
         snow.melt(self.model)
 
     def sublimation(self):
+        model = self.model
+        s = model.state
+        roi = model.grid.roi
+
+        # First resublimation
+        frost = -np.minimum(s.snow.sublimation[roi], 0)
+        self.add_snow(
+            roi,
+            frost,
+            density=snow._fresh_snow_density(s.meteo.wetbulb_temp[roi]),
+        )
+
+        # Then sublimation
         snow.sublimation(self.model)
 
     def runoff(self):
