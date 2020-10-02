@@ -201,6 +201,62 @@ def sky_view_factor(dem, res, azim_step=10, elev_step=1, logger=None):
     return svf
 
 
+def curvature(dem, res, kind, L=None):
+    """
+    Calculate curvature for a digital terrain model.
+
+    Parameters
+    ----------
+    dem : ndarray
+        Terrain elevation (m).
+
+    res : float
+        DEM resolution (m).
+
+    kind : str
+        Curvature calculation method. Allowed values are:
+            - 'liston': calculate topographic curvature according to [1].
+
+    L : float, default None
+        Length scale required for kind='liston' (m).
+
+    Returns
+    -------
+    curv : ndarray
+        Curvature array.
+
+    References
+    ----------
+    .. [1] Liston, G. E., Haehnel, R. B., Sturm, M., Hiemstra, C. A.,
+       Berezovskaya, S., & Tabler, R.  D. (2007). Simulating complex snow
+       distributions in windy environments using SnowTran-3D. Journal of
+       Glaciology, 53(181), 241–256.
+    """
+    if kind == 'liston':
+        L_px = int(np.ceil(L / res))
+        
+        z = dem
+        z_n = _shift_arr(dem, 0, L_px, mode='edge')
+        z_ne = _shift_arr(dem, 1, L_px, mode='edge')
+        z_e = _shift_arr(dem, 2, L_px, mode='edge')
+        z_se = _shift_arr(dem, 3, L_px, mode='edge')
+        z_s = _shift_arr(dem, 4, L_px, mode='edge')
+        z_sw = _shift_arr(dem, 5, L_px, mode='edge')
+        z_w = _shift_arr(dem, 6, L_px, mode='edge')
+        z_nw = _shift_arr(dem, 7, L_px, mode='edge')
+
+        curv = (
+            (z - (z_w + z_e) / 2.) / (2 * L)
+            + (z - (z_s + z_n) / 2.) / (2 * L)
+            + (z - (z_sw + z_ne) / 2.) / (2 * np.sqrt(2) * L)
+            + (z - (z_nw + z_se) / 2.) / (2 * np.sqrt(2) * L)
+        ) / 4.
+    else:
+        raise NotImplementedError
+
+    return curv
+
+
 def openness(dem, res, L, negative=False, mean=True):
     """
     Calculate topographic openness for a DEM following [1].
