@@ -129,7 +129,7 @@ def normal_vector(dem, res):
     return normal_vec
 
 
-def sky_view_factor(dem, res, azim_step=10, elev_step=1, logger=None):
+def sky_view_factor(dem, res, min_azim=0, max_azim=360, azim_step=10, elev_step=1, logger=None):
     """
     Calculate the sky view factor for a DEM after Corripio (2003).
     The sky view factor is the hemispherical fraction of unobstructed sky
@@ -144,11 +144,17 @@ def sky_view_factor(dem, res, azim_step=10, elev_step=1, logger=None):
     res : float
         DEM resolution (m).
 
+    min_azim : int, default 0
+        Minimum azimuth angle (degrees).
+
+    max_azim : int, default 0
+        Maximum azimuth angle (degrees).
+
     azim_step : int, default 10
-        Azimuth angle interval.
+        Azimuth angle interval (degrees).
 
     elev_step : int, default 1
-        Elevation angle interval.
+        Elevation angle interval (degrees).
 
     logger : Logger, optional
         Logger instance for printing status messages.
@@ -165,12 +171,10 @@ def sky_view_factor(dem, res, azim_step=10, elev_step=1, logger=None):
        terrain. International Journal of Geographical Information Science, 17(1),
        1–23. https://doi.org/10.1080/13658810210157796
     """
+    dem = dem.astype(float, copy=False)  # convert to float64 if necessary
     slope, _ = slope_aspect(dem, res)
 
-    min_azim_angle = 0
-    max_azim_angle = 360
-    azim_angles = np.arange(min_azim_angle, max_azim_angle, azim_step)
-
+    azim_angles = np.arange(min_azim, max_azim, azim_step)
     min_elev_angle = 1
     max_elev_angle = int(np.ceil(np.nanmax(slope)))
     elev_angles = np.arange(min_elev_angle, max_elev_angle)[::-1]
