@@ -290,7 +290,10 @@ def _openness_dir(dem, res, L, dir):
 @njit(cache=True)
 def _shift_arr(M, dir, n):
     """
-    Shift an array along one of the eight compass directions.
+    Shift an array along one of the eight (inter)cardinal directions.
+
+    Pixels which "become free" retain their original value (i.e., unlike with
+    np.roll() elements are not wrapped around the axes).
 
     Parameters
     ----------
@@ -298,8 +301,8 @@ def _shift_arr(M, dir, n):
         Input array.
 
     dir : int
-        Direction along to shift the array, ranging from 0 (northwest) to 7
-        (west).
+        Direction along to shift the array, ranging from 0 (north) to 7
+        (northwest).
 
     n : int
         Number of pixels to be shifted.
@@ -311,21 +314,21 @@ def _shift_arr(M, dir, n):
     """
     S = M.copy()
 
-    if dir == 0:
-        S[1 + n:, 1 + n:] = M[:-n - 1, :-n - 1]
-    elif dir == 1:
-        S[1 + n:, :] = M[:-n - 1, :]
-    elif dir == 2:
-        S[1 + n:, :-n - 1] = M[:-n - 1, 1 + n:]
-    elif dir == 3:
-        S[:, :-n - 1] = M[:, 1 + n:]
-    elif dir == 4:
-        S[:-n - 1, :-n - 1] = M[1 + n:, 1 + n:]
-    elif dir == 5:
+    if dir == 0:  # north
         S[:-n - 1, :] = M[1 + n:, :]
-    elif dir == 6:
+    elif dir == 1:  # northeast
         S[:-n - 1, 1 + n:] = M[1 + n:, :-n - 1]
-    elif dir == 7:
+    elif dir == 2:  # east
         S[:, 1 + n:] = M[:, :-n - 1]
+    elif dir == 3:  # southeast
+        S[1 + n:, 1 + n:] = M[:-n - 1, :-n - 1]
+    elif dir == 4:  # south
+        S[1 + n:, :] = M[:-n - 1, :]
+    elif dir == 5:  # southwest
+        S[1 + n:, :-n - 1] = M[:-n - 1, 1 + n:]
+    elif dir == 6:  # west
+        S[:, :-n - 1] = M[:, 1 + n:]
+    elif dir == 7:  # northwest
+        S[:-n - 1, :-n - 1] = M[1 + n:, 1 + n:]
 
     return S
