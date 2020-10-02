@@ -278,7 +278,7 @@ def _openness_dir(dem, res, L, dir):
 
     for i in prange(int(np.ceil(L / res))):
         dist = res * (i + 1) * [1, np.sqrt(2)][dir % 2]
-        Z_shift = _shift_arr(dem, dir, i)
+        Z_shift = _shift_arr_retain(dem, dir, i)
         angle = np.pi / 2 - np.arctan2(Z_shift - dem, dist)
 
         idxs = np.flatnonzero(angle < opn_dir)
@@ -287,13 +287,59 @@ def _openness_dir(dem, res, L, dir):
     return opn_dir
 
 
-@njit(cache=True)
-def _shift_arr(M, dir, n):
+def _shift_arr(M, dir, n, mode='retain'):
     """
     Shift an array along one of the eight (inter)cardinal directions.
 
-    Pixels which "become free" retain their original value (i.e., unlike with
-    np.roll() elements are not wrapped around the axes).
+    Parameters
+    ----------
+    M : ndarray
+        Input array.
+
+    dir : int
+        Direction along to shift the array, ranging from 0 (north) to 7
+        (northwest).
+
+    n : int
+        Number of pixels to be shifted.
+
+    mode : str, default 'retain'
+        If 'retain', pixels are padded with the values from the original array.
+        All other values (e.g., 'edge' for padding with the edge values) are
+        passed to np.pad().
+
+    Returns
+    -------
+    S : ndarray
+        Shifted array.
+    """
+    if mode == 'retain':
+        return _shift_arr_retain(M, dir, n)
+    else:
+        if dir == 0:  # north
+            return np.pad(M, ((0, n), (0, 0)), mode=mode)[n:, :]
+        elif dir == 1:  # northeast
+            return np.pad(M, ((0, n), (n, 0)), mode=mode)[n:, :-n]
+        elif dir == 2:  # east
+            return np.pad(M, ((0, 0), (n, 0)), mode=mode)[:, :-n]
+        elif dir == 3:  # southeast
+            return np.pad(M, ((n, 0), (n, 0)), mode=mode)[:-n, :-n]
+        elif dir == 4:  # south
+            return np.pad(M, ((n, 0), (0, 0)), mode=mode)[:-n, :]
+        elif dir == 5:  # southwest
+            return np.pad(M, ((n, 0), (0, n)), mode=mode)[:-n, n:]
+        elif dir == 6:  # west
+            return np.pad(M, ((0, 0), (0, n)), mode=mode)[:, n:]
+        elif dir == 7:  # northwest
+            return np.pad(M, ((0, n), (0, n)), mode=mode)[n:, n:]
+
+
+@njit(cache=True)
+def _shift_arr_retain(M, dir, n):
+    """
+    Shift an array along one of the eight (inter)cardinal directions.
+    Pixels padded to the edges of the axes retain the value from the
+    original array.
 
     Parameters
     ----------
