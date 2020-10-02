@@ -364,7 +364,6 @@ class Model:
             svf = terrain.sky_view_factor(
                 self.state.base.dem,
                 self.grid.resolution,
-                logger=self.logger,
             )
             self.state.base.svf[:] = svf
 
