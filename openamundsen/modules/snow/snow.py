@@ -237,7 +237,6 @@ def _fresh_snow_density(temp):
 
 
 def compaction(model):
-    roi = model.grid.roi
     snow = model.state.snow
 
     if model.config.snow.compaction.method == 'anderson':
@@ -634,7 +633,6 @@ def runoff(model):
         model.grid.roi_idxs,
         model.timestep,
         max_liquid_water_content(model),
-        s.meteo.snowfall,
         s.meteo.rainfall,
         s.snow.num_layers,
         s.snow.thickness,
@@ -651,7 +649,6 @@ def _runoff(
     roi_idxs,
     timestep,
     max_liquid_water_content,
-    snowfall,
     rainfall,
     num_layers,
     thickness,
@@ -675,9 +672,6 @@ def _runoff(
 
     max_liquid_water_content : ndarray(float, ndim=3)
         Maximum liquid water content (kg m-2).
-
-    snowfall : ndarray(float, ndim=2)
-        Snowfall flux (kg m-2 s-1).
 
     rainfall : ndarray(float, ndim=2)
         Rainfall flux (kg m-2 s-1).
