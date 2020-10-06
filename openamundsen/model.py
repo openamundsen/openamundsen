@@ -154,7 +154,6 @@ class Model:
             meteo.interpolate_station_data(self)
             self._process_meteo_data()
             self._model_interface()
-            self._calculate_diagnostic_variables()
             self.point_outputs.update()
             self.field_outputs.update()
 
@@ -196,17 +195,6 @@ class Model:
         if self.config.snow.model == 'layers':  # TODO check this
             modules.soil.soil_heat_flux(self)
             modules.soil.soil_temperature(self)
-
-    def _calculate_diagnostic_variables(self):
-        """
-        Calculate diagnostic variables from the other state variables.
-        """
-        s = self.state
-        roi = self.grid.roi
-
-        s.meteo.precip_amount[roi] = s.meteo.precip[roi] * self.timestep
-        s.meteo.snowfall_amount[roi] = s.meteo.snowfall[roi] * self.timestep
-        s.meteo.rainfall_amount[roi] = s.meteo.rainfall[roi] * self.timestep
 
     def _initialize_logger(self):
         """
@@ -476,3 +464,7 @@ class Model:
         if 'srf' in self.state.base:
             m.snowfall[roi] *= self.state.base.srf[roi]
             m.precip[roi] = m.snowfall[roi] + m.precip[roi]
+
+        m.precip_amount[roi] = m.precip[roi] * self.timestep
+        m.snowfall_amount[roi] = m.snowfall[roi] * self.timestep
+        m.rainfall_amount[roi] = m.rainfall[roi] * self.timestep
