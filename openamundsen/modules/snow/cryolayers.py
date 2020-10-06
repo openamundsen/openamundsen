@@ -102,7 +102,7 @@ class CryoLayerSnowModel(SnowModel):
         s = model.state
 
         density = _fresh_snow_density(s.meteo.wetbulb_temp[roi])
-        ice_content_change = s.meteo.snowfall_amount[roi].copy()
+        ice_content_change = s.meteo.snowfall[roi].copy()
 
         pos_accum_roi = ice_content_change > 0
         pos_init_layer_roi = (s.snow.ice_content[0, roi] == 0) & (ice_content_change > 0)
@@ -178,7 +178,7 @@ class CryoLayerSnowModel(SnowModel):
         max_lwc = max_liquid_water_content(model)
         max_lwc[2:, :] = 0.  # no LWC for firn and ice
 
-        runoff = model.state.meteo.rainfall_amount[roi].copy()
+        runoff = model.state.meteo.rainfall[roi].copy()
         runoff[np.isnan(runoff)] = 0.
 
         for i in range(model.snow.num_layers):

@@ -136,6 +136,7 @@ def read_netcdf_meteo_file(filename):
     Read a meteo data file in NetCDF format and
     - check if the time, lon, lat, and alt variables are included
     - rename the variables according to NETCDF_VAR_MAPPINGS
+    - convert precipitation rates to sums if necessary
     - check if the units are as expected (METEO_VAR_METADATA)
     - remove all unsupported variables
     - set the station id and name as attributes.
@@ -161,6 +162,13 @@ def read_netcdf_meteo_file(filename):
     for var in ('time', 'lon', 'lat', 'alt'):
         if var not in ds:
             raise oa.errors.MeteoDataError(f'File is missing "{var}" variable: {filename}')
+
+    # Special case for precipitation - convert rates to sums first if required
+    if 'precip' in ds and ds['precip'].units == 'kg m-2 s-1':
+        freq = pd.infer_freq(ds.indexes['time'])
+        dt = util.offset_to_timedelta(freq).total_seconds()
+        ds['precip'] *= dt
+        ds['precip'].attrs['units'] = 'kg m-2'
 
     for var, meta in constants.METEO_VAR_METADATA.items():
         units = meta['units']
@@ -197,7 +205,7 @@ def read_csv_meteo_file(filename, station_id, station_name, x, y, alt, crs):
     """
     Read a meteorological data file in CSV format and return it as a Dataset.
     Unlike in read_netcdf_meteo_file, here it is assumed that precipitation is
-    specified as a sum over the time step (i.e., kg m-2) instead of a flux (kg
+    specified as a sum over the time step (i.e., kg m-2) instead of a rate (kg
     m-2 s-1).
 
     Parameters
@@ -242,7 +250,7 @@ def read_csv_meteo_file(filename, station_id, station_name, x, y, alt, crs):
     df = df.rename(columns=param_mappings)
 
     if 'precip' in df.columns:
-        df.precip /= constants.SECONDS_PER_HOUR  # convert to kg m-2 s-1
+        pass
         # TODO check if the time step is really 3600 s and if precip is really a sum
 
     datadict = {param: (['time'], df[param].astype(np.float32)) for param in df.columns}
@@ -300,10 +308,9 @@ def _resample_dataset(ds, freq):
     """
     Resample a dataset to a given frequency.
 
-    For all parameters except precipitation, the instantaneous values at the
-    target timestamps are taken, i.e.  no aggregation is performed. For
-    precipitation flux, the mean over the respective time intervals is
-    calculated.
+    For all parameters except precipitation (where sums over the respective time
+    intervals are calculated), the instantaneous values at the target timestamps
+    are taken, i.e. no aggregation is performed.
 
     Parameters
     ----------
@@ -323,12 +330,12 @@ def _resample_dataset(ds, freq):
     # ds.resample() is somehow extremely slow, so we resample using pandas
     df = ds.to_dataframe().drop(columns=['lon', 'lat', 'alt'])
 
-    # Take the instantaneous values for all parameters except precipitation flux
-    # (where we calculate the mean)
+    # Take the instantaneous values for all parameters except precipitation
+    # (where we calculate the sum)
     df_res = df.asfreq(freq)
 
     if 'precip' in df:
-        df_res['precip'] = df['precip'].resample(freq, label='right', closed='right').mean()
+        df_res['precip'] = df['precip'].resample(freq, label='right', closed='right').sum()
 
     # Check if the desired frequency is a subset of the original frequency of the
     # data (e.g., resampling hourly to 3-hourly data is ok, but not hourly to

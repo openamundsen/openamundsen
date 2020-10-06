@@ -656,11 +656,11 @@ def calc_advective_heat(model, pos):
         (  # rainfall on snow
             constants.SPEC_HEAT_CAP_WATER
             * (s.meteo.temp[pos] - s.surface.temp[pos])
-            * s.meteo.rainfall_amount[pos]
+            * s.meteo.rainfall[pos]
         ) + (  # snowfall on snow
             constants.SPEC_HEAT_CAP_ICE
             * (s.meteo.wetbulb_temp[pos] - s.surface.temp[pos])
-            * s.meteo.snowfall_amount[pos]
+            * s.meteo.snowfall[pos]
         )
     ) / model.timestep
 

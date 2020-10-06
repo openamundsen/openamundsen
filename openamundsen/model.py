@@ -463,8 +463,7 @@ class Model:
         # Redistribute snow
         if 'srf' in self.state.base:
             m.snowfall[roi] *= self.state.base.srf[roi]
-            m.precip[roi] = m.snowfall[roi] + m.precip[roi]
+            m.precip[roi] = m.snowfall[roi] + m.rainfall[roi]
 
-        m.precip_amount[roi] = m.precip[roi] * self.timestep
-        m.snowfall_amount[roi] = m.snowfall[roi] * self.timestep
-        m.rainfall_amount[roi] = m.rainfall[roi] * self.timestep
+        m.snowfall_rate[roi] = m.snowfall[roi] / self.timestep
+        m.rainfall_rate[roi] = m.rainfall[roi] / self.timestep

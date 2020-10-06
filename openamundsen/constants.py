@@ -53,8 +53,8 @@ METEO_VAR_METADATA = {
         'units': 'K',
     },
     'precip': {
-        'standard_name': 'precipitation_flux',
-        'units': 'kg m-2 s-1',
+        'standard_name': 'precipitation_amount',
+        'units': 'kg m-2',
     },
     'rel_hum': {
         'standard_name': 'relative_humidity',

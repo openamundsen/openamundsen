@@ -19,7 +19,7 @@ def albedo(model, pos=None):
         s.snow.albedo[pos] = _albedo_usaco(
             s.snow.albedo[pos],
             s.meteo.temp[pos],
-            s.meteo.snowfall_amount[pos] / model.timestep,
+            s.meteo.snowfall[pos] / model.timestep,
             model.config.snow.albedo.min,
             model.config.snow.albedo.max,
             model.config.snow.albedo.k_pos,
@@ -31,7 +31,7 @@ def albedo(model, pos=None):
         s.snow.albedo[pos] = _albedo_fsm(
             s.snow.albedo[pos],
             s.surface.temp[pos],
-            s.meteo.snowfall_amount[pos] / model.timestep,
+            s.meteo.snowfall[pos] / model.timestep,
             model.config.snow.albedo.min,
             model.config.snow.albedo.max,
             model.config.snow.albedo.melting_snow_decay_timescale,
@@ -632,7 +632,7 @@ def runoff(model):
     _runoff(
         model.grid.roi_idxs,
         max_liquid_water_content(model),
-        s.meteo.rainfall_amount,
+        s.meteo.rainfall,
         s.snow.num_layers,
         s.snow.thickness,
         s.snow.temp,
