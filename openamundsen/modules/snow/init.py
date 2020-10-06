@@ -48,7 +48,7 @@ class LayerSnowModel(SnowModel):
 
         self.add_snow(
             roi,
-            s.meteo.snowfall[roi] * model.timestep,
+            s.meteo.snowfall_amount[roi],
             density=snow._fresh_snow_density(s.meteo.wetbulb_temp[roi]),
         )
 

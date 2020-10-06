@@ -19,7 +19,7 @@ def albedo(model, pos=None):
         s.snow.albedo[pos] = _albedo_usaco(
             s.snow.albedo[pos],
             s.meteo.temp[pos],
-            s.meteo.snowfall[pos],
+            s.meteo.snowfall_amount[pos] / model.timestep,
             model.config.snow.albedo.min,
             model.config.snow.albedo.max,
             model.config.snow.albedo.k_pos,
@@ -31,7 +31,7 @@ def albedo(model, pos=None):
         s.snow.albedo[pos] = _albedo_fsm(
             s.snow.albedo[pos],
             s.surface.temp[pos],
-            s.meteo.snowfall[pos],
+            s.meteo.snowfall_amount[pos] / model.timestep,
             model.config.snow.albedo.min,
             model.config.snow.albedo.max,
             model.config.snow.albedo.melting_snow_decay_timescale,
@@ -46,7 +46,7 @@ def albedo(model, pos=None):
 def _albedo_usaco(
     albedo,
     temp,
-    snowfall,
+    snowfall_rate,
     min_albedo,
     max_albedo,
     k_pos,
@@ -65,7 +65,7 @@ def _albedo_usaco(
     temp : ndarray
         Air temperature (K).
 
-    snowfall : ndarray
+    snowfall_rate : ndarray
         Snowfall rate (kg m-2 s-1).
 
     min_albedo : float
@@ -105,14 +105,14 @@ def _albedo_usaco(
     k_scale_factor = timestep / (c.SECONDS_PER_HOUR * c.HOURS_PER_DAY)
     decay_factor = k_scale_factor * np.where(temp >= c.T0, k_pos, k_neg)
     albedo = min_albedo + (albedo - min_albedo) * np.exp(-decay_factor)
-    albedo[snowfall >= significant_snowfall] = max_albedo
+    albedo[snowfall_rate >= significant_snowfall] = max_albedo
     return albedo
 
 
 def _albedo_fsm(
     albedo,
     surface_temp,
-    snowfall,
+    snowfall_rate,
     min_albedo,
     max_albedo,
     melting_snow_decay_timescale,
@@ -131,7 +131,7 @@ def _albedo_fsm(
     surface_temp : ndarray
         Surface temperature (K).
 
-    snowfall : ndarray
+    snowfall_rate : ndarray
         Snowfall rate (kg m-2 s-1).
 
     min_albedo : float
@@ -168,10 +168,10 @@ def _albedo_fsm(
         c.SECONDS_PER_HOUR * melting_snow_decay_timescale,
         c.SECONDS_PER_HOUR * cold_snow_decay_timescale,
     )
-    reciprocal_albedo_timescale = 1 / albedo_decay_timescale + snowfall / refresh_snowfall
+    reciprocal_albedo_timescale = 1 / albedo_decay_timescale + snowfall_rate / refresh_snowfall
     albedo_limit = (
         min_albedo / albedo_decay_timescale
-        + snowfall * max_albedo / refresh_snowfall
+        + snowfall_rate * max_albedo / refresh_snowfall
     ) / reciprocal_albedo_timescale
     decay_factor = reciprocal_albedo_timescale * timestep
     albedo = albedo_limit + (albedo - albedo_limit) * np.exp(-decay_factor)
@@ -631,9 +631,8 @@ def runoff(model):
 
     _runoff(
         model.grid.roi_idxs,
-        model.timestep,
         max_liquid_water_content(model),
-        s.meteo.rainfall,
+        s.meteo.rainfall_amount,
         s.snow.num_layers,
         s.snow.thickness,
         s.snow.temp,
@@ -647,7 +646,6 @@ def runoff(model):
 @njit(cache=True, parallel=True)
 def _runoff(
     roi_idxs,
-    timestep,
     max_liquid_water_content,
     rainfall,
     num_layers,
@@ -667,14 +665,11 @@ def _runoff(
         (N, 2)-array specifying the (row, col) indices within the data arrays
         that should be considered.
 
-    timestep : float
-        Model timestep (s).
-
     max_liquid_water_content : ndarray(float, ndim=3)
         Maximum liquid water content (kg m-2).
 
     rainfall : ndarray(float, ndim=2)
-        Rainfall flux (kg m-2 s-1).
+        Rainfall amount (kg m-2).
 
     num_layers : ndarray(float, ndim=2)
         Number of snow layers.
@@ -707,7 +702,7 @@ def _runoff(
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
 
-        runoff[i, j] = rainfall[i, j] * timestep  # TODO optimize this
+        runoff[i, j] = rainfall[i, j]
 
         for k in range(num_layers[i, j]):
             liquid_water_content[k, i, j] += runoff[i, j]
