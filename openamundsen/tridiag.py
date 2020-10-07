@@ -54,3 +54,29 @@ def solve_tridiag(a, b, c, d, overwrite_bd=False):
         x[k] = (d[k] - c[k] * x[k + 1]) / b[k]
 
     return x
+
+
+def solve_tridiag_array(a, b, c, d, overwrite_bd=False):
+    """
+    Solve multiple tridiagonal equation systems using the Thomas algorithm.
+    Parameters are same as for solve_tridiag(), however are in this case arrays
+    with dimensions (n, num_equations).
+    """
+    n = d.shape[0]  # number of equations
+
+    if not overwrite_bd:
+        b = b.copy()
+        d = d.copy()
+
+    for k in range(1, n):
+        m = a[k, :] / b[k - 1, :]
+        b[k, :] = b[k, :] - m * c[k - 1, :]
+        d[k, :] = d[k, :] - m * d[k - 1, :]
+
+    x = b
+    x[-1, :] = d[-1, :] / b[-1, :]
+
+    for k in range(n - 2, 0 - 1, -1):
+        x[k, :] = (d[k, :] - c[k, :] * x[k + 1, :]) / b[k, :]
+
+    return x
