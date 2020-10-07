@@ -979,19 +979,18 @@ def snow_properties(model):
        Geoscientific Model Development, 8(12), 3867–3876.
        https://doi.org/10.5194/gmd-8-3867-2015
     """
-    roi = model.grid.roi
     snow = model.state.snow
 
-    snow.depth[roi] = snow.thickness[:, roi].sum(axis=0)
-    snow.swe[roi] = (snow.ice_content[:, roi] + snow.liquid_water_content[:, roi]).sum(axis=0)
+    snow.depth[:] = snow.thickness.sum(axis=0)
+    snow.swe[:] = (snow.ice_content + snow.liquid_water_content).sum(axis=0)
 
     # Snow cover fraction (eq. (13))
-    snow.area_fraction[roi] = np.tanh(snow.depth[roi] / model.config.snow.snow_cover_fraction_depth_scale)
+    snow.area_fraction[:] = np.tanh(snow.depth / model.config.snow.snow_cover_fraction_depth_scale)
 
     # Areal heat capacity of snow (eq. (9))
-    snow.heat_cap[:, roi] = (
-        snow.ice_content[:, roi] * c.SPEC_HEAT_CAP_ICE
-        + snow.liquid_water_content[:, roi] * c.SPEC_HEAT_CAP_WATER
+    snow.heat_cap[:] = (
+        snow.ice_content * c.SPEC_HEAT_CAP_ICE
+        + snow.liquid_water_content * c.SPEC_HEAT_CAP_WATER
     )
 
 
