@@ -44,12 +44,11 @@ class LayerSnowModel(SnowModel):
     def accumulation(self):
         model = self.model
         s = model.state
-        roi = model.grid.roi
-
+        pos = s.meteo.snowfall > 0
         self.add_snow(
-            roi,
-            s.meteo.snowfall[roi],
-            density=snow._fresh_snow_density(s.meteo.wetbulb_temp[roi]),
+            pos,
+            s.meteo.snowfall[pos],
+            density=snow._fresh_snow_density(s.meteo.wetbulb_temp[pos]),
         )
 
     def heat_conduction(self):
@@ -61,14 +60,14 @@ class LayerSnowModel(SnowModel):
     def sublimation(self):
         model = self.model
         s = model.state
-        roi = model.grid.roi
 
         # First resublimation
-        frost = -np.minimum(s.snow.sublimation[roi], 0)
+        frost = -np.minimum(s.snow.sublimation, 0)
+        pos = frost > 0
         self.add_snow(
-            roi,
-            frost,
-            density=snow._fresh_snow_density(s.meteo.wetbulb_temp[roi]),
+            pos,
+            frost[pos],
+            density=snow._fresh_snow_density(s.meteo.wetbulb_temp[pos]),
         )
 
         # Then sublimation
