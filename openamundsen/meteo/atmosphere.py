@@ -86,19 +86,22 @@ def saturation_vapor_pressure(temp, over=None):
     temp_c = np.asarray(temp) - c.T0
 
     if over is None:
-        ix = (temp_c >= 0.).astype(int)  # contains 1 for indexes with positive temperatures, and 0 otherwise
+        pos = temp_c >= 0
+        ca = np.where(pos, VAPOR_PRESSURE_COEFFS_WATER[0], VAPOR_PRESSURE_COEFFS_ICE[0])
+        cb = np.where(pos, VAPOR_PRESSURE_COEFFS_WATER[1], VAPOR_PRESSURE_COEFFS_ICE[1])
+        cc = np.where(pos, VAPOR_PRESSURE_COEFFS_WATER[2], VAPOR_PRESSURE_COEFFS_ICE[2])
     elif over == 'water':
-        ix = np.full(temp_c.shape, 1)
+        ca = VAPOR_PRESSURE_COEFFS_WATER[0]
+        cb = VAPOR_PRESSURE_COEFFS_WATER[1]
+        cc = VAPOR_PRESSURE_COEFFS_WATER[2]
     elif over == 'ice':
-        ix = np.full(temp_c.shape, 0)
+        ca = VAPOR_PRESSURE_COEFFS_ICE[0]
+        cb = VAPOR_PRESSURE_COEFFS_ICE[1]
+        cc = VAPOR_PRESSURE_COEFFS_ICE[2]
     else:
         raise NotImplementedError
 
-    ca = np.array([VAPOR_PRESSURE_COEFFS_ICE[0], VAPOR_PRESSURE_COEFFS_WATER[0]])
-    cb = np.array([VAPOR_PRESSURE_COEFFS_ICE[1], VAPOR_PRESSURE_COEFFS_WATER[1]])
-    cc = np.array([VAPOR_PRESSURE_COEFFS_ICE[2], VAPOR_PRESSURE_COEFFS_WATER[2]])
-
-    return ca[ix] * np.exp(cb[ix] * temp_c / (cc[ix] + temp_c))
+    return ca * np.exp(cb * temp_c / (cc + temp_c))
 
 
 def vapor_pressure(temp, rel_hum, over=None):
