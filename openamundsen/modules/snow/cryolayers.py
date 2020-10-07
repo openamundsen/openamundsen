@@ -55,13 +55,12 @@ class CryoLayerSnowModel(SnowModel):
 
     def albedo_aging(self):
         model = self.model
-        roi = model.grid.roi
         s = model.state
 
         self.update_surface_layer_type()
 
         for i in range(model.snow.num_layers):
-            pos = model.roi_mask_to_global(s.surface.layer_type[roi] == i)
+            pos = s.surface.layer_type == i
 
             if i in (CryoLayerID.NEW_SNOW, CryoLayerID.OLD_SNOW):
                 s.snow.albedo[pos] = s.snow.layer_albedo[i, pos]
@@ -98,27 +97,21 @@ class CryoLayerSnowModel(SnowModel):
 
     def accumulation(self):
         model = self.model
-        roi = model.grid.roi
         s = model.state
 
-        density = _fresh_snow_density(s.meteo.wetbulb_temp[roi])
-        ice_content_change = s.meteo.snowfall[roi].copy()
+        density = _fresh_snow_density(s.meteo.wetbulb_temp)
 
-        pos_accum_roi = ice_content_change > 0
-        pos_init_layer_roi = (s.snow.ice_content[0, roi] == 0) & (ice_content_change > 0)
-        pos_accum = model.roi_mask_to_global(pos_accum_roi)
-        pos_init_layer = model.roi_mask_to_global(pos_init_layer_roi)
+        pos_accum = s.meteo.snowfall > 0
+        pos_init_layer = (s.snow.ice_content[0, :] == 0) & (s.meteo.snowfall > 0)
 
         # Initialize new snow layer where required
         s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer] = model.config.snow.albedo.max
         s.snow.albedo[pos_init_layer] = s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer]
-        s.snow.density[CryoLayerID.NEW_SNOW, pos_init_layer] = density[pos_init_layer_roi]
+        s.snow.density[CryoLayerID.NEW_SNOW, pos_init_layer] = density[pos_init_layer]
 
         # Add snow to new snow layer
-        s.snow.ice_content[CryoLayerID.NEW_SNOW, pos_accum] += ice_content_change[pos_accum_roi]
-        s.snow.thickness[CryoLayerID.NEW_SNOW, pos_accum] += (
-            ice_content_change[pos_accum_roi] / density[pos_accum_roi]
-        )
+        s.snow.ice_content[CryoLayerID.NEW_SNOW, :] += s.meteo.snowfall
+        s.snow.thickness[CryoLayerID.NEW_SNOW, :] += s.meteo.snowfall / density
         s.snow.density[CryoLayerID.NEW_SNOW, pos_accum] = (
             (
                 s.snow.ice_content[CryoLayerID.NEW_SNOW, pos_accum]
@@ -131,90 +124,79 @@ class CryoLayerSnowModel(SnowModel):
 
     def melt(self):
         model = self.model
-        roi = model.grid.roi
         s = model.state
 
-        ice_content_change = s.snow.melt[roi].copy()
+        ice_content_change = s.snow.melt.copy()
 
         for i in range(model.snow.num_layers):
-            pos_roi = (ice_content_change > 0) & (s.snow.ice_content[i, roi] > 0)
-            pos = model.roi_mask_to_global(pos_roi)
+            pos = (ice_content_change > 0) & (s.snow.ice_content[i, :] > 0)
 
             cur_ice_content_change = np.minimum(
-                ice_content_change[pos_roi],
+                ice_content_change[pos],
                 s.snow.ice_content[i, pos],
             )
             s.snow.thickness[i, pos] *= (1 - cur_ice_content_change / s.snow.ice_content[i, pos])
             s.snow.ice_content[i, pos] -= cur_ice_content_change
             s.snow.liquid_water_content[i, pos] += cur_ice_content_change
-            ice_content_change[pos_roi] -= cur_ice_content_change
+            ice_content_change[pos] -= cur_ice_content_change
 
     def sublimation(self):
         model = self.model
-        roi = model.grid.roi
         s = model.state
 
         # Ice content change is positive for sublimation (mass loss) and negative for mass gain
         # (resublimation)
-        ice_content_change = s.snow.sublimation[roi].copy()
+        ice_content_change = s.snow.sublimation.copy()
 
         for i in range(model.snow.num_layers):
-            pos_roi = (ice_content_change > 0) & (s.snow.ice_content[i, roi] > 0)
-            pos = model.roi_mask_to_global(pos_roi)
+            pos = (ice_content_change > 0) & (s.snow.ice_content[i, :] > 0)
 
             cur_ice_content_change = np.minimum(
-                ice_content_change[pos_roi],
+                ice_content_change[pos],
                 s.snow.ice_content[i, pos],
             )
             s.snow.thickness[i, pos] *= (1 - cur_ice_content_change / s.snow.ice_content[i, pos])
             s.snow.ice_content[i, pos] -= cur_ice_content_change
-            ice_content_change[pos_roi] -= cur_ice_content_change
+            ice_content_change[pos] -= cur_ice_content_change
 
     def runoff(self):
         model = self.model
-        roi = model.grid.roi
         s = model.state
 
         max_lwc = max_liquid_water_content(model)
         max_lwc[2:, :] = 0.  # no LWC for firn and ice
 
-        runoff = model.state.meteo.rainfall[roi].copy()
+        runoff = model.state.meteo.rainfall.copy()
         runoff[np.isnan(runoff)] = 0.
 
         for i in range(model.snow.num_layers):
-            pos_roi = (s.snow.ice_content[i, roi] + s.snow.liquid_water_content[i, roi]) > 0.
-            pos = model.roi_mask_to_global(pos_roi)
+            pos = (s.snow.ice_content[i, :] + s.snow.liquid_water_content[i, :]) > 0.
 
-            s.snow.liquid_water_content[i, pos] += runoff[pos_roi]
+            s.snow.liquid_water_content[i, pos] += runoff[pos]
             runoff_cur = (s.snow.liquid_water_content[i, pos] - max_lwc[i, pos]).clip(min=0)
-            runoff[pos_roi] = runoff_cur
+            runoff[pos] = runoff_cur
             s.snow.liquid_water_content[i, pos] -= runoff_cur
 
     def update_layers(self):
         model = self.model
-        roi = model.grid.roi
         s = model.state.snow
         transition_params = model.config.snow.cryolayers.transition
 
-        total_we = s.ice_content[:, roi] + s.liquid_water_content[:, roi]
+        total_we = s.ice_content + s.liquid_water_content
 
         # Reset empty layers
         for i in range(self.num_layers):
-            pos = model.roi_mask_to_global(total_we[i, :] <= 0.)
-            self.reset_layer(i, pos)
+            self.reset_layer(i, total_we[i, :] <= 0.)
 
         # Update thickness
-        pos_roi = total_we > 0.
-        pos = model.roi_mask_to_global(pos_roi)
-        s.thickness[pos] = total_we[pos_roi] / s.density[pos]
+        pos = total_we > 0.
+        s.thickness[pos] = total_we[pos] / s.density[pos]
 
         # Transition new snow -> old snow
         self.layer_transition(
             CryoLayerID.NEW_SNOW,
             CryoLayerID.OLD_SNOW,
-            model.roi_mask_to_global(
-                s.density[CryoLayerID.NEW_SNOW, roi] >= transition_params.old_snow
-            ),
+            s.density[CryoLayerID.NEW_SNOW, :] >= transition_params.old_snow
         )
 
         # Transition old snow -> firn at the first timestep of the "transition month"
@@ -229,27 +211,26 @@ class CryoLayerSnowModel(SnowModel):
         self.layer_transition(
             CryoLayerID.FIRN,
             CryoLayerID.ICE,
-            model.roi_mask_to_global(s.density[CryoLayerID.FIRN, roi] >= transition_params.ice),
+            s.density[CryoLayerID.FIRN, :] >= transition_params.ice,
         )
 
     def update_properties(self):
         model = self.model
-        roi = model.grid.roi
         s = model.state
 
         snow_properties(self.model)
 
-        s.snow.albedo[roi] = np.nan
+        s.snow.albedo[:] = np.nan
 
         for i in reversed(range(self.num_layers)):
-            pos = model.roi_mask_to_global(s.snow.thickness[i, roi] > 0)
+            pos = s.snow.thickness[i, :] > 0
             s.snow.albedo[pos] = s.snow.layer_albedo[i, pos]
 
     def reset_layer(self, layer, pos=None):
         s = self.model.state.snow
 
         if pos is None:
-            pos = self.model.grid.roi
+            pos = slice(None)
 
         s.thickness[layer, pos] = 0
         s.ice_content[layer, pos] = 0
@@ -310,5 +291,4 @@ class CryoLayerSnowModel(SnowModel):
         s.surface.layer_type[roi] = CryoLayerID.SNOW_FREE
 
         for i in reversed(range(model.snow.num_layers)):
-            pos = model.roi_mask_to_global(s.snow.thickness[i, roi] > 0)
-            s.surface.layer_type[pos] = i
+            s.surface.layer_type[s.snow.thickness[i, :] > 0] = i
