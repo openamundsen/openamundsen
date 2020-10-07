@@ -208,55 +208,12 @@ def _soil_properties(
 
 def soil_temperature(model):
     """
-    Wrapper function for _soil_temperature().
-    """
-    _soil_temperature(
-        model.grid.roi_idxs,
-        model.state.soil.thickness,
-        model.timestep,
-        model.state.soil.temp,
-        model.state.soil.therm_cond,
-        model.state.soil.heat_flux,
-        model.state.soil.heat_cap,
-    )
-
-
-@njit(parallel=True, cache=True)
-def _soil_temperature(
-    roi_idxs,
-    thickness,
-    timestep,
-    temp,
-    therm_cond,
-    heat_flux,
-    heat_cap,
-):
-    """
     Update soil layer temperatures.
 
     Parameters
     ----------
-    roi_idxs : ndarray(int, ndim=2)
-        (N, 2)-array specifying the (row, col) indices within the data arrays
-        that should be considered.
-
-    thickness : ndarray(float, ndim=3)
-        Soil thickness (m).
-
-    timestep : float
-        Model timestep (s).
-
-    temp : ndarray(float, ndim=3)
-        Soil temperature (K).
-
-    therm_cond : ndarray(float, ndim=3)
-        Soil thermal conductivity (W m-1 K-1).
-
-    heat_flux : ndarray(float, ndim=2)
-        Soil heat flux (W m-2).
-
-    heat_cap : ndarray(float, ndim=3)
-        Areal heat capacity (J K-1 m-2).
+    model : Model
+        Model instance.
 
     References
     ----------
@@ -265,21 +222,23 @@ def _soil_temperature(
        GCM simulation of climate and climate sensitivity. Climate Dynamics, 15(3),
        183–203. https://doi.org/10.1007/s003820050276
     """
-    num_pixels = len(roi_idxs)
-    for idx_num in prange(num_pixels):
-        i, j = roi_idxs[idx_num]
+    roi = model.grid.roi
+    thickness = model.state.soil.thickness[:, roi]
+    temp = model.state.soil.temp[:, roi]
+    therm_cond = model.state.soil.therm_cond[:, roi]
 
-        temp[:, i, j] += heatconduction.temp_change(
-            thickness[:, i, j],
-            timestep,
-            temp[:, i, j],
-            therm_cond[:, i, j],
-            temp[-1, i, j],
-            thickness[-1, i, j],
-            therm_cond[-1, i, j],
-            heat_flux[i, j],
-            heat_cap[:, i, j],
-        )
+    dT = heatconduction.temp_change_array(
+        thickness,
+        model.timestep,
+        temp,
+        therm_cond,
+        temp[-1, :],
+        thickness[-1, :],
+        therm_cond[-1, :],
+        model.state.soil.heat_flux[roi],
+        model.state.soil.heat_cap[:, roi],
+    )
+    model.state.soil.temp[:, roi] += dT
 
 
 def soil_heat_flux(model):
