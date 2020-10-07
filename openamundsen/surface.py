@@ -24,20 +24,19 @@ def surface_properties(model):
        http://jules.jchmr.org/sites/default/files/HCTN_30.pdf
     """
     s = model.state
-    roi = model.grid.roi
 
-    s.surface.albedo[roi] = np.where(
-        s.snow.area_fraction[roi] > 0,
+    s.surface.albedo[:] = np.where(
+        s.snow.area_fraction > 0,
         (
-            s.snow.area_fraction[roi] * s.snow.albedo[roi]
-            + (1 - s.snow.area_fraction[roi]) * model.config.soil.albedo
+            s.snow.area_fraction * s.snow.albedo
+            + (1 - s.snow.area_fraction) * model.config.soil.albedo
         ),
         model.config.soil.albedo,
     )
 
-    s.surface.roughness_length[roi] = (
-        model.config.snow.roughness_length**s.snow.area_fraction[roi]
-        * model.config.soil.roughness_length**(1 - s.snow.area_fraction[roi])
+    s.surface.roughness_length[:] = (
+        model.config.snow.roughness_length**s.snow.area_fraction
+        * model.config.soil.roughness_length**(1 - s.snow.area_fraction)
     )
     calc_turbulent_exchange_coefficient(model)
 
@@ -46,11 +45,11 @@ def surface_properties(model):
         # (the constant 1/100 therein corresponds to
         # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2
         # to 1 is taken from FSM)
-        s.surface.conductance[roi] = model.config.soil.saturated_soil_surface_conductance * (
+        s.surface.conductance[:] = model.config.soil.saturated_soil_surface_conductance * (
             np.maximum(
                 (
-                    s.soil.frac_unfrozen_moisture_content[0, roi]
-                    * s.soil.vol_moisture_content_sat[roi] / s.soil.vol_moisture_content_crit[roi]
+                    s.soil.frac_unfrozen_moisture_content[0, :]
+                    * s.soil.vol_moisture_content_sat / s.soil.vol_moisture_content_crit
                 )**2,
                 1,
             )
@@ -74,20 +73,19 @@ def surface_layer_properties(model):
        183–203. https://doi.org/10.1007/s003820050276
     """
     s = model.state
-    roi = model.grid.roi
 
-    s.surface.thickness[roi] = np.maximum(s.snow.thickness[0, roi], s.soil.thickness[0, roi])
-    s.surface.layer_temp[roi] = (
-        s.soil.temp[0, roi]
-        + (s.snow.temp[0, roi] - s.soil.temp[0, roi])
-        * s.snow.thickness[0, roi] / s.soil.thickness[0, roi]
+    s.surface.thickness[:] = np.maximum(s.snow.thickness[0, :], s.soil.thickness[0, :])
+    s.surface.layer_temp[:] = (
+        s.soil.temp[0, :]
+        + (s.snow.temp[0, :] - s.soil.temp[0, :])
+        * s.snow.thickness[0, :] / s.soil.thickness[0, :]
     )
 
-    pos1 = model.roi_mask_to_global(s.snow.thickness[0, roi] <= s.soil.thickness[0, roi] / 2)
-    pos2 = model.roi_mask_to_global(s.snow.thickness[0, roi] > s.soil.thickness[0, roi])
+    pos1 = s.snow.thickness[0, :] <= s.soil.thickness[0, :] / 2
+    pos2 = s.snow.thickness[0, :] > s.soil.thickness[0, :]
 
     # Effective surface thermal conductivity (eq. (79))
-    s.surface.therm_cond[roi] = s.snow.therm_cond[0, roi]
+    s.surface.therm_cond[:] = s.snow.therm_cond[0, :]
     s.surface.therm_cond[pos1] = (
         s.soil.thickness[0, pos1]
         / (
