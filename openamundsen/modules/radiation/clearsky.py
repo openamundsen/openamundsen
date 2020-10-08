@@ -268,7 +268,7 @@ def _transmittances(
     ozone_layer_thickness_cm = ozone_layer_thickness * 100.
     visibility_km = visibility / 1000.
 
-    # Relative optical air mass pressure corrected
+    # Relative optical air mass pressure corrected (eq. (3.10))
     rel_opt_air_mass_press_corr = rel_opt_air_mass * atmos_press / c.STANDARD_ATMOSPHERE
 
     # Rayleigh scattering
@@ -277,20 +277,20 @@ def _transmittances(
         * (1 + rel_opt_air_mass_press_corr - rel_opt_air_mass_press_corr**1.01)
     )
 
-    # Transmittance by ozone (constant for the entire area)
+    # Transmittance by ozone (constant for the entire area) (eq. (3.13))
     lm = ozone_layer_thickness_cm * rel_opt_air_mass
     trans_ozone = (
         1 - (
-            0.1611 * lm * (1 + 139.48 * lm)**(-0.3035)  # -0.3035 seems to be the correct value (in eq. 3.13 in Corripio (2002) the value is -0.035)
+            0.1611 * lm * (1 + 139.48 * lm)**(-0.3035)  # -0.3035 seems to be the correct value (in eq. (3.13) in [1] the value is -0.035)
             - 0.002715 * lm * 1. / (1 + 0.044 * lm + 3e-4 * lm**2)
         )
     )
 
-    # Transmittance by uniformly mixed gases
+    # Transmittance by uniformly mixed gases (eq. (3.15))
     trans_gases = np.exp(-0.0127 * rel_opt_air_mass_press_corr**0.26)
 
-    # Transmittance by water vapor
-    precipitable_water_gcm2 = precipitable_water / 10  # kg m-2 to g cm-2
+    # Transmittance by water vapor (eq. (3.16))
+    precipitable_water_gcm2 = precipitable_water / 10  # kg m-2 (= mm) to g cm-2 (= cm)
     wm = precipitable_water_gcm2 * rel_opt_air_mass
     trans_vapor = (
         1
@@ -298,13 +298,13 @@ def _transmittances(
         * 1. / (1 + 79.034 * wm**0.6828 + 6.385 * wm)
     )
 
-    # Transmittance by aerosols
+    # Transmittance by aerosols (eq. (3.17))
     trans_aerosols = (0.97 - 1.265 * visibility_km**(-0.66))**(rel_opt_air_mass_press_corr**0.9)
 
-    # Correction of atmospheric transmittances for altitude after Bintanja (1996)
+    # Correction of atmospheric transmittances for altitude (eq. (3.8))
     elev_corr = 2.2e-5 * elev.clip(max=3000)
 
-    # Transmittance of direct radiation due to aerosol absorptance
+    # Transmittance of direct radiation due to aerosol absorptance (eq. (3.19))
     trans_aerosol_abs = (
         1
         - (1 - single_scattering_albedo)
