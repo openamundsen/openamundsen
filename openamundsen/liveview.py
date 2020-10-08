@@ -144,11 +144,9 @@ class LiveView:
         for field, ax, img in zip(self.fields, self.axarr.flat, self.imgs):
             data = self.state[field]
 
-            # Hide non-ROI pixels for integer fields (for float fields they should contain NaNs
-            # already)
-            if np.issubdtype(data.dtype, np.integer):
-                data = data.astype(float)
-                data[~self.roi] = np.nan
+            # Hide non-ROI pixels (conversion to float is required for integer fields)
+            data = data.astype(float, copy=False)
+            data[~self.roi] = np.nan
 
             img.set_data(data)
 
