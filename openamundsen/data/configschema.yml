@@ -606,6 +606,11 @@ liveview:
       type: boolean
       default: true
 
+    downsample:  # downsampling factor
+      type: integer
+      default: 1
+      min: 1
+
     fields:
       type: list
       default: []

@@ -148,6 +148,9 @@ class LiveView:
             data = data.astype(float, copy=False)
             data[~self.roi] = np.nan
 
+            # Perform downsampling
+            data = data[::self.config.downsample]
+
             img.set_data(data)
 
             if self.config.blit:
