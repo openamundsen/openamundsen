@@ -141,6 +141,10 @@ output_data:
           type: boolean
           default: true
 
+        add_default_variables:  # include the default output variables
+          type: boolean
+          default: true
+
         points:
           type: list
           default: []
@@ -155,6 +159,20 @@ output_data:
                 required: true
               name:
                 type: string
+
+        variables:
+          type: list
+          default: []
+          schema:
+            type: dict
+            oneof:
+              - type: dict
+                schema:
+                  var:  # variable name
+                    type: string
+                    required: true
+                  name:  # output name
+                    type: string
 
 meteo:
   type: dict

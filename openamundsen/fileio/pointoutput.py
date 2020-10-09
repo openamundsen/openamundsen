@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 import numpy as np
-from openamundsen import constants, util
+from openamundsen import constants, errors, util
 import pandas as pd
+import pprint
 import rasterio
 import xarray as xr
 
@@ -147,8 +148,30 @@ class PointOutputManager:
         self.write_dates = write_dates
 
         # Add default output variables
-        for var in _default_output_vars:
-            vars.append(var)
+        if config.add_default_variables:
+            for var in _default_output_vars:
+                vars.append(var)
+
+        # Add user defined output variables
+        for var_cfg in config.variables:
+            vars.append(
+                PointOutputVariable(
+                    var_name=var_cfg['var'],
+                    output_name=var_cfg['name'] if 'name' in var_cfg else None
+                )
+            )
+
+        # Check if all variable specifications are valid
+        for var in vars:
+            try:
+                _ = model.state[var.var_name]
+            except (AttributeError, KeyError):
+                raise errors.ConfigurationError(f'Invalid time series output variable: {var.var_name}')
+
+        # Check if there are any duplicate output names
+        if len(set([v.output_name for v in vars])) < len(vars):
+            raise errors.ConfigurationError('Duplicate output names in time series output configuration.\n'
+                                            f'List of variables:\n{pprint.pformat(vars)}')
 
         # Add default output points (= stations within ROI)
         if config.add_default_points:
