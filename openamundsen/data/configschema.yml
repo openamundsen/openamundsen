@@ -629,7 +629,7 @@ liveview:
       default: 1
       min: 1
 
-    fields:
+    variables:
       type: list
       default: []
       schema:

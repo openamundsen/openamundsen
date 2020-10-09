@@ -44,14 +44,14 @@ class LiveView:
         plt.rcParams['toolbar'] = 'None'
 
         num_cols = self.config.cols
-        num_rows = int(np.ceil(len(self.config.fields) / num_cols))
+        num_rows = int(np.ceil(len(self.config.variables) / num_cols))
         fig, axarr = plt.subplots(ncols=num_cols, nrows=num_rows)
         fig.subplots_adjust(top=0.92, bottom=0.03, left=0.03, right=0.97)
 
         fields = []
         imgs = []
 
-        for field_num, d in enumerate(self.config.fields):
+        for field_num, d in enumerate(self.config.variables):
             field = d['var']
             min_range = d['min']
             max_range = d['max']
