@@ -14,22 +14,22 @@ line utility.
     missing dependencies can be done using the following command[^1]:
 
         conda install -c conda-forge \
-            munch                    \
+            cerberus                 \
             loguru                   \
+            munch                    \
             netCDF4                  \
             numba                    \
             numpy                    \
             pandas                   \
             pyproj                   \
             pyqt                     \
-            pyqtgraph                \
             ruamel.yaml              \
             rasterio                 \
             scipy                    \
             xarray
  3. Run the included sample model setup for the Rofental domain, either by
     running `./bin/openamundsen examples/rofental.yml` from the main
-    openamundsen directory, or by running the rofental_test.py script located in
+    openamundsen directory, or by running the rofental.py script located in
     the examples directory (if you are running the script from an IDE, make sure
     that the working directory is set to the main openamundsen directory).
 
