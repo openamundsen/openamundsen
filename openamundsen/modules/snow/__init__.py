@@ -1,2 +1,2 @@
 from .init import LayerSnowModel
-from .cryolayers import CryoLayerSnowModel, CryoLayerID
+from .cryolayermodel import CryoLayerSnowModel, CryoLayerID
