@@ -81,8 +81,8 @@ output_data:
   type: dict
   default: {}
   schema:
-    # Parameters for gridded output data (fields)
-    fields:
+    # Parameters for gridded output data
+    grids:
       type: dict
       default: {}
       schema:
@@ -93,7 +93,7 @@ output_data:
             - ascii
           default: netcdf
 
-        fields:
+        variables:
           type: list
           default: []
           schema:
@@ -121,8 +121,8 @@ output_data:
                   type: datetime
                   coerce: datetime
 
-    # Parameters for gridded output data (fields)
-    points:
+    # Parameters for point output data (time series)
+    timeseries:
       type: dict
       default: {}
       schema:

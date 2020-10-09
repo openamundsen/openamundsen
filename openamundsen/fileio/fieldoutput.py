@@ -56,10 +56,10 @@ class FieldOutputManager:
     model : Model
     """
     def __init__(self, model):
-        config = model.config.output_data.fields
+        config = model.config.output_data.grids
         fields = []
 
-        for field_cfg in config.fields:
+        for field_cfg in config.variables:
             try:
                 output_name = field_cfg['name']
             except KeyError:
@@ -140,7 +140,7 @@ class FieldOutputManager:
         # Open the NetCDF file in case of NetCDF output (and create it beforehand when calling the
         # method for the first time)
         if self.format == 'netcdf':
-            nc_file = self.model.config.results_dir / 'field_outputs.nc'
+            nc_file = self.model.config.results_dir / 'output_grids.nc'
 
             if not self.nc_file_created:
                 ds = self._create_dataset()

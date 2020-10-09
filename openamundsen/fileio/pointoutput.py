@@ -130,7 +130,7 @@ class PointOutputManager:
     def __init__(self, model):
         vars = []
         points = []
-        config = model.config.output_data.points
+        config = model.config.output_data.timeseries
 
         # Initialize write dates (+ add last time step of the model run if not included anyway)
         write_dates = pd.date_range(
@@ -333,7 +333,7 @@ class PointOutputManager:
             self.model.logger.debug(f'Writing point outputs')
 
             if self.format == 'netcdf':
-                filename = self.model.config.results_dir / 'point_outputs.nc'
+                filename = self.model.config.results_dir / 'output_timeseries.nc'
 
                 if date == self.write_dates[0]:
                     ds.to_netcdf(filename)
