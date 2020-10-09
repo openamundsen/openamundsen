@@ -205,7 +205,15 @@ class PointOutputManager:
             )
 
             row, col = rasterio.transform.rowcol(model.grid.transform, point['x'], point['y'])
-            # TODO check if point is within the grid boundaries
+
+            # Check if point is within the grid boundaries
+            if row < 0 or row >= model.grid.rows or col < 0 or col >= model.grid.cols:
+                raise errors.ConfigurationError('Output point is outside of the grid boundaries: '
+                                                f'{dict(point)}')
+
+            # Check if point is within the ROI (if not, still allow it but raise a warning)
+            if not model.grid.roi[row, col]:
+                model.logger.warning(f'Output point is outside of the ROI: {dict(point)}')
 
             points.append(OutputPoint(
                 name=point_name,
