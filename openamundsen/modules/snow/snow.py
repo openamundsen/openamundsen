@@ -178,37 +178,6 @@ def _albedo_fsm(
     return albedo
 
 
-def add_snow(
-        model,
-        pos,
-        ice_content,
-        liquid_water_content,
-        density,
-        albedo,
-):
-    """
-    Add snow to the top of the snowpack.
-
-    Parameters
-    ----------
-    model : Model
-        Model instance.
-    """
-    s = model.state
-
-    ice_content = np.nan_to_num(ice_content, nan=0., copy=True)
-
-    # Initialize first snow layer where necessary
-    pos_init_layer = model.roi_mask_to_global((s.snow.num_layers[pos] == 0) & (ice_content > 0))
-    s.snow.num_layers[pos_init_layer] = 1
-    s.snow.temp[0, pos_init_layer] = np.minimum(s.meteo.temp[pos_init_layer], c.T0)
-    s.snow.albedo[pos_init_layer] = model.config.snow.albedo.max
-
-    # Add snow to first layer
-    s.snow.ice_content[0, pos] += ice_content
-    s.snow.thickness[0, pos] += ice_content / density
-
-
 def _fresh_snow_density(temp):
     """
     Calculate fresh snow density based on the parameterization by [1] (eq. (4.22)).
@@ -455,25 +424,6 @@ def _compaction_fsm(
                     thickness[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / density[k, i, j]
 
 
-def melt(model):
-    """
-    Wrapper function for _melt().
-    """
-    snow = model.state.snow
-
-    _melt(
-        model.grid.roi_idxs,
-        model.timestep,
-        snow.num_layers,
-        snow.melt,
-        snow.thickness,
-        snow.temp,
-        snow.ice_content,
-        snow.liquid_water_content,
-        snow.heat_cap,
-    )
-
-
 @njit(cache=True, parallel=True)
 def _melt(
     roi_idxs,
@@ -550,22 +500,6 @@ def _melt(
                     ice_content_change = 0.
 
 
-def sublimation(model):
-    """
-    Wrapper function for _sublimation().
-    """
-    snow = model.state.snow
-
-    _sublimation(
-        model.grid.roi_idxs,
-        model.timestep,
-        snow.num_layers,
-        snow.ice_content,
-        snow.thickness,
-        snow.sublimation,
-    )
-
-
 @njit(cache=True, parallel=True)
 def _sublimation(
     roi_idxs,
@@ -621,26 +555,6 @@ def _sublimation(
                     thickness[k, i, j] *= (1 - ice_content_change / ice_content[k, i, j])
                     ice_content[k, i, j] -= ice_content_change
                     ice_content_change = 0.
-
-
-def runoff(model):
-    """
-    Wrapper function for _runoff().
-    """
-    s = model.state
-
-    _runoff(
-        model.grid.roi_idxs,
-        max_liquid_water_content(model),
-        s.meteo.rainfall,
-        s.snow.num_layers,
-        s.snow.thickness,
-        s.snow.temp,
-        s.snow.ice_content,
-        s.snow.liquid_water_content,
-        s.snow.runoff,
-        s.snow.heat_cap,
-    )
 
 
 @njit(cache=True, parallel=True)
@@ -725,24 +639,6 @@ def _runoff(
                 temp[k, i, j] += c.LATENT_HEAT_OF_FUSION * ice_content_change / heat_cap[k, i, j]
 
 
-def heat_conduction(model):
-    """
-    Wrapper function for _heat_conduction().
-    """
-    _heat_conduction(
-        model.grid.roi_idxs,
-        model.state.snow.num_layers,
-        model.state.snow.thickness,
-        model.state.soil.thickness,
-        model.timestep,
-        model.state.snow.temp,
-        model.state.snow.therm_cond,
-        model.state.soil.therm_cond,
-        model.state.surface.heat_flux,
-        model.state.snow.heat_cap,
-    )
-
-
 @njit(parallel=True, cache=True)
 def _heat_conduction(
     roi_idxs,
@@ -816,25 +712,6 @@ def _heat_conduction(
                 heat_flux[i, j],
                 heat_cap[:ns, i, j],
             )
-
-
-def update_layers(model):
-    """
-    Wrapper function for _update_layers().
-    """
-    snow = model.state.snow
-
-    _update_layers(
-        model.grid.roi_idxs,
-        snow.num_layers,
-        np.array(model.config.snow.min_thickness),
-        snow.thickness,
-        snow.ice_content,
-        snow.liquid_water_content,
-        snow.heat_cap,
-        snow.temp,
-        snow.depth,
-    )
 
 
 @njit(cache=True, parallel=True)

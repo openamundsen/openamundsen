@@ -52,10 +52,35 @@ class LayerSnowModel(SnowModel):
         )
 
     def heat_conduction(self):
-        snow.heat_conduction(self.model)
+        model = self.model
+        s = model.state
+        snow._heat_conduction(
+            model.grid.roi_idxs,
+            s.snow.num_layers,
+            s.snow.thickness,
+            s.soil.thickness,
+            model.timestep,
+            s.snow.temp,
+            s.snow.therm_cond,
+            s.soil.therm_cond,
+            s.surface.heat_flux,
+            s.snow.heat_cap,
+        )
 
     def melt(self):
-        snow.melt(self.model)
+        model = self.model
+        s = model.state
+        snow._melt(
+            model.grid.roi_idxs,
+            model.timestep,
+            s.snow.num_layers,
+            s.snow.melt,
+            s.snow.thickness,
+            s.snow.temp,
+            s.snow.ice_content,
+            s.snow.liquid_water_content,
+            s.snow.heat_cap,
+        )
 
     def sublimation(self):
         model = self.model
@@ -71,13 +96,45 @@ class LayerSnowModel(SnowModel):
         )
 
         # Then sublimation
-        snow.sublimation(self.model)
+        snow._sublimation(
+            model.grid.roi_idxs,
+            model.timestep,
+            s.snow.num_layers,
+            s.snow.ice_content,
+            s.snow.thickness,
+            s.snow.sublimation,
+        )
 
     def runoff(self):
-        snow.runoff(self.model)
+        model = self.model
+        s = model.state
+        snow._runoff(
+            model.grid.roi_idxs,
+            snow.max_liquid_water_content(model),
+            s.meteo.rainfall,
+            s.snow.num_layers,
+            s.snow.thickness,
+            s.snow.temp,
+            s.snow.ice_content,
+            s.snow.liquid_water_content,
+            s.snow.runoff,
+            s.snow.heat_cap,
+        )
 
     def update_layers(self):
-        snow.update_layers(self.model)
+        model = self.model
+        s = model.state
+        snow._update_layers(
+            model.grid.roi_idxs,
+            s.snow.num_layers,
+            np.array(model.config.snow.min_thickness),
+            s.snow.thickness,
+            s.snow.ice_content,
+            s.snow.liquid_water_content,
+            s.snow.heat_cap,
+            s.snow.temp,
+            s.snow.depth,
+        )
 
     def update_properties(self):
         snow.snow_properties(self.model)
