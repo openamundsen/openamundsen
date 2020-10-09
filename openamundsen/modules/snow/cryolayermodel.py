@@ -3,7 +3,7 @@ from openamundsen import constants
 from openamundsen.snowmodel import SnowModel
 from .snow import (
     _compaction_anderson,
-    _fresh_snow_density,
+    fresh_snow_density,
     albedo,
     max_liquid_water_content,
     snow_properties,
@@ -99,7 +99,7 @@ class CryoLayerSnowModel(SnowModel):
         model = self.model
         s = model.state
 
-        density = _fresh_snow_density(s.meteo.wetbulb_temp)
+        density = fresh_snow_density(s.meteo.wetbulb_temp)
 
         pos_accum = s.meteo.snowfall > 0
         pos_init_layer = (s.snow.ice_content[0, :] == 0) & (s.meteo.snowfall > 0)

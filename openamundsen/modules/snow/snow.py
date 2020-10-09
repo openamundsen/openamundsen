@@ -178,7 +178,7 @@ def _albedo_fsm(
     return albedo
 
 
-def _fresh_snow_density(temp):
+def fresh_snow_density(temp):
     """
     Calculate fresh snow density based on the parameterization by [1] (eq. (4.22)).
 

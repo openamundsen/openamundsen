@@ -48,7 +48,7 @@ class LayerSnowModel(SnowModel):
         self.add_snow(
             pos,
             s.meteo.snowfall[pos],
-            density=snow._fresh_snow_density(s.meteo.wetbulb_temp[pos]),
+            density=snow.fresh_snow_density(s.meteo.wetbulb_temp[pos]),
         )
 
     def heat_conduction(self):
@@ -92,7 +92,7 @@ class LayerSnowModel(SnowModel):
         self.add_snow(
             pos,
             frost[pos],
-            density=snow._fresh_snow_density(s.meteo.wetbulb_temp[pos]),
+            density=snow.fresh_snow_density(s.meteo.wetbulb_temp[pos]),
         )
 
         # Then sublimation
