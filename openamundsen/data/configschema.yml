@@ -558,6 +558,10 @@ snow:
             - secant
           default: secant
 
+        use_single_snow_albedo:  # use a single albedo for new snow and old snow
+          type: boolean
+          default: true
+
 soil:
   type: dict
   default: {}

@@ -59,17 +59,30 @@ class CryoLayerSnowModel(SnowModel):
 
         self.update_surface_layer_type()
 
-        for i in range(model.snow.num_layers):
-            pos = s.surface.layer_type == i
+        pos_old = s.snow.thickness[CryoLayerID.OLD_SNOW, :] > 0.
+        pos_new = s.snow.thickness[CryoLayerID.NEW_SNOW, :] > 0.
+        s.snow.albedo[pos_old] = s.snow.layer_albedo[CryoLayerID.OLD_SNOW, pos_old]
+        s.snow.albedo[pos_new] = s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_new]
+        albedo(model, pos_old | pos_new)
 
-            if i in (CryoLayerID.NEW_SNOW, CryoLayerID.OLD_SNOW):
-                s.snow.albedo[pos] = s.snow.layer_albedo[i, pos]
-                albedo(model, pos)
-                s.snow.layer_albedo[i, pos] = s.snow.albedo[pos]
-            elif i == CryoLayerID.FIRN:
-                s.snow.layer_albedo[i, pos] = model.config.snow.albedo.firn
-            elif i == CryoLayerID.ICE:
-                s.snow.layer_albedo[i, pos] = model.config.snow.albedo.ice
+        if model.config.snow.cryolayers.use_single_snow_albedo:
+            s.snow.layer_albedo[CryoLayerID.OLD_SNOW, pos_old] = s.snow.albedo[pos_old]
+            s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_new] = s.snow.albedo[pos_new]
+        else:
+            pos_old_surf = s.surface.layer_type == CryoLayerID.OLD_SNOW
+            pos_new_surf = s.surface.layer_type == CryoLayerID.NEW_SNOW
+            s.snow.layer_albedo[CryoLayerID.OLD_SNOW, pos_old_surf] = s.snow.albedo[pos_old_surf]
+            s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_new_surf] = s.snow.albedo[pos_new_surf]
+
+        # Firn and ice albedo stay constant
+        if model.snow.num_layers > 2:
+            for i in (CryoLayerID.FIRN, CryoLayerID.ICE):
+                pos = s.surface.layer_type == i
+
+                if i == CryoLayerID.FIRN:
+                    s.snow.layer_albedo[i, pos] = model.config.snow.albedo.firn
+                elif i == CryoLayerID.ICE:
+                    s.snow.layer_albedo[i, pos] = model.config.snow.albedo.ice
 
     def compaction(self):
         model = self.model
@@ -106,8 +119,13 @@ class CryoLayerSnowModel(SnowModel):
 
         # Initialize new snow layer where required
         s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer] = model.config.snow.albedo.max
-        s.snow.albedo[pos_init_layer] = s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer]
         s.snow.density[CryoLayerID.NEW_SNOW, pos_init_layer] = density[pos_init_layer]
+        if model.config.snow.cryolayers.use_single_snow_albedo:
+            pos_albedo = pos_init_layer & (s.snow.thickness[CryoLayerID.OLD_SNOW, :] > 0.)
+            s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_albedo] = (
+                s.snow.layer_albedo[CryoLayerID.OLD_SNOW, pos_albedo]
+            )
+        s.snow.albedo[pos_init_layer] = s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer]
 
         # Add snow to new snow layer
         s.snow.ice_content[CryoLayerID.NEW_SNOW, :] += s.meteo.snowfall
