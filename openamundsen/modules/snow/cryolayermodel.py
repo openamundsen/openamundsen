@@ -111,30 +111,11 @@ class CryoLayerSnowModel(SnowModel):
     def accumulation(self):
         model = self.model
         s = model.state
-
-        density = fresh_snow_density(s.meteo.wetbulb_temp)
-
-        pos_accum = s.meteo.snowfall > 0
-        pos_init_layer = (s.snow.ice_content[0, :] == 0) & (s.meteo.snowfall > 0)
-
-        # Initialize new snow layer where required
-        s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer] = model.config.snow.albedo.max
-        s.snow.density[CryoLayerID.NEW_SNOW, pos_init_layer] = density[pos_init_layer]
-        if model.config.snow.cryolayers.use_single_snow_albedo:
-            pos_albedo = pos_init_layer & (s.snow.thickness[CryoLayerID.OLD_SNOW, :] > 0.)
-            s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_albedo] = (
-                s.snow.layer_albedo[CryoLayerID.OLD_SNOW, pos_albedo]
-            )
-        s.snow.albedo[pos_init_layer] = s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_layer]
-
-        # Add snow to new snow layer
-        s.snow.ice_content[CryoLayerID.NEW_SNOW, :] += s.meteo.snowfall
-        s.snow.thickness[CryoLayerID.NEW_SNOW, :] += s.meteo.snowfall / density
-        s.snow.density[CryoLayerID.NEW_SNOW, pos_accum] = (
-            (
-                s.snow.ice_content[CryoLayerID.NEW_SNOW, pos_accum]
-                + s.snow.liquid_water_content[CryoLayerID.NEW_SNOW, pos_accum]
-            ) / s.snow.thickness[CryoLayerID.NEW_SNOW, pos_accum]
+        pos = s.meteo.snowfall > 0
+        self.add_snow(
+            pos,
+            s.meteo.snowfall[pos],
+            density=fresh_snow_density(s.meteo.wetbulb_temp[pos]),
         )
 
     def heat_conduction(self):
@@ -310,3 +291,42 @@ class CryoLayerSnowModel(SnowModel):
 
         for i in reversed(range(model.snow.num_layers)):
             s.surface.layer_type[s.snow.thickness[i, :] > 0] = i
+
+    def add_snow(
+            self,
+            pos,
+            ice_content,
+            liquid_water_content=0,
+            density=None,
+            albedo=None,
+    ):
+        model = self.model
+        s = model.state
+
+        pos_init = (s.snow.ice_content[CryoLayerID.NEW_SNOW, pos] == 0) & (ice_content > 0)
+        pos_init_global = model.global_mask(pos_init, pos)
+
+        # Initialize new snow layer where required
+        s.snow.density[CryoLayerID.NEW_SNOW, pos_init_global] = density[pos_init]
+
+        if albedo is None:
+            s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_global] = model.config.snow.albedo.max
+
+            if model.config.snow.cryolayers.use_single_snow_albedo:
+                pos_albedo = pos_init_global & (s.snow.thickness[CryoLayerID.OLD_SNOW, :] > 0.)
+                s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_albedo] = (
+                    s.snow.layer_albedo[CryoLayerID.OLD_SNOW, pos_albedo]
+                )
+
+            s.snow.albedo[pos_init_global] = s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_global]
+
+        # Add snow to new snow layer
+        s.snow.ice_content[CryoLayerID.NEW_SNOW, pos] += ice_content
+        s.snow.liquid_water_content[CryoLayerID.NEW_SNOW, pos] += liquid_water_content
+        s.snow.thickness[CryoLayerID.NEW_SNOW, pos] += ice_content / density
+        s.snow.density[CryoLayerID.NEW_SNOW, pos] = (
+            (
+                s.snow.ice_content[CryoLayerID.NEW_SNOW, pos]
+                + s.snow.liquid_water_content[CryoLayerID.NEW_SNOW, pos]
+            ) / s.snow.thickness[CryoLayerID.NEW_SNOW, pos]
+        )
