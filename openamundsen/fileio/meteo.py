@@ -164,7 +164,10 @@ def read_netcdf_meteo_file(filename):
             raise oa.errors.MeteoDataError(f'File is missing "{var}" variable: {filename}')
 
     # Special case for precipitation - convert rates to sums first if required
-    if 'precip' in ds and ds['precip'].units == 'kg m-2 s-1':
+    if 'precip' in ds and (
+        'units' not in ds['precip'].attrs  # if units are not specified we assume they are kg m-2 s-1
+        or ds['precip'].units == 'kg m-2 s-1'
+    ):
         freq = pd.infer_freq(ds.indexes['time'])
         dt = util.offset_to_timedelta(freq).total_seconds()
         ds['precip'] *= dt
@@ -173,7 +176,7 @@ def read_netcdf_meteo_file(filename):
     for var, meta in constants.METEO_VAR_METADATA.items():
         units = meta['units']
 
-        if var in ds and ds[var].units != units:
+        if var in ds and 'units' in ds[var].attrs and ds[var].units != units:
             raise oa.errors.MeteoDataError(
                 f'{var} has wrong units in {filename}: expected {units}, got {ds[var].units}'
             )
