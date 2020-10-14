@@ -86,7 +86,7 @@ class CryoLayerSnowModel(SnowModel):
 
     def compaction(self):
         model = self.model
-        snow = model.state.snow
+        s = model.state
 
         # Consider only old snow and new snow, but always set the number of layers to 2 regardless
         # if both layers exist, due to the loop over the layers in _compaction_anderson (and the
@@ -99,14 +99,38 @@ class CryoLayerSnowModel(SnowModel):
                 model.grid.roi_idxs,
                 model.timestep,
                 num_layers,
-                snow.thickness,
-                snow.ice_content,
-                snow.liquid_water_content,
-                snow.density,
+                s.snow.thickness,
+                s.snow.ice_content,
+                s.snow.liquid_water_content,
+                s.snow.density,
                 model.state.meteo.temp,
             )
         else:
             raise NotImplementedError
+
+        # Now handle firn and ice
+        if model.snow.num_layers > 2:
+            ice_density = model.config.snow.cryolayers.transition.ice
+
+            # Firn: linear transition to ice in ~10 yrs
+            firnies = s.snow.thickness[CryoLayerID.FIRN, :] > 0.
+            densification_rate = (
+                (ice_density - 500.)  # old snow->firn transition density is ~500 kg m-3
+                / (constants.HOURS_PER_DAY * constants.DAYS_PER_YEAR * 10)  # 10 years
+            )
+            s.snow.density[CryoLayerID.FIRN, firnies] += densification_rate * (model.timestep / constants.SECONDS_PER_HOUR)
+
+            # Ice: density stays constant
+            icies = s.snow.thickness[CryoLayerID.ICE, :] > 0.
+            s.snow.density[CryoLayerID.ICE, icies] = ice_density
+
+            total_we = s.snow.ice_content + s.snow.liquid_water_content
+            s.snow.thickness[CryoLayerID.FIRN, firnies] = (
+                total_we[CryoLayerID.FIRN, firnies] / s.snow.density[CryoLayerID.FIRN, firnies]
+            )
+            s.snow.thickness[CryoLayerID.ICE, icies] = (
+                total_we[CryoLayerID.ICE, icies] / s.snow.density[CryoLayerID.ICE, icies]
+            )
 
     def accumulation(self):
         model = self.model
