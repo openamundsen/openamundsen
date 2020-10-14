@@ -48,8 +48,7 @@ def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, freq='H', logge
     for nc_file in nc_files:
         logger.info(f'Reading meteo file: {nc_file}')
 
-        ds = read_netcdf_meteo_file(nc_file)
-        ds = ds.sel(time=slice(start_date, end_date))
+        ds = read_netcdf_meteo_file(nc_file, start_date=start_date, end_date=end_date)
         ds = _resample_dataset(ds, freq)
 
         if ds.dims['time'] == 0:
@@ -131,7 +130,7 @@ def read_meteo_data_csv(meteo_data_dir, start_date, end_date, crs, freq='H', log
     return combine_meteo_datasets(datasets)
 
 
-def read_netcdf_meteo_file(filename):
+def read_netcdf_meteo_file(filename, start_date=None, end_date=None):
     """
     Read a meteo data file in NetCDF format and
     - check if the time, lon, lat, and alt variables are included
@@ -151,7 +150,9 @@ def read_netcdf_meteo_file(filename):
     ds : Dataset
         Station data.
     """
-    ds = xr.load_dataset(filename)
+    with xr.open_dataset(filename) as ds:
+        ds = ds.sel(time=slice(start_date, end_date))
+        ds.load()
 
     # rename variables
     ds_vars = list(ds.variables.keys())
