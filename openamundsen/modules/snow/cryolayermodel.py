@@ -244,8 +244,9 @@ class CryoLayerSnowModel(SnowModel):
         if pos is None:
             pos = self.model.grid.roi
 
-        pos_merge = pos & (s.thickness[dst_layer, :] > 0.)
-        pos_init = pos & (s.thickness[dst_layer, :] == 0.)
+        pos_src_snow = pos & (s.thickness[src_layer, :] > 0.)
+        pos_merge = pos_src_snow & (s.thickness[dst_layer, :] > 0.)
+        pos_init = pos_src_snow & (s.thickness[dst_layer, :] == 0.)
 
         # Initialize the destination layer for pixels where SWE = 0
         s.thickness[dst_layer, pos_init] = s.thickness[src_layer, pos_init]
