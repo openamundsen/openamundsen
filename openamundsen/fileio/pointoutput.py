@@ -110,6 +110,7 @@ _default_output_vars = [
     PointOutputVariable('snow.depth', 'snow_depth'),
     PointOutputVariable('snow.temp', 'snow_temp'),
     PointOutputVariable('snow.thickness', 'snow_thickness'),
+    PointOutputVariable('snow.density', 'snow_density'),
     PointOutputVariable('snow.ice_content'),
     PointOutputVariable('snow.liquid_water_content'),
     PointOutputVariable('snow.melt'),
