@@ -197,6 +197,7 @@ def energy_balance(model):
     pos_roi = (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0)
     pos = model.roi_mask_to_global(pos_roi)
     s.snow.sublimation[pos] = -1 * s.surface.moisture_flux[pos] * model.timestep
+    s.snow.sublimation[np.isnan(s.snow.sublimation)] = 0.
     # soil_evaporation[model.roi_mask_to_global(~pos)] = -1 * surf_moisture_flux[~pos] * model.timestep
 
 
@@ -310,6 +311,7 @@ def cryo_layer_energy_balance(model):
     # Snow sublimation
     s.snow.sublimation[roi] = 0.
     s.snow.sublimation[snowies] = -1 * s.surface.moisture_flux[snowies] * model.timestep
+    s.snow.sublimation[np.isnan(s.snow.sublimation)] = 0.
 
 
 def stability_factor(
@@ -399,6 +401,8 @@ def stability_factor(
         1 + stability_adjustment_parameter * richardson[pos]))
     stability_factor[~pos] = 1 - 3 * stability_adjustment_parameter * richardson[~pos] / (
         1 + c * np.sqrt(-richardson[~pos]))
+
+    stability_factor[np.isnan(stability_factor)] = 1.
 
     return stability_factor
 
@@ -738,10 +742,10 @@ def solve_energy_balance(model, pos):
         * surf_temp_change
     )
 
-    surf_temp_change = np.nan_to_num(surf_temp_change, nan=0., copy=False)
-    surf_moisture_flux_change = np.nan_to_num(surf_moisture_flux_change, nan=0., copy=False)
-    surf_heat_flux_change = np.nan_to_num(surf_heat_flux_change, nan=0., copy=False)
-    sens_heat_flux_change = np.nan_to_num(sens_heat_flux_change, nan=0., copy=False)
+    surf_temp_change[np.isnan(surf_temp_change)] = 0.
+    surf_moisture_flux_change[np.isnan(surf_moisture_flux_change)] = 0.
+    surf_heat_flux_change[np.isnan(surf_heat_flux_change)] = 0.
+    sens_heat_flux_change[np.isnan(sens_heat_flux_change)] = 0.
 
     return (
         surf_temp_change,

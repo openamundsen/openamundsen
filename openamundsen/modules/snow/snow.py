@@ -201,6 +201,7 @@ def fresh_snow_density(temp):
     min_temp = c.T0 - 15.
     temp = np.array(temp).clip(min_temp)  # the parameterization is only valid for temperatures >= -15 °C
     rho = 50 + 1.7 * (temp - min_temp)**1.5
+    rho[np.isnan(rho)] = 100.  # if temperature is not available, set density to 100 kg m-3
     return rho
 
 
@@ -330,6 +331,9 @@ def _compaction_anderson(
                 dens_metamorph = c4 * np.exp(-c5 * (c.T0 - air_temp[i, j])) * c6
 
                 densification_rate = density[k, i, j] * (dens_compact + dens_metamorph)
+                if np.isnan(densification_rate):
+                    densification_rate = 0.
+
                 density[k, i, j] += densification_rate * timestep_h
                 thickness[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / density[k, i, j]
 

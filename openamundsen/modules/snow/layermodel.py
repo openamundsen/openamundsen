@@ -369,6 +369,8 @@ def _runoff(
         i, j = roi_idxs[idx_num]
 
         runoff[i, j] = rainfall[i, j]
+        if np.isnan(runoff[i, j]):
+            runoff[i, j] = 0.
 
         for k in range(num_layers[i, j]):
             liquid_water_content[k, i, j] += runoff[i, j]
