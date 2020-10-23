@@ -76,6 +76,10 @@ class LiveView:
             imgs.append(img)
             fields.append(field)
 
+        # Hide unused subplot spaces
+        for ax in axarr.flat[len(self.config.variables):]:
+            ax.axis('off')
+
         plt.text(
             x=0.03,
             y=0.95,
