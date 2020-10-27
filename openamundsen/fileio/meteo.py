@@ -169,8 +169,12 @@ def read_netcdf_meteo_file(filename, start_date=None, end_date=None):
         'units' not in ds['precip'].attrs  # if units are not specified we assume they are kg m-2 s-1
         or ds['precip'].units == 'kg m-2 s-1'
     ):
-        freq = pd.infer_freq(ds.indexes['time'])
-        dt = util.offset_to_timedelta(freq).total_seconds()
+        try:
+            freq = pd.infer_freq(ds.indexes['time'])
+            dt = util.offset_to_timedelta(freq).total_seconds()
+        except ValueError:  # infer_freq() needs at least 3 dates
+            dt = np.nan
+
         ds['precip'] *= dt
         ds['precip'].attrs['units'] = 'kg m-2'
 
