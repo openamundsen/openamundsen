@@ -332,6 +332,8 @@ class CryoLayerSnowModel(SnowModel):
         pos_init_global = model.global_mask(pos_init, pos)
 
         # Initialize new snow layer where required
+        if np.isscalar(density):
+            density = np.full(ice_content.shape, density)
         s.snow.density[CryoLayerID.NEW_SNOW, pos_init_global] = density[pos_init]
 
         if albedo is None:
