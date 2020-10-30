@@ -344,6 +344,9 @@ class CryoLayerSnowModel(SnowModel):
                 )
 
             s.snow.albedo[pos_init_global] = s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_init_global]
+        else:
+            s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos] = albedo
+            s.snow.albedo[pos] = albedo
 
         # Add snow to new snow layer
         s.snow.ice_content[CryoLayerID.NEW_SNOW, pos] += ice_content
