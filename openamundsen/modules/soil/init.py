@@ -7,8 +7,8 @@ def initialize(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     References
     ----------

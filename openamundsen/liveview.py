@@ -23,7 +23,7 @@ class LiveView:
 
     state : StateVariableManager
         StateVariableManager (i.e., the model.state attribute) of the
-        respective Model instance.
+        respective OpenAmundsen instance.
 
     roi : ndarray
         Boolean array specifying the region of interest.

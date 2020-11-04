@@ -10,8 +10,8 @@ def surface_properties(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     References
     ----------
@@ -62,8 +62,8 @@ def surface_layer_properties(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     References
     ----------
@@ -105,8 +105,8 @@ def energy_balance(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     References
     ----------
@@ -207,8 +207,8 @@ def cryo_layer_energy_balance(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     References
     ----------
@@ -414,8 +414,8 @@ def calc_turbulent_exchange_coefficient(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     References
     ----------
@@ -462,8 +462,8 @@ def calc_radiation_balance(model, pos):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     pos : ndarray(bool)
         Pixels for which the radiation fluxes should be calculated.
@@ -489,8 +489,8 @@ def calc_saturation_specific_humidity(model, pos):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     pos : ndarray(bool)
         Pixels to be considered.
@@ -509,8 +509,8 @@ def calc_moisture_availability(model, pos):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     pos : ndarray(bool)
         Pixels to be considered.
@@ -544,8 +544,8 @@ def calc_latent_heat(model, pos):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     pos : ndarray(bool)
         Pixels to be considered.
@@ -565,8 +565,8 @@ def calc_surface_flux(model, pos):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     pos : ndarray(bool)
         Pixels to be considered.
@@ -592,8 +592,8 @@ def calc_turbulent_fluxes(model, pos, sensible=True, latent=True):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     pos : ndarray(bool)
         Pixels to be considered.
@@ -640,8 +640,8 @@ def calc_advective_heat(model, pos):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     pos : ndarray(bool)
         Pixels to be considered.
@@ -674,8 +674,8 @@ def solve_energy_balance(model, pos):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     pos : ndarray(bool)
         Pixels to be considered.
@@ -763,8 +763,8 @@ def energy_balance_remainder(model, pos, surf_temp):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     pos : ndarray(bool)
         Pixels to be considered.
@@ -817,8 +817,8 @@ def iterate_surface_temperature(model, frosties):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     frosties : ndarray(bool)
         Pixels to be considered.

@@ -433,8 +433,8 @@ def snow_properties(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     References
     ----------
@@ -470,8 +470,8 @@ def max_liquid_water_content(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     Returns
     -------

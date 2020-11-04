@@ -53,7 +53,8 @@ class FieldOutputManager:
 
     Parameters
     ----------
-    model : Model
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
     """
     def __init__(self, model):
         config = model.config.output_data.grids

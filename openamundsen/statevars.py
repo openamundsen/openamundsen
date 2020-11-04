@@ -6,7 +6,7 @@ from openamundsen.util import create_empty_array
 
 class StateVariableManager:
     """
-    Class for managing state variables of a Model instance.
+    Class for managing state variables of a OpenAmundsen instance.
     State variables are organized into categories (e.g., "base", "meteo",
     "snow").  For each category, a StateVariableContainer is created containing
     the variables and their respective metadata.
@@ -223,7 +223,7 @@ class StateVariableDefinition:
 
 def add_default_state_variables(model):
     """
-    Add all state variables to a Model instance which are required for any
+    Add all state variables to an OpenAmundsen instance which are required for any
     model run. Depending on which submodules are activated in the run
     configuration, further state variables might be added in other locations.
     """

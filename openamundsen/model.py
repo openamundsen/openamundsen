@@ -20,7 +20,7 @@ import sys
 import time
 
 
-class Model:
+class OpenAmundsen:
     """
     Class encapsulating the required data and methods for a single
     openAMUNDSEN model run.
@@ -32,7 +32,7 @@ class Model:
 
     Examples
     --------
-    >>> model = oa.Model(oa.read_config('config.yml'))
+    >>> model = oa.OpenAmundsen(oa.read_config('config.yml'))
     >>> model.initialize()
     >>> model.run()
     """
@@ -223,7 +223,7 @@ class Model:
     def _initialize_grid(self):
         """
         Initialize the grid parameters (number of rows and columns, transformation
-        parameters) for the Model instance by reading the DEM file associated to the
+        parameters) for the OpenAmundsen instance by reading the DEM file associated to the
         model run.
         """
         self.logger.info('Initializing model grid')
@@ -494,3 +494,13 @@ class Model:
             self.first_timestep_of_model_run
             or self.date.day != self.dates[self.date_idx - 1].day
         )
+
+
+def Model(*args, **kwargs):
+    import warnings
+    warnings.warn(
+        'Using oa.Model is deprecated, please use oa.OpenAmundsen instead',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return OpenAmundsen(*args, **kwargs)

@@ -66,10 +66,10 @@ values is located under openamundsen/data/defaultconfig.yml.
 
 ### Code structure
 
-The `Model` class encapsulates the required data and functionality for an
+The `OpenAmundsen` class encapsulates the required data and functionality for an
 openAMUNDSEN model run. The object oriented nature allows to, e.g., run several
 model runs in parallel from a single Python script. When instantiating a
-`Model`, the configuration for the model run must be passed in the constructor.
+`OpenAmundsen`, the configuration for the model run must be passed in the constructor.
 After instantiation, the `initialize()` method must be called in order to
 create and initialize all required state variables, read the input files and
 meteorological data, etc. Then, the `run()` method can be called to perform the
@@ -81,13 +81,13 @@ Hence, a simple model run from within Python would look like this:
 import openamundsen as oa
 
 config = oa.read_config('config_file.yml')
-model = oa.Model(config)
+model = oa.OpenAmundsen(config)
 model.initialize()
 model.run()
 ```
 
 The state variables of a model run are stored in the `state` attribute of the
-respective `Model` object. They are organized in categories such as `base`
+respective `OpenAmundsen` object. They are organized in categories such as `base`
 (containing basic data such as the DEM and derived variables (slope, aspect,
 …), the ROI, etc.), `meteo` (containing the meteorological fields), `snow`
 (containing the snow-specific variables), etc. For example, the DEM array can

@@ -31,8 +31,8 @@ def correct_station_precipitation(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
 
     References
     ----------

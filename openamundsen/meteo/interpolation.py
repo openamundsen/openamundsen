@@ -189,8 +189,8 @@ def interpolate_station_data(model):
 
     Parameters
     ----------
-    model : Model
-        Model instance.
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
     """
     model.logger.debug('Interpolating station data')
 

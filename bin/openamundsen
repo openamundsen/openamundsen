@@ -13,6 +13,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     config = oa.read_config(args.config_file)
-    model = oa.Model(config)
+    model = oa.OpenAmundsen(config)
     model.initialize()
     model.run()

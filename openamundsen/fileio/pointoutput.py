@@ -127,7 +127,8 @@ class PointOutputManager:
 
     Parameters
     ----------
-    model : Model
+    model : OpenAmundsen
+        openAMUNDSEN model instance.
     """
     def __init__(self, model):
         vars = []
