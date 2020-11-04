@@ -3,11 +3,11 @@ import loguru
 from openamundsen import (
     conf,
     constants,
+    errors,
     fileio,
     liveview,
     meteo,
     modules,
-    snowmodel,
     surface,
     statevars,
     terrain,
@@ -67,6 +67,14 @@ class Model:
             if precip_corr['method'] == 'srf':
                 self.state.base.add_variable('srf', '1', 'Snow redistribution factor')
                 break  # multiple SRFs are not allowed
+
+        if self.config.snow_management.enabled:
+            try:
+                import openamundsen_snowmanagement
+            except ImportError:
+                raise errors.ConfigurationError('The snow management module must be installed '
+                                                'for enabling snow management.')
+            self.snow_management = openamundsen_snowmanagement.SnowManagementModel(self)
 
         self._create_state_variables()
 
@@ -171,6 +179,11 @@ class Model:
         self.snow.compaction()
         self.snow.accumulation()
         self.snow.albedo_aging()
+
+        if self.config.snow_management.enabled:
+            self.snow_management.produce()
+            self.snow_management.groom()
+
         # TODO call update_layers() here?
         self.snow.update_properties()
 
@@ -306,6 +319,9 @@ class Model:
         self.snow.initialize()
         modules.soil.initialize(self)
         self.state.surface.temp[self.grid.roi] = self.state.soil.temp[0, self.grid.roi]
+
+        if self.config.snow_management.enabled:
+            self.snow_management.initialize()
 
     def _initialize_point_outputs(self):
         self.point_outputs = fileio.PointOutputManager(self)
@@ -467,3 +483,14 @@ class Model:
 
         m.snowfall_rate[roi] = m.snowfall[roi] / self.timestep
         m.rainfall_rate[roi] = m.rainfall[roi] / self.timestep
+
+    @property
+    def is_first_timestep_of_model_run(self):
+        return self.date_idx == 0
+
+    @property
+    def is_first_timestep_of_day(self):
+        return (
+            self.first_timestep_of_model_run
+            or self.date.day != self.dates[self.date_idx - 1].day
+        )
