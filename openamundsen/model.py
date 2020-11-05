@@ -55,6 +55,8 @@ class OpenAmundsen:
         self._initialize_grid()
         self._initialize_state_variable_management()
 
+        self.require_soil = self.config.snow.model == 'layers'
+
         if self.config.snow.model == 'layers':
             self.snow = modules.snow.LayerSnowModel(self)
         elif self.config.snow.model == 'cryolayers':
@@ -187,7 +189,7 @@ class OpenAmundsen:
         # TODO call update_layers() here?
         self.snow.update_properties()
 
-        if self.config.snow.model == 'layers':  # TODO check this
+        if self.require_soil:
             modules.soil.soil_properties(self)
 
         surface.surface_properties(self)
@@ -205,7 +207,7 @@ class OpenAmundsen:
         self.snow.update_properties()
         self.snow.update_layers()
 
-        if self.config.snow.model == 'layers':  # TODO check this
+        if self.require_soil:
             modules.soil.soil_heat_flux(self)
             modules.soil.soil_temperature(self)
 
