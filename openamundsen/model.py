@@ -186,19 +186,13 @@ class OpenAmundsen:
             self.snow_management.produce()
             self.snow_management.groom()
 
-        # TODO call update_layers() here?
         self.snow.update_properties()
 
         if self.require_soil:
             modules.soil.soil_properties(self)
 
         surface.surface_properties(self)
-
-        if self.config.snow.model == 'layers':  # TODO check this
-            surface.surface_layer_properties(self)
-            surface.energy_balance(self)
-        elif self.config.snow.model == 'cryolayers':
-            surface.cryo_layer_energy_balance(self)
+        surface.energy_balance(self)
 
         self.snow.heat_conduction()
         self.snow.melt()

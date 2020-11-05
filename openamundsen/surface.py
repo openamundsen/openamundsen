@@ -55,6 +55,8 @@ def surface_properties(model):
             )
         )
 
+        surface_layer_properties(model)
+
 
 def surface_layer_properties(model):
     """
@@ -100,6 +102,15 @@ def surface_layer_properties(model):
 
 
 def energy_balance(model):
+    snow_model = model.config.snow.model
+
+    if snow_model == 'layers':
+        layer_model_energy_balance(model)
+    elif snow_model == 'cryolayers':
+        cryo_layer_model_energy_balance(model)
+
+
+def layer_model_energy_balance(model):
     """
     Calculate the surface energy balance for the layer model following [1].
 
@@ -201,7 +212,7 @@ def energy_balance(model):
     # soil_evaporation[model.roi_mask_to_global(~pos)] = -1 * surf_moisture_flux[~pos] * model.timestep
 
 
-def cryo_layer_energy_balance(model):
+def cryo_layer_model_energy_balance(model):
     """
     Calculate the surface energy balance for the cryo layer model following [1-2].
 
