@@ -415,11 +415,29 @@ snow:
       default: layers
 
     melt:
-      type: string
-      allowed:
-        - energy_balance
-        - temperature_index
-      default: energy_balance
+      type: dict
+      schema:
+        method:
+          type: string
+          allowed: # temperature index methods are only allowed for the cryo layer model (validated afterwards)
+            - energy_balance
+            - temperature_index
+            - enhanced_temperature_index
+          default: energy_balance
+
+        threshold_temp:
+          type: number
+          default: 0.
+
+        degree_day_factor:  # must be provided for methods temperature_index and enhanced_temperature_index (validated afterwards)
+          type: number
+          nullable: true
+          default:
+
+        albedo_factor:  # must be provided for method enhanced_temperature_index (validated afterwards)
+          type: number
+          nullable: true
+          default:
 
     min_thickness:
       type: list

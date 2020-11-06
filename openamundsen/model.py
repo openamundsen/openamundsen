@@ -49,28 +49,32 @@ class OpenAmundsen:
         the required input raster files and meteorological input data,
         initialize the model grid and all required state variables, etc.
         """
+        config = self.config
+
         self._initialize_logger()
 
         self._prepare_time_steps()
         self._initialize_grid()
         self._initialize_state_variable_management()
 
-        self.require_soil = self.config.snow.model == 'layers'
+        self.require_soil = config.snow.model == 'layers'
+        self.require_energy_balance = config.snow.melt.method == 'energy_balance'
+        self.require_temperature_index = not self.require_energy_balance
 
-        if self.config.snow.model == 'layers':
+        if config.snow.model == 'layers':
             self.snow = modules.snow.LayerSnowModel(self)
-        elif self.config.snow.model == 'cryolayers':
+        elif config.snow.model == 'cryolayers':
             self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
             raise NotImplementedError
 
         # Create snow redistribution factor state variables
-        for precip_corr in self.config.meteo.precipitation_correction:
+        for precip_corr in config.meteo.precipitation_correction:
             if precip_corr['method'] == 'srf':
                 self.state.base.add_variable('srf', '1', 'Snow redistribution factor')
                 break  # multiple SRFs are not allowed
 
-        if self.config.snow_management.enabled:
+        if config.snow_management.enabled:
             try:
                 import openamundsen_snowmanagement
             except ImportError:
@@ -84,7 +88,7 @@ class OpenAmundsen:
         self._read_meteo_data()
         self._calculate_terrain_parameters()
 
-        self.config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
+        config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
         self._initialize_point_outputs()
         self._initialize_field_outputs()
 
@@ -192,7 +196,11 @@ class OpenAmundsen:
             modules.soil.soil_properties(self)
 
         surface.surface_properties(self)
-        surface.energy_balance(self)
+
+        if self.require_energy_balance:
+            surface.energy_balance(self)
+        elif self.require_temperature_index:
+            self.snow.temperature_index()
 
         self.snow.heat_conduction()
         self.snow.melt()

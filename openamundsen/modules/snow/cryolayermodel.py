@@ -145,6 +145,35 @@ class CryoLayerSnowModel(SnowModel):
     def heat_conduction(self):
         pass
 
+    def temperature_index(self):
+        """
+        Calculate snowmelt based on a temperature index approach.
+        """
+        model = self.model
+        melt_config = model.config.snow.melt
+        s = model.state
+
+        timestep_d = model.timestep / (constants.SECONDS_PER_HOUR * constants.HOURS_PER_DAY)  # (d)
+        threshold_temp_K = melt_config.threshold_temp + constants.T0
+
+        snowies = s.snow.thickness.sum(axis=0) > 0.
+        degree_days = (s.meteo.temp[snowies] - threshold_temp_K) * timestep_d
+
+        if melt_config.method == 'temperature_index':
+            melt = melt_config.degree_day_factor * degree_days
+        elif melt_config.method == 'enhanced_temperature_index':
+            melt = (
+                melt_config.degree_day_factor * degree_days
+                + melt_config.albedo_factor
+                * (1. - s.surface.albedo[snowies])
+                * s.meteo.sw_in[snowies]
+                * timestep_d
+            )
+        else:
+            raise NotImplementedError
+
+        s.snow.melt[snowies] = melt.clip(min=0)
+
     def melt(self):
         model = self.model
         s = model.state

@@ -80,7 +80,26 @@ def parse_config(config):
     if not valid:
         raise ConfigurationError('Invalid configuration\n\n' + util.to_yaml(v.errors))
 
-    full_config = v.document
+    full_config = Configuration.fromDict(v.document)
     full_config['end_date'] = parse_end_date(full_config['end_date'], full_config['timestep'])
+    validate_config(full_config)
 
-    return Configuration.fromDict(full_config)
+    return full_config
+
+
+def validate_config(config):
+    """
+    Perform some additional validations which are too complicated with Cerberus.
+    """
+    if config.snow.model == 'layers' and config.snow.melt.method != 'energy_balance':
+        raise ConfigurationError(f'Melt method "{config.snow.melt.method}" not supported for the '
+                                 f'snow model "{config.snow.model}"')
+
+    if config.snow.melt.method == 'temperature_index':
+        if config.snow.melt.degree_day_factor is None:
+            raise ConfigurationError('Missing field: snow.melt.degree_day_factor')
+    elif config.snow.melt.method == 'enhanced_temperature_index':
+        if config.snow.melt.degree_day_factor is None:
+            raise ConfigurationError('Missing field: snow.melt.degree_day_factor')
+        if config.snow.melt.albedo_factor is None:
+            raise ConfigurationError('Missing field: snow.melt.albedo_factor')
