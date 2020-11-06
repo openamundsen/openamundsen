@@ -7,7 +7,14 @@ from pathlib import Path
 import xarray as xr
 
 
-def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, freq='H', logger=None):
+def read_meteo_data_netcdf(
+        meteo_data_dir,
+        start_date,
+        end_date,
+        freq='H',
+        aggregate=False,
+        logger=None,
+):
     """
     Read all available stations in NetCDF format for a given period.
 
@@ -25,6 +32,10 @@ def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, freq='H', logge
     freq : str
         Pandas-compatible frequency string (e.g. '3H') to which the data should
         be resampled.
+
+    aggregate : boolean, default False
+        Aggregate data when downsampling to a lower frequency or take
+        instantaneous values.
 
     logger : logger, default None
         Logger to use for status messages.
@@ -49,7 +60,7 @@ def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, freq='H', logge
         logger.info(f'Reading meteo file: {nc_file}')
 
         ds = read_netcdf_meteo_file(nc_file, start_date=start_date, end_date=end_date)
-        ds = _resample_dataset(ds, freq)
+        ds = _resample_dataset(ds, freq, aggregate=aggregate)
 
         if ds.dims['time'] == 0:
             logger.warning('File contains no meteo data for the specified period')
@@ -62,7 +73,15 @@ def read_meteo_data_netcdf(meteo_data_dir, start_date, end_date, freq='H', logge
     return combine_meteo_datasets(datasets)
 
 
-def read_meteo_data_csv(meteo_data_dir, start_date, end_date, crs, freq='H', logger=None):
+def read_meteo_data_csv(
+        meteo_data_dir,
+        start_date,
+        end_date,
+        crs,
+        freq='H',
+        aggregate=False,
+        logger=None,
+):
     """
     Read all available stations in CSV format for a given period.
     This function expects a file named `stations.csv` in the specified
@@ -87,6 +106,10 @@ def read_meteo_data_csv(meteo_data_dir, start_date, end_date, crs, freq='H', log
     freq : str
         Pandas-compatible frequency string (e.g. '3H') to which the data should
         be resampled.
+
+    aggregate : boolean, default False
+        Aggregate data when downsampling to a lower frequency or take
+        instantaneous values.
 
     logger : logger, default None
         Logger to use for status messages.
@@ -117,7 +140,7 @@ def read_meteo_data_csv(meteo_data_dir, start_date, end_date, crs, freq='H', log
         )
 
         ds = ds.sel(time=slice(start_date, end_date))
-        ds = _resample_dataset(ds, freq)
+        ds = _resample_dataset(ds, freq, aggregate=aggregate)
 
         if ds.dims['time'] == 0:
             logger.warning('File contains no meteo data for the specified period')
@@ -312,13 +335,9 @@ def combine_meteo_datasets(datasets):
     return xr.combine_nested(datasets_processed, concat_dim='station')
 
 
-def _resample_dataset(ds, freq):
+def _resample_dataset(ds, freq, aggregate=False):
     """
-    Resample a dataset to a given frequency.
-
-    For all parameters except precipitation (where sums over the respective time
-    intervals are calculated), the instantaneous values at the target timestamps
-    are taken, i.e. no aggregation is performed.
+    Resample a dataset to a given time frequency.
 
     Parameters
     ----------
@@ -329,25 +348,37 @@ def _resample_dataset(ds, freq):
         Pandas-compatible frequency string (e.g. '3H'). Must be an exact subset
         of the original frequency of the data.
 
+    aggregate : boolean, default False
+        Aggregate data when downsampling to a lower frequency or take
+        instantaneous values.
+
     Returns
     -------
     ds_res : Dataset
         Resampled dataset.
     """
-    # return ds
-    # ds.resample() is somehow extremely slow, so we resample using pandas
+    # ds.resample() is extremely slow for some reason, so we resample using pandas
     df = ds.to_dataframe().drop(columns=['lon', 'lat', 'alt'])
 
-    # Take the instantaneous values for all parameters except precipitation
-    # (where we calculate the sum)
-    df_res = df.asfreq(freq)
+    if aggregate:
+        # Calculate averages
+        df_res = df.resample(freq, label='right', closed='right').mean()
 
+        # We might end up with an extra bin after resampling; take only the dates which we would
+        # have taken when using instantaneous values
+        dates = df.asfreq(freq).index
+        df_res = df_res.loc[dates]
+    else:
+        # Take the instantaneous values
+        df_res = df.asfreq(freq)
+
+    # Precipitation is summed up regardless of the aggregation setting
     if 'precip' in df:
         df_res['precip'] = df['precip'].resample(freq, label='right', closed='right').sum()
 
     # Check if the desired frequency is a subset of the original frequency of the
     # data (e.g., resampling hourly to 3-hourly data is ok, but not hourly to
-    # 1.5-hourly)
+    # 1.5-hourly, or upsampling in general)
     if not df.index.intersection(df_res.index).equals(df_res.index):
         raise errors.MeteoDataError(f'Resampling from freq "{df.index.inferred_freq}" '
                                     f'to "{freq}" not supported')

@@ -400,6 +400,7 @@ class OpenAmundsen:
                 self.config.start_date,
                 self.config.end_date,
                 freq=self.config['timestep'],
+                aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
                 logger=self.logger,
             )
         elif meteo_format == 'csv':
@@ -409,6 +410,7 @@ class OpenAmundsen:
                 self.config.end_date,
                 self.config.input_data.meteo.crs,
                 freq=self.config['timestep'],
+                aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
                 logger=self.logger,
             )
         else:

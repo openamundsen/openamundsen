@@ -76,6 +76,10 @@ input_data:
           nullable: true
           default:
 
+        aggregate_when_downsampling: # use instantaneous values if the time series need to be downsampled (default) or aggregate them
+          type: boolean
+          default: false
+
 # Parameters for gridded output data (fields)
 output_data:
   type: dict
