@@ -168,12 +168,19 @@ def sky_view_factor(dem, res, min_azim=0, max_azim=360, azim_step=10, elev_step=
        terrain. International Journal of Geographical Information Science, 17(1),
        1–23. https://doi.org/10.1080/13658810210157796
     """
+    # Set SVF to 1 for 1x1 grids
+    if dem.shape == (1, 1):
+        return np.full(dem.shape, 1.)
+
     dem = dem.astype(float, copy=False)  # convert to float64 if necessary
     slope, _ = slope_aspect(dem, res)
 
     azim_angles = np.arange(min_azim, max_azim, azim_step)
     min_elev_angle = 1
-    max_elev_angle = int(np.ceil(np.nanmax(slope)))
+    max_elev_angle = max(
+        int(np.ceil(np.nanmax(slope))),
+        min_elev_angle,
+    )
     elev_angles = np.arange(min_elev_angle, max_elev_angle + 1)[::-1]
 
     svfs = _svf_numba(dem, slope, res, azim_angles, elev_angles)
