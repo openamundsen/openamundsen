@@ -51,6 +51,7 @@ start_date: 2019-11-01
 end_date: 2020-04-30
 resolution: 50
 timestep: H
+timezone: 1
 
 input_data:
   grids:
@@ -68,8 +69,9 @@ values is located under openamundsen/data/defaultconfig.yml.
 
 The `OpenAmundsen` class encapsulates the required data and functionality for an
 openAMUNDSEN model run. The object oriented nature allows to, e.g., run several
-model runs in parallel from a single Python script. When instantiating a
-`OpenAmundsen`, the configuration for the model run must be passed in the constructor.
+model runs in parallel from a single Python script. When instantiating an
+`OpenAmundsen` object, the configuration for the model run must be passed in
+the constructor.
 After instantiation, the `initialize()` method must be called in order to
 create and initialize all required state variables, read the input files and
 meteorological data, etc. Then, the `run()` method can be called to perform the
@@ -106,6 +108,26 @@ grid and point outputs are updated and potentially written, before proceeding
 to the next time step.
 
 ## Release Notes/Changelog
+
+### v0.2 (2020-11-17)
+
+- Implemented cryo layer model.
+- Implemented snow management module (developed as a separate package, not part
+  of main codebase).
+- Added various precipitation undercatch correction methods (using either a
+  constant SCF and/or the transfer functions from Goodison et al. (1998) and
+  Kochendorfer et al. (2017)).
+- Added functionality for deriving and applying openness-/sky view factor based
+  snow redistribution fields.
+- Allow using arbitrary timesteps (e.g. 10-minutely, daily); resample forcing
+  data to the desired time resolution if necessary.
+- Implemented temperature index and ETI (Pellicciotti et al., 2005) melt models.
+- Allow using prescribed lapse rates for temperature/precipitation/humidity.
+- Added liquid water content parameterization based on mass fractions.
+- Validate/normalize model run configuration upon initialization.
+- New and improved live view window
+- Performance improvements
+- Many bugfixes
 
 ### v0.1 (2020-07-30)
 
