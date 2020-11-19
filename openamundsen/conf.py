@@ -104,6 +104,21 @@ def validate_config(config):
     if dates[-1] != config.end_date:
         raise ConfigurationError('Start/end date is not compatible with timestep')
 
+    # Check if write_freq is compatible with timestep - as long as the time step is <= 1d,
+    # write_freq can be an offset like 'M' or 'Y', but for larger timesteps it is not guaranteed
+    # that these dates generated with pd.date_range(start=start_date, end=end_date, freq=write_freq)
+    # are actually reached, so in this case write_freq must be a multiple of timestep
+    # (e.g. timestep = '5D' and write_freq = '30D')
+    timestep_td = util.offset_to_timedelta(config.timestep)
+    write_freq = config.output_data.timeseries.write_freq
+    if timestep_td > pd.Timedelta(days=1):
+        try:
+            write_freq_td = pd.Timedelta(write_freq)
+            if write_freq_td.total_seconds() % timestep_td.total_seconds() != 0:
+                raise ConfigurationError('write_freq must be a multiple of timestep')
+        except ValueError:
+            raise ConfigurationError('write_freq must be a multiple of timestep')
+
     if config.snow.model == 'layers' and config.snow.melt.method != 'energy_balance':
         raise ConfigurationError(f'Melt method "{config.snow.melt.method}" not supported for the '
                                  f'snow model "{config.snow.model}"')

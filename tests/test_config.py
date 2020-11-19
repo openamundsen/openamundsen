@@ -134,6 +134,11 @@ def test_infer_end_date(minimal_config):
     mc['start_date'] = '2017-11-01'
     mc['end_date'] = '2018-04-25'
     mc['timestep'] = '5D'
+    mc['output_data'] = {
+        'timeseries': {
+            'write_freq': '30D',
+        },
+    }
     config = oa.parse_config(mc)
     assert config['end_date'] == pd.Timestamp(mc['end_date'])
 
