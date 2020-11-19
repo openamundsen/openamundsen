@@ -33,5 +33,9 @@ setup(
             'matplotlib>=3.0.0',
             'PyQt5>=5.12',
         ],
+        'test': [
+            'pytest',
+            'pvlib',
+        ],
     },
 )
