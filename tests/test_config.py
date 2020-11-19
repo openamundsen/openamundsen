@@ -1,3 +1,4 @@
+from copy import deepcopy
 import openamundsen as oa
 import openamundsen.errors as errors
 import pytest
@@ -25,7 +26,7 @@ def save_and_parse_config(config):
         else:
             raise Exception('Unsupported type')
 
-        return oa.conf.parse_config(oa.read_config(f.name))
+        return oa.parse_config(oa.read_config(f.name))
 
 
 @pytest.fixture(scope='function')
@@ -68,17 +69,65 @@ def test_read_minimal_config(minimal_config):
     save_and_parse_config(minimal_config)
 
 
-def test_infer_end_date(minimal_config):
+def test_read_config(minimal_config):
     config = save_and_parse_config(minimal_config)
     assert config['end_date'].hour == 23
 
-    minimal_config['end_date'] = '2020-04-30 11:00'
-    config = save_and_parse_config(minimal_config)
+    yaml_str = dedent("""
+        domain: dummy
+        start_date: 2019-11-01
+        end_date: 2020-12-31
+        resolution: 50
+        timezone: 1
+    """)
+    config = save_and_parse_config(yaml_str)
+    assert config['end_date'].hour == 23
+
+
+def test_start_end_date_order(minimal_config):
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2020-01-01'
+    mc['end_date'] = '2020-01-01'
+    oa.parse_config(mc)
+    mc['timestep'] = 'D'
+    oa.parse_config(mc)
+
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2020-01-01 00:00'
+    mc['end_date'] = '2020-01-01 00:00'
+    oa.parse_config(mc)
+
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2020-01-01'
+    mc['end_date'] = '2019-12-31'
+    with pytest.raises(errors.ConfigurationError):
+        oa.parse_config(mc)
+
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2020-01-01 01:00'
+    mc['end_date'] = '2020-01-01 00:00'
+    with pytest.raises(errors.ConfigurationError):
+        oa.parse_config(mc)
+
+
+def test_infer_end_date(minimal_config):
+    config = oa.parse_config(minimal_config)
+    assert config['end_date'].hour == 23
+
+    mc = deepcopy(minimal_config)
+    mc['end_date'] = '2020-04-30 11:00'
+    config = oa.parse_config(mc)
     assert config['end_date'].hour == 11
 
-    minimal_config['end_date'] = ' 2020-04-30 '
-    config = save_and_parse_config(minimal_config)
+    mc = deepcopy(minimal_config)
+    mc['end_date'] = ' 2020-04-30 '
+    config = oa.parse_config(mc)
     assert config['end_date'].hour == 23
+
+    mc = deepcopy(minimal_config)
+    mc['timestep'] = 'D'
+    config = oa.parse_config(mc)
+    assert config['end_date'].hour == 0
 
     yaml_str = dedent("""
         domain: dummy
@@ -101,10 +150,42 @@ def test_infer_end_date(minimal_config):
     assert config['end_date'].hour == 11
 
 
+def test_timesteps(minimal_config):
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2019-11-01 03:00'
+    oa.parse_config(mc)
+
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2019-11-01 00:15'
+    mc['end_date'] = '2019-11-01 23:45'
+    mc['timestep'] = '15min'
+    oa.parse_config(mc)
+
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2019-11-01 02:00'
+    mc['end_date'] = '2019-11-01 22:00'
+    mc['timestep'] = '3H'
+    with pytest.raises(errors.ConfigurationError):
+        oa.parse_config(mc)
+
+    mc = deepcopy(minimal_config)
+    mc['end_date'] = '2019-12-31 15:00'
+    mc['timestep'] = 'D'
+    with pytest.raises(errors.ConfigurationError):
+        oa.parse_config(mc)
+
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2019-12-31 01:23'
+    mc['end_date'] = '2019-12-31 03:45'
+    mc['timestep'] = 'H'
+    with pytest.raises(errors.ConfigurationError):
+        oa.parse_config(mc)
+
+
 def test_missing_parameter(minimal_config):
     for key in minimal_config.keys():
-        config = minimal_config.copy()
+        config = deepcopy(minimal_config)
         del config[key]
 
         with pytest.raises(errors.ConfigurationError):
-            save_and_parse_config(config)
+            oa.parse_config(config)

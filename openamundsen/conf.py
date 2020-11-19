@@ -91,6 +91,18 @@ def validate_config(config):
     """
     Perform some additional validations which are too complicated with Cerberus.
     """
+    if config.start_date > config.end_date:
+        raise ConfigurationError('End date must be after start date')
+
+    # Check if timestep matches start/end dates
+    dates = pd.date_range(
+        start=config.start_date,
+        end=config.end_date,
+        freq=config.timestep,
+    )
+    if dates[-1] != config.end_date:
+        raise ConfigurationError('Start/end date is not compatible with timestep')
+
     if config.snow.model == 'layers' and config.snow.melt.method != 'energy_balance':
         raise ConfigurationError(f'Melt method "{config.snow.melt.method}" not supported for the '
                                  f'snow model "{config.snow.model}"')
