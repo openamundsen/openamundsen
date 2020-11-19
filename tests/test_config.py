@@ -1,6 +1,7 @@
 from copy import deepcopy
 import openamundsen as oa
 import openamundsen.errors as errors
+import pandas as pd
 import pytest
 from ruamel.yaml import YAML
 import tempfile
@@ -129,6 +130,13 @@ def test_infer_end_date(minimal_config):
     config = oa.parse_config(mc)
     assert config['end_date'].hour == 0
 
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2017-11-01'
+    mc['end_date'] = '2018-04-25'
+    mc['timestep'] = '5D'
+    config = oa.parse_config(mc)
+    assert config['end_date'] == pd.Timestamp(mc['end_date'])
+
     yaml_str = dedent("""
         domain: dummy
         start_date: 2019-11-01
@@ -178,6 +186,13 @@ def test_timesteps(minimal_config):
     mc['start_date'] = '2019-12-31 01:23'
     mc['end_date'] = '2019-12-31 03:45'
     mc['timestep'] = 'H'
+    with pytest.raises(errors.ConfigurationError):
+        oa.parse_config(mc)
+
+    mc = deepcopy(minimal_config)
+    mc['start_date'] = '2017-11-01'
+    mc['end_date'] = '2018-04-29'
+    mc['timestep'] = '5D'
     with pytest.raises(errors.ConfigurationError):
         oa.parse_config(mc)
 
