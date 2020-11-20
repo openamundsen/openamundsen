@@ -258,7 +258,7 @@ def add_default_state_variables(model):
     meteo.add_variable('diff_in_clearsky', 'W m-2', 'Clear-sky diffuse incoming shortwave radiation', 'surface_diffuse_downwelling_shortwave_flux_in_air_assuming_clear_sky')
     meteo.add_variable('cloud_factor', '1', 'Cloud factor')
     meteo.add_variable('cloud_fraction', '1', 'Cloud fraction', 'cloud_area_fraction')
-    meteo.add_variable('wetbulb_temp', 'K', 'Wet-bulb temperature', 'wet_bulb_temperature')
+    meteo.add_variable('wet_bulb_temp', 'K', 'Wet-bulb temperature', 'wet_bulb_temperature')
     meteo.add_variable('dewpoint_temp', 'K', 'Dew point temperature', 'dew_point_temperature')
     meteo.add_variable('atmos_press', 'Pa', 'Atmospheric pressure', 'air_pressure')
     meteo.add_variable('sat_vap_press', 'Pa', 'Saturation vapor pressure')

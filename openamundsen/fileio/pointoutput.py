@@ -89,7 +89,7 @@ _default_output_vars = [
     PointOutputVariable('meteo.diff_in_clearsky'),
     PointOutputVariable('meteo.cloud_factor'),
     PointOutputVariable('meteo.cloud_fraction'),
-    PointOutputVariable('meteo.wetbulb_temp'),
+    PointOutputVariable('meteo.wet_bulb_temp'),
     PointOutputVariable('meteo.dewpoint_temp'),
     PointOutputVariable('meteo.atmos_press'),
     PointOutputVariable('meteo.sat_vap_press'),

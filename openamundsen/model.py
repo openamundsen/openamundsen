@@ -454,7 +454,7 @@ class OpenAmundsen:
             m.spec_heat_cap_moist_air[roi],
             m.lat_heat_vap[roi],
         )
-        m.wetbulb_temp[roi] = meteo.wet_bulb_temperature(
+        m.wet_bulb_temp[roi] = meteo.wet_bulb_temperature(
             m.temp[roi],
             m.rel_hum[roi],
             m.vap_press[roi],
@@ -472,7 +472,7 @@ class OpenAmundsen:
         if precip_phase_method == 'temp':
             pp_temp = m.temp
         elif precip_phase_method == 'wet_bulb_temp':
-            pp_temp = m.wetbulb_temp
+            pp_temp = m.wet_bulb_temp
 
         snowfall_frac = meteo.precipitation_phase(
             pp_temp[roi],

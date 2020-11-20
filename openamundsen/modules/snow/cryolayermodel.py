@@ -139,7 +139,7 @@ class CryoLayerSnowModel(SnowModel):
         self.add_snow(
             pos,
             s.meteo.snowfall[pos],
-            density=fresh_snow_density(s.meteo.wetbulb_temp[pos]),
+            density=fresh_snow_density(s.meteo.wet_bulb_temp[pos]),
         )
 
     def heat_conduction(self):
