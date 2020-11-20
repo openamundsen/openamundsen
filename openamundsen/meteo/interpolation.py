@@ -217,7 +217,7 @@ def interpolate_station_data(model):
             target_zs,
         )
 
-    # For relative humidity dewpoint temperature is interpolated, so we also need station
+    # For relative humidity dew point temperature is interpolated, so we also need station
     # temperatures and the interpolated temperature field
     param = 'rel_hum'
     param_config = model.config['meteo']['interpolation'][constants.INTERPOLATION_CONFIG_PARAM_MAPPINGS[param]]
@@ -298,14 +298,14 @@ def interpolate_param(
     else:
         raise NotImplementedError(f'Unsupported parameter: {param}')
 
-    # For relative humidity interpolate dewpoint temperature and convert back to humidity later
+    # For relative humidity interpolate dew point temperature and convert back to humidity later
     if param == 'rel_hum':
         if temps is None or target_temps is None:
             raise Exception('Temperature must be provided for humidity interpolation')
 
         rel_hums = data
-        dewpoint_temps = meteo.dew_point_temperature(temps, rel_hums)
-        data = dewpoint_temps
+        dew_point_temps = meteo.dew_point_temperature(temps, rel_hums)
+        data = dew_point_temps
 
     data_interpol = _interpolate_with_trend(
         data,
@@ -320,8 +320,8 @@ def interpolate_param(
     )
 
     if param == 'rel_hum':
-        target_dewpoint_temps = data_interpol
-        vapor_press = meteo.saturation_vapor_pressure(target_dewpoint_temps, 'water')
+        target_dew_point_temps = data_interpol
+        vapor_press = meteo.saturation_vapor_pressure(target_dew_point_temps, 'water')
         sat_vapor_press = meteo.saturation_vapor_pressure(target_temps, 'water')
         data_interpol = 100 * vapor_press / sat_vapor_press
 

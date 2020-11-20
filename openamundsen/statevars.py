@@ -259,7 +259,7 @@ def add_default_state_variables(model):
     meteo.add_variable('cloud_factor', '1', 'Cloud factor')
     meteo.add_variable('cloud_fraction', '1', 'Cloud fraction', 'cloud_area_fraction')
     meteo.add_variable('wet_bulb_temp', 'K', 'Wet-bulb temperature', 'wet_bulb_temperature')
-    meteo.add_variable('dewpoint_temp', 'K', 'Dew point temperature', 'dew_point_temperature')
+    meteo.add_variable('dew_point_temp', 'K', 'Dew point temperature', 'dew_point_temperature')
     meteo.add_variable('atmos_press', 'Pa', 'Atmospheric pressure', 'air_pressure')
     meteo.add_variable('sat_vap_press', 'Pa', 'Saturation vapor pressure')
     meteo.add_variable('vap_press', 'Pa', 'Vapor pressure', 'water_vapor_partial_pressure_in_air')
