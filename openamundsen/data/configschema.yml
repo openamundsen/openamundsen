@@ -135,6 +135,7 @@ output_data:
           allowed:
             - netcdf
             - csv
+            - memory
           default: netcdf
 
         write_freq:  # how often the files should be written

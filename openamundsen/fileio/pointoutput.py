@@ -135,18 +135,23 @@ class PointOutputManager:
         points = []
         config = model.config.output_data.timeseries
 
-        # Initialize write dates (+ add last time step of the model run if not included anyway)
-        write_dates = pd.date_range(
-            start=model.config.start_date,
-            end=model.config.end_date,
-            freq=config.write_freq,
-        )
-        write_dates = write_dates[
-            (write_dates >= model.config.start_date)
-            & (write_dates <= model.config.end_date)
-        ]
-        if model.config.end_date not in write_dates:
-            write_dates = write_dates.append(pd.DatetimeIndex([model.config.end_date]))
+        # Initialize write dates
+        if config.format == 'memory':
+            write_dates = []
+        else:
+            write_dates = pd.date_range(
+                start=model.config.start_date,
+                end=model.config.end_date,
+                freq=config.write_freq,
+            )
+            write_dates = write_dates[
+                (write_dates >= model.config.start_date)
+                & (write_dates <= model.config.end_date)
+            ]
+
+            # Add last timestep of the model run if it is not included anyway
+            if model.config.end_date not in write_dates:
+                write_dates = write_dates.append(pd.DatetimeIndex([model.config.end_date]))
         self.write_dates = write_dates
 
         # Add default output variables
@@ -313,18 +318,21 @@ class PointOutputManager:
         -------
         dates : pd.DatetimeIndex
         """
-        idxs = np.flatnonzero(self.write_dates >= self.model.date)
-        next_write_date = self.write_dates[idxs[0]]
-
-        idxs = np.flatnonzero(self.write_dates < self.model.date)
-        if len(idxs) == 0:
-            dates = self.model.dates[self.model.dates <= next_write_date]
+        if self.format == 'memory':
+            dates = self.model.dates
         else:
-            prev_write_date = self.write_dates[idxs[-1]]
-            dates = self.model.dates[
-                (self.model.dates > prev_write_date)
-                & (self.model.dates <= next_write_date)
-            ]
+            idxs = np.flatnonzero(self.write_dates >= self.model.date)
+            next_write_date = self.write_dates[idxs[0]]
+
+            idxs = np.flatnonzero(self.write_dates < self.model.date)
+            if len(idxs) == 0:
+                dates = self.model.dates[self.model.dates <= next_write_date]
+            else:
+                prev_write_date = self.write_dates[idxs[-1]]
+                dates = self.model.dates[
+                    (self.model.dates > prev_write_date)
+                    & (self.model.dates <= next_write_date)
+                ]
 
         return dates
 
@@ -362,8 +370,8 @@ class PointOutputManager:
         # Write data to file
         # If we are at the first write date, simple write the file (i.e. overwrite possibly
         # existing files), otherwise merge the already written dataset with the in-memory one.
-        if date == ds.indexes['time'][-1]:
-            self.model.logger.debug(f'Writing point outputs')
+        if self.format != 'memory' and date == ds.indexes['time'][-1]:
+            self.model.logger.debug('Writing point outputs')
 
             if self.format == 'netcdf':
                 filename = self.model.config.results_dir / 'output_timeseries.nc'
