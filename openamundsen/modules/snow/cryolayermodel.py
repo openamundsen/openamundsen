@@ -75,7 +75,7 @@ class CryoLayerSnowModel(SnowModel):
             s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_new_surf] = s.snow.albedo[pos_new_surf]
 
         # Firn and ice albedo stay constant
-        if model.snow.num_layers > 2:
+        if self.num_layers > 2:
             for i in (CryoLayerID.FIRN, CryoLayerID.ICE):
                 pos = s.surface.layer_type == i
 
@@ -109,7 +109,7 @@ class CryoLayerSnowModel(SnowModel):
             raise NotImplementedError
 
         # Now handle firn and ice
-        if model.snow.num_layers > 2:
+        if self.num_layers > 2:
             ice_density = model.config.snow.cryolayers.transition.ice
 
             # Firn: linear transition to ice in ~10 yrs
@@ -180,7 +180,7 @@ class CryoLayerSnowModel(SnowModel):
 
         ice_content_change = s.snow.melt.copy()
 
-        for i in range(model.snow.num_layers):
+        for i in range(self.num_layers):
             pos = (ice_content_change > 0) & (s.snow.ice_content[i, :] > 0)
 
             cur_ice_content_change = np.minimum(
@@ -200,7 +200,7 @@ class CryoLayerSnowModel(SnowModel):
         # (resublimation)
         ice_content_change = s.snow.sublimation.copy()
 
-        for i in range(model.snow.num_layers):
+        for i in range(self.num_layers):
             pos = (ice_content_change > 0) & (s.snow.ice_content[i, :] > 0)
 
             cur_ice_content_change = np.minimum(
@@ -221,7 +221,7 @@ class CryoLayerSnowModel(SnowModel):
         runoff = model.state.meteo.rainfall.copy()
         runoff[np.isnan(runoff)] = 0.
 
-        for i in range(model.snow.num_layers):
+        for i in range(self.num_layers):
             pos = (s.snow.ice_content[i, :] + s.snow.liquid_water_content[i, :]) > 0.
 
             s.snow.liquid_water_content[i, pos] += runoff[pos]
@@ -343,7 +343,7 @@ class CryoLayerSnowModel(SnowModel):
 
         s.surface.layer_type[roi] = CryoLayerID.SNOW_FREE
 
-        for i in reversed(range(model.snow.num_layers)):
+        for i in reversed(range(self.num_layers)):
             s.surface.layer_type[s.snow.thickness[i, :] > 0] = i
 
     def add_snow(
