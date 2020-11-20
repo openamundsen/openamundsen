@@ -21,20 +21,20 @@ class CryoLayerID:
 class CryoLayerSnowModel(SnowModel):
     def __init__(self, model):
         s = model.state.snow
-        num_layers = 4
+        num_cryo_layers = 4
 
         s.add_variable('num_layers', '1', 'Number of snow layers', dtype=int)
-        s.add_variable('thickness', 'm', 'Snow thickness', dim3=num_layers)
-        s.add_variable('density', 'kg m-3', 'Snow density', 'snow_density', dim3=num_layers)
-        s.add_variable('ice_content', 'kg m-2', 'Ice content of snow', dim3=num_layers)
-        s.add_variable('liquid_water_content', 'kg m-2', 'Liquid water content of snow', dim3=num_layers)
-        s.add_variable('cold_content', 'kg m-2', 'Cold content of snow', dim3=num_layers)
-        s.add_variable('temp', 'K', 'Snow temperature', dim3=num_layers)  # XXX only added because this is in the default point outputs
-        s.add_variable('layer_albedo', '1', 'Snow layer albedo', dim3=num_layers)
-        s.add_variable('heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_layers)  # XXX only added because of snow.snow_properties()
+        s.add_variable('thickness', 'm', 'Snow thickness', dim3=num_cryo_layers)
+        s.add_variable('density', 'kg m-3', 'Snow density', 'snow_density', dim3=num_cryo_layers)
+        s.add_variable('ice_content', 'kg m-2', 'Ice content of snow', dim3=num_cryo_layers)
+        s.add_variable('liquid_water_content', 'kg m-2', 'Liquid water content of snow', dim3=num_cryo_layers)
+        s.add_variable('cold_content', 'kg m-2', 'Cold content of snow', dim3=num_cryo_layers)
+        s.add_variable('temp', 'K', 'Snow temperature', dim3=num_cryo_layers)  # XXX only added because this is in the default point outputs
+        s.add_variable('layer_albedo', '1', 'Snow layer albedo', dim3=num_cryo_layers)
+        s.add_variable('heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_cryo_layers)  # XXX only added because of snow.snow_properties()
 
         self.model = model
-        self.num_layers = num_layers
+        self.num_cryo_layers = num_cryo_layers
 
     def initialize(self):
         roi = self.model.grid.roi
@@ -75,7 +75,7 @@ class CryoLayerSnowModel(SnowModel):
             s.snow.layer_albedo[CryoLayerID.NEW_SNOW, pos_new_surf] = s.snow.albedo[pos_new_surf]
 
         # Firn and ice albedo stay constant
-        if self.num_layers > 2:
+        if self.num_cryo_layers > 2:
             for i in (CryoLayerID.FIRN, CryoLayerID.ICE):
                 pos = s.surface.layer_type == i
 
@@ -109,7 +109,7 @@ class CryoLayerSnowModel(SnowModel):
             raise NotImplementedError
 
         # Now handle firn and ice
-        if self.num_layers > 2:
+        if self.num_cryo_layers > 2:
             ice_density = model.config.snow.cryolayers.transition.ice
 
             # Firn: linear transition to ice in ~10 yrs
@@ -180,7 +180,7 @@ class CryoLayerSnowModel(SnowModel):
 
         ice_content_change = s.snow.melt.copy()
 
-        for i in range(self.num_layers):
+        for i in range(self.num_cryo_layers):
             pos = (ice_content_change > 0) & (s.snow.ice_content[i, :] > 0)
 
             cur_ice_content_change = np.minimum(
@@ -200,7 +200,7 @@ class CryoLayerSnowModel(SnowModel):
         # (resublimation)
         ice_content_change = s.snow.sublimation.copy()
 
-        for i in range(self.num_layers):
+        for i in range(self.num_cryo_layers):
             pos = (ice_content_change > 0) & (s.snow.ice_content[i, :] > 0)
 
             cur_ice_content_change = np.minimum(
@@ -221,7 +221,7 @@ class CryoLayerSnowModel(SnowModel):
         runoff = model.state.meteo.rainfall.copy()
         runoff[np.isnan(runoff)] = 0.
 
-        for i in range(self.num_layers):
+        for i in range(self.num_cryo_layers):
             pos = (s.snow.ice_content[i, :] + s.snow.liquid_water_content[i, :]) > 0.
 
             s.snow.liquid_water_content[i, pos] += runoff[pos]
@@ -237,7 +237,7 @@ class CryoLayerSnowModel(SnowModel):
         total_we = s.ice_content + s.liquid_water_content
 
         # Reset empty layers
-        for i in range(self.num_layers):
+        for i in range(self.num_cryo_layers):
             self.reset_layer(i, total_we[i, :] <= 0.)
 
         # Update thickness
@@ -274,7 +274,7 @@ class CryoLayerSnowModel(SnowModel):
 
         s.snow.albedo[:] = np.nan
 
-        for i in reversed(range(self.num_layers)):
+        for i in reversed(range(self.num_cryo_layers)):
             pos = s.snow.thickness[i, :] > 0
             s.snow.albedo[pos] = s.snow.layer_albedo[i, pos]
 
@@ -343,7 +343,7 @@ class CryoLayerSnowModel(SnowModel):
 
         s.surface.layer_type[roi] = CryoLayerID.SNOW_FREE
 
-        for i in reversed(range(self.num_layers)):
+        for i in reversed(range(self.num_cryo_layers)):
             s.surface.layer_type[s.snow.thickness[i, :] > 0] = i
 
     def add_snow(

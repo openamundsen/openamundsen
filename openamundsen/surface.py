@@ -257,7 +257,7 @@ def cryo_layer_model_energy_balance(model):
     en_bal = np.full(roi.shape, np.nan)
     available_melt_time[melties] = model.timestep  # contains the time (in seconds) available for melt in this time step for each pixel
 
-    for layer_num in range(model.snow.num_layers):
+    for layer_num in range(model.snow.num_cryo_layers):
         possible_melties = model.roi_mask_to_global(
             melties_roi
             & (s.snow.thickness[layer_num, roi] > 0)
