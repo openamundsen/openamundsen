@@ -372,6 +372,8 @@ class OpenAmundsen:
             svf = terrain.sky_view_factor(
                 self.state.base.dem,
                 self.grid.resolution,
+                num_sweeps=self.config.meteo.radiation.num_shadow_sweeps,
+                logger=self.logger,
             )
             self.state.base.svf[:] = svf
 

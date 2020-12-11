@@ -1,16 +1,9 @@
-import numba
+from numba import njit, prange
 import numpy as np
 
 
-@numba.njit(
-    numba.uint8[:, :](
-        numba.double[:, :],
-        numba.double,
-        numba.double[:],
-    ),
-    cache=True,
-)
-def shadows(dem, res, sun_vec):
+@njit(cache=True, parallel=True)
+def shadows(dem, res, sun_vec, num_sweeps=1):
     """
     Calculate terrain shadowing after Corripio (2003).
 
@@ -24,6 +17,12 @@ def shadows(dem, res, sun_vec):
 
     sun_vec : ndarray
         Vector describing the position of the sun.
+
+    num_sweeps : int, default 1
+        Number of sweeps to perform in each direction. E.g. if num_sweeps = 3,
+        sun paths are calculated for all elements in the first 3 rows and
+        columns of the DEM in the direction of the sun.
+        num_sweeps can be set to -1 to consider all pixels of the DEM.
 
     Returns
     -------
@@ -45,52 +44,51 @@ def shadows(dem, res, sun_vec):
     normal_sun_vec[1] = -sun_vec[1] * sun_vec[2] / normal_sun_vec[2]
 
     # Determine origin of scanning lines in the direction of the sun
-    if sun_vec[0] < 0:  # sun is in the West
-        j_end = 0
-    else:
-        j_end = dem.shape[1] - 1  # sun is in the East
-
-    if sun_vec[1] < 0:  # sun is in the North
-        i_end = 0
-    else:
-        i_end = dem.shape[0] - 1  # sun is in the South
+    if num_sweeps == -1:
+        num_sweeps = max(dem.shape)
+    pos = np.zeros(dem.shape, dtype=np.uint8)
+    if sun_vec[0] < 0 and sun_vec[1] < 0:  # sun is in the Northwest
+        pos[:, :num_sweeps] = 1
+        pos[:num_sweeps, :] = 1
+    elif sun_vec[0] < 0 and sun_vec[1] >= 0:  # sun is in the Southwest
+        pos[-num_sweeps:, :] = 1
+        pos[:, :num_sweeps] = 1
+    elif sun_vec[0] >= 0 and sun_vec[1] < 0:  # sun is in the Northeast
+        pos[:num_sweeps, :] = 1
+        pos[:, -num_sweeps:] = 1
+    elif sun_vec[0] >= 0 and sun_vec[1] >= 0:  # sun is in the Northwest
+        pos[-num_sweeps:, :] = 1
+        pos[:, -num_sweeps:] = 1
+    i_vals, j_vals = np.nonzero(pos)
 
     illum = np.full(dem.shape, 1, dtype=np.uint8)
 
-    for direction in ('x', 'y'):
-        if direction == 'x':
-            i_vals = np.array([i_end])
-            j_vals = np.arange(dem.shape[1])
-        elif direction == 'y':
-            i_vals = np.arange(dem.shape[0])
-            j_vals = np.array([j_end])
+    for idx_num in prange(len(i_vals)):
+        i = i_vals[idx_num]
+        j = j_vals[idx_num]
+        n = 0
+        max_z_proj = -np.inf
 
-        for i in i_vals:
-            for j in j_vals:
-                n = 0
-                z_cmp = -1e30
+        while True:
+            dx = inv_sun_vec[0] * n
+            dy = inv_sun_vec[1] * n
+            jdx = int(np.round(j + dx))
+            idy = int(np.round(i + dy))
+            n += 1
 
-                while True:
-                    dx = inv_sun_vec[0] * n
-                    dy = inv_sun_vec[1] * n
-                    jdx = int(np.round(j + dx))
-                    idy = int(np.round(i + dy))
+            if jdx < 0 or jdx >= dem.shape[1] or idy < 0 or idy >= dem.shape[0]:
+                break
 
-                    if jdx < 0 or jdx >= dem.shape[1] or idy < 0 or idy >= dem.shape[0]:
-                        break
+            vec_to_orig = np.array([
+                dx * res,
+                dy * res,
+                dem[idy, jdx],
+            ])
+            z_proj = np.dot(vec_to_orig, normal_sun_vec)
 
-                    vec_to_orig = np.array([
-                        dx * res,
-                        dy * res,
-                        dem[idy, jdx],
-                    ])
-                    z_proj = np.dot(vec_to_orig, normal_sun_vec)
-
-                    if z_proj < z_cmp:
-                        illum[idy, jdx] = 0
-                    else:
-                        z_cmp = z_proj
-
-                    n += 1
+            if z_proj < max_z_proj:
+                illum[idy, jdx] = 0
+            else:
+                max_z_proj = z_proj
 
     return illum

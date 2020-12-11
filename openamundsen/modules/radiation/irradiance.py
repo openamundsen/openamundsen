@@ -36,6 +36,7 @@ def clear_sky_shortwave_irradiance(model, day_angle, sun_vec, sun_over_horizon):
             model.state.base.dem,
             model.grid.resolution,
             sun_vec,
+            num_sweeps=model.config.meteo.radiation.num_shadow_sweeps,
         )
 
         model.logger.debug('Calculating clear-sky shortwave irradiance')

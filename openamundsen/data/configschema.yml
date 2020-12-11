@@ -388,6 +388,9 @@ meteo:
         clear_sky_albedo:
           type: number
           default: 0.0685
+        num_shadow_sweeps:
+          type: integer
+          default: 1
 
     # Measurement heights
     measurement_height:

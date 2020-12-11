@@ -1,6 +1,6 @@
 from numba import njit, prange
 import numpy as np
-import openamundsen.modules.radiation
+from openamundsen.modules.radiation import shadows
 
 
 def slope_aspect(dem, res):
@@ -129,7 +129,16 @@ def normal_vector(dem, res):
     return normal_vec
 
 
-def sky_view_factor(dem, res, min_azim=0, max_azim=360, azim_step=10, elev_step=1):
+def sky_view_factor(
+        dem,
+        res,
+        min_azim=0,
+        max_azim=360,
+        azim_step=10,
+        elev_step=1,
+        num_sweeps=1,
+        logger=None,
+):
     """
     Calculate the sky view factor for a DEM after Corripio (2003).
     The sky view factor is the hemispherical fraction of unobstructed sky
@@ -147,7 +156,7 @@ def sky_view_factor(dem, res, min_azim=0, max_azim=360, azim_step=10, elev_step=
     min_azim : int, default 0
         Minimum azimuth angle (degrees).
 
-    max_azim : int, default 0
+    max_azim : int, default 360
         Maximum azimuth angle (degrees).
 
     azim_step : int, default 10
@@ -155,6 +164,12 @@ def sky_view_factor(dem, res, min_azim=0, max_azim=360, azim_step=10, elev_step=
 
     elev_step : int, default 1
         Elevation angle interval (degrees).
+
+    num_sweeps : int, default 1
+        Number of sweeps in each direction when calculating shadows.
+
+    logger : Logger, optional
+        Logger instance for printing status messages.
 
     Returns
     -------
@@ -174,6 +189,7 @@ def sky_view_factor(dem, res, min_azim=0, max_azim=360, azim_step=10, elev_step=
 
     dem = dem.astype(float, copy=False)  # convert to float64 if necessary
     slope, _ = slope_aspect(dem, res)
+    svf = np.zeros(dem.shape)
 
     azim_angles = np.arange(min_azim, max_azim, azim_step)
     min_elev_angle = 1
@@ -183,24 +199,11 @@ def sky_view_factor(dem, res, min_azim=0, max_azim=360, azim_step=10, elev_step=
     )
     elev_angles = np.arange(min_elev_angle, max_elev_angle + 1)[::-1]
 
-    svfs = _svf_numba(dem, slope, res, azim_angles, elev_angles)
-    svf = svfs.mean(axis=0)
-    return svf
+    for azim_num, azim_angle in enumerate(azim_angles):
+        if logger is not None:
+            logger.info(f'Calculating sky view factor for azimuth={azim_angle}° '
+                        f'({azim_num + 1}/{len(azim_angles)})')
 
-
-@njit(cache=True, parallel=True)
-def _svf_numba(dem, slope, res, azim_angles, elev_angles):
-    """
-    Parallel calculation of the sky view factor for a range of azimuth and
-    elevation angles.
-    Returns a (num_azim_angles, rows, cols) array which should be averaged for
-    deriving the actual sky view factor.
-    """
-    svfs = np.zeros((len(azim_angles), dem.shape[0], dem.shape[1]))
-    max_elev_angle = elev_angles.max()
-
-    for i in prange(len(azim_angles)):
-        azim_angle = azim_angles[i]
         azim_rad = np.deg2rad(azim_angle)
         svf_cur = np.full(dem.shape, max_elev_angle)
 
@@ -212,13 +215,13 @@ def _svf_numba(dem, slope, res, azim_angles, elev_angles):
                 np.sin(elev_rad),
             ])
 
-            illum = openamundsen.modules.radiation.shadows(dem, res, sun_vec)
-            idxs = np.flatnonzero(illum == 1)
-            svf_cur.ravel()[idxs] = elev_angle
+            illum = shadows(dem, res, sun_vec, num_sweeps=num_sweeps)
+            svf_cur[illum == 1] = elev_angle
 
-        svfs[i, :, :] = np.cos(np.deg2rad(svf_cur))**2
+        svf += np.cos(np.deg2rad(svf_cur))**2
 
-    return svfs
+    svf /= len(azim_angles)
+    return svf
 
 
 def curvature(dem, res, kind, L=None):
