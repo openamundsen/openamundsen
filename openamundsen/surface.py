@@ -312,6 +312,44 @@ def cryo_layer_model_energy_balance(model):
 
         available_melt_time[melties] -= layer_melt_time[melties]
 
+    # Refreeze liquid water and build up cold content
+    en_bal[frosties] = energy_balance_remainder(model, frosties, constants.T0)
+    refreezing_factor = model.config.snow.cryolayers.refreezing_factor
+    available_cc = (
+        -1
+        * en_bal * model.timestep / constants.LATENT_HEAT_OF_FUSION
+        * refreezing_factor
+    ).clip(min=0)  # kg m-2
+    cold_holding_capacity = model.config.snow.cryolayers.cold_holding_capacity
+    for layer_num in range(model.snow.num_cryo_layers):
+        # No cold content for firn and ice
+        if layer_num not in (CryoLayerID.NEW_SNOW, CryoLayerID.OLD_SNOW):
+            continue
+
+        cold_conties = model.global_mask(
+            frosties_roi
+            & (s.snow.thickness[layer_num, roi] > 0)
+            & (available_cc[roi] > 0)
+        )
+
+        refreeze_amount = np.minimum(
+            s.snow.liquid_water_content[layer_num, cold_conties],
+            available_cc[cold_conties],
+        )
+        s.snow.liquid_water_content[layer_num, cold_conties] -= refreeze_amount
+        available_cc[cold_conties] -= refreeze_amount
+
+        max_layer_cc = cold_holding_capacity * (
+            s.snow.ice_content[layer_num, cold_conties]
+            + s.snow.liquid_water_content[layer_num, cold_conties]
+        )
+        cc_buildup = np.minimum(
+            available_cc[cold_conties],
+            max_layer_cc - s.snow.cold_content[layer_num, cold_conties],
+        )
+        s.snow.cold_content[layer_num, cold_conties] += cc_buildup
+        available_cc[cold_conties] -= cc_buildup
+
     # Iteration for calculating snow surface temperature
     iterate_surface_temperature(model, frosties)
 

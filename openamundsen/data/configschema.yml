@@ -589,6 +589,19 @@ snow:
           type: boolean
           default: true
 
+        # Cold holding capacity (as a fraction of the layer SWE) and refreezing
+        # factor for the cold content approach by Braun (1984)
+        cold_holding_capacity:
+          type: number
+          min: 0
+          max: 1
+          default: 0.
+        refreezing_factor:
+          type: number
+          min: 0
+          max: 1
+          default: 1.
+
 soil:
   type: dict
   default: {}
