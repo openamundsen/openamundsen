@@ -418,9 +418,10 @@ snow:
     model:
       type: string
       allowed:
-        - layers
+        - multilayer
         - cryolayers
-      default: layers
+      default: multilayer
+      coerce: snowmodel
 
     melt:
       type: dict

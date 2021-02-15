@@ -22,6 +22,13 @@ class ConfigurationValidator(cerberus.Validator):
     def _normalize_coerce_path(self, path):
         return Path(path)
 
+    def _normalize_coerce_snowmodel(self, model):
+        # Snow model name 'layers' is deprecated -> change to 'multilayer'
+        if model == 'layers':
+            return 'multilayer'
+
+        return model
+
 
 class ConfigurationEncoder(json.JSONEncoder):
     def default(self, o):
@@ -119,7 +126,7 @@ def validate_config(config):
         except ValueError:
             raise ConfigurationError('write_freq must be a multiple of timestep')
 
-    if config.snow.model == 'layers' and config.snow.melt.method != 'energy_balance':
+    if config.snow.model == 'multilayer' and config.snow.melt.method != 'energy_balance':
         raise ConfigurationError(f'Melt method "{config.snow.melt.method}" not supported for the '
                                  f'snow model "{config.snow.model}"')
 

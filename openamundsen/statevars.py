@@ -285,7 +285,7 @@ def add_default_state_variables(model):
     surf.add_variable('roughness_length', 'm', 'Surface roughness length', 'surface_roughness_length')
     surf.add_variable('turbulent_exchange_coeff', '1', 'Transfer coefficient for heat and moisture')
     surf.add_variable('conductance', 'm s-1', 'Surface conductance')
-    if model.config.snow.model == 'layers':
+    if model.config.snow.model == 'multilayer':
         surf.add_variable('layer_temp', 'K', 'Surface layer temperature')
         surf.add_variable('thickness', 'm', 'Surface layer thickness')
         surf.add_variable('therm_cond', 'W m-1 K-1', 'Surface thermal conductivity')

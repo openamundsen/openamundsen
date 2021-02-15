@@ -40,7 +40,7 @@ def surface_properties(model):
     )
     calc_turbulent_exchange_coefficient(model)
 
-    if model.config.snow.model == 'layers':
+    if model.config.snow.model == 'multilayer':
         # Calculate surface conductance (eq. (35) from [2])
         # (the constant 1/100 therein corresponds to
         # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2
@@ -104,7 +104,7 @@ def surface_layer_properties(model):
 def energy_balance(model):
     snow_model = model.config.snow.model
 
-    if snow_model == 'layers':
+    if snow_model == 'multilayer':
         layer_model_energy_balance(model)
     elif snow_model == 'cryolayers':
         cryo_layer_model_energy_balance(model)

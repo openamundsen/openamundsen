@@ -57,11 +57,11 @@ class OpenAmundsen:
         self._initialize_grid()
         self._initialize_state_variable_management()
 
-        self.require_soil = config.snow.model == 'layers'
+        self.require_soil = config.snow.model == 'multilayer'
         self.require_energy_balance = config.snow.melt.method == 'energy_balance'
         self.require_temperature_index = not self.require_energy_balance
 
-        if config.snow.model == 'layers':
+        if config.snow.model == 'multilayer':
             self.snow = modules.snow.LayerSnowModel(self)
         elif config.snow.model == 'cryolayers':
             self.snow = modules.snow.CryoLayerSnowModel(self)
