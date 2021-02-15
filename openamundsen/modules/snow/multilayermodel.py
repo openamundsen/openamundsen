@@ -5,7 +5,7 @@ from openamundsen.snowmodel import SnowModel
 from . import snow
 
 
-class LayerSnowModel(SnowModel):
+class MultilayerSnowModel(SnowModel):
     def __init__(self, model):
         self.model = model
 

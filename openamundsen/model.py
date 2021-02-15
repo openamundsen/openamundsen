@@ -62,7 +62,7 @@ class OpenAmundsen:
         self.require_temperature_index = not self.require_energy_balance
 
         if config.snow.model == 'multilayer':
-            self.snow = modules.snow.LayerSnowModel(self)
+            self.snow = modules.snow.MultilayerSnowModel(self)
         elif config.snow.model == 'cryolayers':
             self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
