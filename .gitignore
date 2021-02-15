@@ -3,3 +3,4 @@ __pycache__
 svf_*.asc
 examples/results
 scratch
+doc/_build

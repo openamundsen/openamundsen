@@ -37,5 +37,9 @@ setup(
             'pytest',
             'pvlib',
         ],
+        'docs': [
+            'sphinx',
+            'sphinx_rtd_theme',
+        ],
     },
 )
