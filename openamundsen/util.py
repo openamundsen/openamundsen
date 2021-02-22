@@ -84,7 +84,11 @@ def read_yaml_file(filename):
     result : dict
     """
     with open(filename) as f:
-        return yaml.load(f.read())
+        return load_yaml(f.read())
+
+
+def load_yaml(s):
+    return yaml.load(s)
 
 
 def to_yaml(d):

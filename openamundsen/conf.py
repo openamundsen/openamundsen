@@ -66,6 +66,14 @@ class Configuration(Munch):
     so that attributes are accessible both using dict notation
     (`config['start_date']`) as well as dot notation (`config.end_date`).
     """
+    @classmethod
+    def from_dict(cls, d):
+        return cls.fromDict(d)
+
+    @classmethod
+    def from_yaml(cls, s):
+        return cls.from_dict(util.load_yaml(s))
+
     def __repr__(self):
         return util.to_yaml(self.toDict())
 

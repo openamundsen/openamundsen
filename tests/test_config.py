@@ -16,6 +16,10 @@ def save_and_read_yaml_dict(d):
         return oa.read_config(f.name)
 
 
+def parse_yaml_config(config):
+    return oa.parse_config(oa.Configuration.from_yaml(config))
+
+
 def save_and_parse_config(config):
     with tempfile.NamedTemporaryFile('w+') as f:
         if isinstance(config, dict):
@@ -66,10 +70,6 @@ def test_config_equal():
     assert config == config_read
 
 
-def test_read_minimal_config(minimal_config):
-    save_and_parse_config(minimal_config)
-
-
 def test_read_config(minimal_config):
     config = save_and_parse_config(minimal_config)
     assert config['end_date'].hour == 23
@@ -81,7 +81,7 @@ def test_read_config(minimal_config):
         resolution: 50
         timezone: 1
     """)
-    config = save_and_parse_config(yaml_str)
+    config = parse_yaml_config(yaml_str)
     assert config['end_date'].hour == 23
 
 
@@ -150,16 +150,16 @@ def test_infer_end_date(minimal_config):
         timezone: 1
     """)
 
-    config = save_and_parse_config(yaml_str.format(d='2020-04-30'))
+    config = parse_yaml_config(yaml_str.format(d='2020-04-30'))
     assert config['end_date'].hour == 23
 
-    config = save_and_parse_config(yaml_str.format(d='"2020-04-30"'))
+    config = parse_yaml_config(yaml_str.format(d='"2020-04-30"'))
     assert config['end_date'].hour == 23
 
-    config = save_and_parse_config(yaml_str.format(d='2020-04-30 11:00'))
+    config = parse_yaml_config(yaml_str.format(d='2020-04-30 11:00'))
     assert config['end_date'].hour == 11
 
-    config = save_and_parse_config(yaml_str.format(d='"2020-04-30 11:00"'))
+    config = parse_yaml_config(yaml_str.format(d='"2020-04-30 11:00"'))
     assert config['end_date'].hour == 11
 
 
