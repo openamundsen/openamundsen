@@ -520,9 +520,13 @@ snow:
 
         min:  # minimum snow albedo
           type: number
+          min: 0
+          max: 1
           default: 0.55
         max:  # maximum snow albedo
           type: number
+          min: 0
+          max: 1
           default: 0.85
 
         # Parameters for the "usaco" method (values from Rohrer (1992))
