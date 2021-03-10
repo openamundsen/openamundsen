@@ -274,12 +274,14 @@ class OpenAmundsen:
         bool_var = ds.x.copy().astype(bool)
         bool_var[:] = False
         bool_var.attrs = {}
+        int_var = bool_var.copy().astype(int)
+        int_var[:] = -1
 
         rows, cols = rasterio.transform.rowcol(self.grid.transform, x, y)
-        row_var = bool_var.copy()
-        col_var = bool_var.copy()
-        row_var.values = rows
-        col_var.values = cols
+        row_var = int_var.copy()
+        col_var = int_var.copy()
+        row_var.values[:] = rows
+        col_var.values[:] = cols
         ds['col'] = col_var
         ds['row'] = row_var
 
