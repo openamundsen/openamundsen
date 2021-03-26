@@ -219,9 +219,9 @@ def compaction(model):
             snow.density,
             model.state.meteo.temp,
         )
-    elif model.config.snow.compaction.method == 'fsm':
+    elif model.config.snow.compaction.method == 'empirical':
         timescale = c.SECONDS_PER_HOUR * model.config.snow.compaction.timescale  # snow compaction timescale (s)
-        _compaction_fsm(
+        _compaction_empirical(
             model.grid.roi_idxs,
             model.timestep,
             timescale,
@@ -342,7 +342,7 @@ def _compaction_anderson(
 
 
 @njit(cache=True, parallel=True)
-def _compaction_fsm(
+def _compaction_empirical(
     roi_idxs,
     timestep,
     timescale,

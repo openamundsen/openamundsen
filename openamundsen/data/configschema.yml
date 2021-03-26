@@ -493,10 +493,10 @@ snow:
           type: string
           allowed:
             - anderson
-            - fsm
+            - empirical
           default: anderson
 
-        # Parameters for the FSM prognostic density parameterization
+        # Parameters for the empirical density parameterization
         timescale:  # snow compaction timescale (h)
           type: number
           default: 200
