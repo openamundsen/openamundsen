@@ -2,7 +2,7 @@ import cerberus
 import datetime
 import json
 from munch import Munch
-from openamundsen import util
+from openamundsen import constants, util
 from openamundsen.errors import ConfigurationError
 import pandas as pd
 from pathlib import Path
@@ -146,3 +146,7 @@ def validate_config(config):
             raise ConfigurationError('Missing field: snow.melt.degree_day_factor')
         if config.snow.melt.albedo_factor is None:
             raise ConfigurationError('Missing field: snow.melt.albedo_factor')
+    
+    if abs(config.meteo.precipitation_phase.threshold_temp) < 20:
+        print('Warning: precipitation phase threshold temperature seems to be in °C, converting to K')
+        config.meteo.precipitation_phase.threshold_temp += constants.T0

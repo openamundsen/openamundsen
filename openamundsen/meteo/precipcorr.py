@@ -104,7 +104,7 @@ def correct_station_precipitation(model):
 
     snowfall_frac = meteo.precipitation_phase(
         pp_temp,
-        threshold_temp=model.config.meteo.precipitation_phase.threshold_temp + constants.T0,
+        threshold_temp=model.config.meteo.precipitation_phase.threshold_temp,
         temp_range=model.config.meteo.precipitation_phase.temp_range,
     )
 
