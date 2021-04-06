@@ -69,7 +69,7 @@ def initialize(model):
     # Thermal conductivity of soil minerals
     s.therm_cond_minerals[roi] = (
         (constants.THERM_COND_CLAY**cfg.clay_fraction)
-        * (constants.THERM_COND_SAND**(1 - cfg.clay_fraction))  # XXX really 1 - clay_fraction and not just sand_fraction?
+        * (constants.THERM_COND_SAND**(1 - cfg.clay_fraction))  # TODO really 1 - clay_fraction and not just sand_fraction?
     )
 
     # Thermal conductivity of dry soil

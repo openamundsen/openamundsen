@@ -519,7 +519,7 @@ def calc_radiation_balance(model, pos):
     """
     s = model.state
 
-    # TODO this is a parameter
+    # TODO this should be a parameter
     snow_emissivity = 0.99
 
     s.meteo.sw_out[pos] = s.surface.albedo[pos] * s.meteo.sw_in[pos]
@@ -841,7 +841,7 @@ def energy_balance_remainder(model, pos, surf_temp):
     s = model.state
     s.surface.temp[pos] = surf_temp
 
-    ground_heat_flux = 2.  # TODO this is a parameter
+    ground_heat_flux = 2.  # TODO this should be a parameter
 
     calc_radiation_balance(model, pos)
     calc_saturation_specific_humidity(model, pos)

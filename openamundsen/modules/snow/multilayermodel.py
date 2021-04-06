@@ -559,7 +559,7 @@ def _update_layers(
             new_thickness = thickness[0, i, j]
             k_new = 0
 
-            # TODO optimize this entire loop
+            # TODO optimize this loop
             for k_old in range(num_layers_prev[i, j]):
                 while True:  # TODO replace with normal loop
                     weight = min(new_thickness / thickness_prev[k_old, i, j], 1.)

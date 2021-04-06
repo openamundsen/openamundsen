@@ -158,7 +158,7 @@ def longwave_irradiance(model):
     m = model.state.meteo
     clear_sky_emissivity = meteo.clear_sky_emissivity(m.precipitable_water[roi])
 
-    # TODO these are parameters
+    # TODO these should be parameters
     cloud_emissivity = 0.976  # emissivity of totally overcast skies (Greuell et al., 1997)
     rock_emission_factor = 0.01  # (K W-1 m2) temperature of emitting rocks during daytime is assumed to be higher than the air temperature by this factor multiplied by the incoming shortwave radiation (Greuell et al., 1997)
 
