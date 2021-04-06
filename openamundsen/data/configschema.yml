@@ -435,9 +435,9 @@ snow:
             - enhanced_temperature_index
           default: energy_balance
 
-        threshold_temp:
+        threshold_temp:  # K
           type: number
-          default: 0.
+          default: 273.15
 
         degree_day_factor:  # must be provided for methods temperature_index and enhanced_temperature_index (validated afterwards)
           type: number
