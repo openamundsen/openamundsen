@@ -326,11 +326,11 @@ meteo:
             - wet_bulb_temp
           default: wet_bulb_temp
 
-        threshold_temp:  # temperature threshold (°C)
+        threshold_temp:  # temperature threshold (K)
           type: number
-          default: 2.
+          default: 275.15
 
-        temp_range:  # temperature range for mixed precipitation (°C)
+        temp_range:  # temperature range for mixed precipitation (K)
           type: number
           default: 0.
 

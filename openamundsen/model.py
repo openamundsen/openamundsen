@@ -480,7 +480,7 @@ class OpenAmundsen:
 
         snowfall_frac = meteo.precipitation_phase(
             pp_temp[roi],
-            threshold_temp=self.config.meteo.precipitation_phase.threshold_temp + constants.T0,
+            threshold_temp=self.config.meteo.precipitation_phase.threshold_temp,
             temp_range=self.config.meteo.precipitation_phase.temp_range,
         )
         m.snowfall[roi] = snowfall_frac * m.precip[roi]
