@@ -154,10 +154,9 @@ class CryoLayerSnowModel(SnowModel):
         s = model.state
 
         timestep_d = model.timestep / (constants.SECONDS_PER_HOUR * constants.HOURS_PER_DAY)  # (d)
-        threshold_temp_K = melt_config.threshold_temp + constants.T0
 
         snowies = s.snow.thickness.sum(axis=0) > 0.
-        degree_days = (s.meteo.temp[snowies] - threshold_temp_K) * timestep_d
+        degree_days = (s.meteo.temp[snowies] - melt_config.threshold_temp) * timestep_d
 
         if melt_config.method == 'temperature_index':
             melt = melt_config.degree_day_factor * degree_days
