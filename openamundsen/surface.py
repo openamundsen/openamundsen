@@ -105,14 +105,15 @@ def energy_balance(model):
     snow_model = model.config.snow.model
 
     if snow_model == 'multilayer':
-        layer_model_energy_balance(model)
+        multilayer_energy_balance(model)
     elif snow_model == 'cryolayers':
         cryo_layer_model_energy_balance(model)
 
 
-def layer_model_energy_balance(model):
+def multilayer_energy_balance(model):
     """
-    Calculate the surface energy balance for the layer model following [1].
+    Calculate the surface energy balance for the multilayer model
+    following [1].
 
     Parameters
     ----------
