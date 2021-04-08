@@ -328,11 +328,11 @@ meteo:
 
         threshold_temp:  # temperature threshold (K)
           type: number
-          default: 275.15
+          default: 273.65
 
         temp_range:  # temperature range for mixed precipitation (K)
           type: number
-          default: 0.
+          default: 1.
 
     # Settings for precipitation correction
     precipitation_correction:
