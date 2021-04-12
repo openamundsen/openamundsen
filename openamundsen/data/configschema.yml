@@ -354,7 +354,6 @@ meteo:
                 dependencies: gauge
               - allowed:
                   - srf
-                dependencies: file
           gauge:
             type: string
           scf:

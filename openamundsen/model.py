@@ -385,7 +385,11 @@ class OpenAmundsen:
         # Read snow redistribution factor files
         for precip_corr in self.config.meteo.precipitation_correction:
             if precip_corr['method'] == 'srf':
-                srf_file = precip_corr['file']
+                if 'file' in precip_corr:
+                    srf_file = precip_corr['file']
+                else:
+                    srf_file = util.raster_filename('srf', self.config)
+
                 self.logger.info(f'Reading snow redistribution factor ({srf_file})')
                 self.state.base.srf[:] = fileio.read_raster_file(srf_file, check_meta=self.grid)
                 break
