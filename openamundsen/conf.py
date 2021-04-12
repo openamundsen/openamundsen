@@ -146,7 +146,22 @@ def validate_config(config):
             raise ConfigurationError('Missing field: snow.melt.degree_day_factor')
         if config.snow.melt.albedo_factor is None:
             raise ConfigurationError('Missing field: snow.melt.albedo_factor')
-    
+
     if abs(config.meteo.precipitation_phase.threshold_temp) < 20:
         print('Warning: precipitation phase threshold temperature seems to be in °C, converting to K')
         config.meteo.precipitation_phase.threshold_temp += constants.T0
+
+    ac = config.snow.albedo
+    if ac.method == 'usaco':
+        print('Warning: albedo method "usaco" is deprecated, please use "snow_age"')
+        ac.method = 'snow_age'
+        ac.cold_snow_decay_timescale = 1 / ac.k_neg * constants.HOURS_PER_DAY
+        ac.melting_snow_decay_timescale = 1 / ac.k_pos * constants.HOURS_PER_DAY
+        ac.decay_timescale_determination_temperature = 'air'
+        ac.refresh_snowfall = ac.significant_snowfall
+        ac.refresh_method = 'binary'
+    elif ac.method == 'fsm':
+        print('Warning: albedo method "fsm" is deprecated, please use "snow_age"')
+        ac.method = 'snow_age'
+        ac.decay_timescale_determination_temperature = 'surface'
+        ac.refresh_method = 'continuous'
