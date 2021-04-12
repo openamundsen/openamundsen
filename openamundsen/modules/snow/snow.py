@@ -11,9 +11,6 @@ def albedo(model, pos=None):
     """
     s = model.state
 
-    if pos is None:
-        pos = model.grid.roi
-
     if model.config.snow.albedo.method == 'usaco':
         s.snow.albedo[pos] = _albedo_usaco(
             s.snow.albedo[pos],
@@ -38,8 +35,74 @@ def albedo(model, pos=None):
             model.config.snow.albedo.refresh_snowfall,
             model.timestep,
         )
-    else:
-        raise NotImplementedError
+    elif model.config.snow.albedo.method == 'snow_age':
+        _albedo_snow_age(model, pos)
+
+
+def _albedo_snow_age(model, pos=None):
+    """
+    Update snow albedo.
+    Albedo aging is calculated using an exponential decay function with
+    different timescales for cold and melting snow [1-3].
+    For fresh snow, albedo is either reset to the maximum value when snowfall
+    exceeds a preset threshold [2], or continuously increased whenever snow is
+    falling with a rate depending on snowfall rate [3-4].
+
+    References
+    ----------
+    .. [1] Snow Hydrology: Summary Report of the Snow Investigations. Published
+       by the North Pacific Division, Corps of Engineers, U.S. Army, Portland,
+       Oregon, 1956.  437 pages, 70 pages of plates, maps and figs., 27 cm.
+       https://doi.org/10.3189/S0022143000024503
+
+    .. [2] Hanzer, F., Helfricht, K., Marke, T., & Strasser, U. (2016).
+       Multilevel spatiotemporal validation of snow/ice mass balance and runoff
+       modeling in glacierized catchments. The Cryosphere, 10(4), 1859–1881.
+       https://doi.org/10.5194/tc-10-1859-2016
+
+    .. [3] Essery, R., Morin, S., Lejeune, Y., & B Ménard, C. (2013). A
+       comparison of 1701 snow models using observations from an alpine site.
+       Advances in Water Resources, 55, 131–148.
+       https://doi.org/10.1016/j.advwatres.2012.07.013
+
+    .. [4] Dutra, E., Balsamo, G., Viterbo, P., Miranda, P., Beljaars, A.,
+       Schär, C., & Elder, K. (2009). New snow scheme in HTESSEL: description and
+       offline validation. ECMWF. https://doi.org/10.21957/98x9mrv1y
+    """
+    albedo_config = model.config.snow.albedo
+    s = model.state
+
+    if pos is None:
+        pos = model.grid.roi
+
+    if albedo_config.decay_timescale_determination_temperature == 'air':
+        temp = s.meteo.temp[pos]
+    elif albedo_config.decay_timescale_determination_temperature == 'surface':
+        temp = s.surface.temp[pos]
+
+    # Albedo decay
+    decay_timescale = np.where(
+        temp >= c.T0,
+        c.SECONDS_PER_HOUR * albedo_config.melting_snow_decay_timescale,
+        c.SECONDS_PER_HOUR * albedo_config.cold_snow_decay_timescale,
+    )
+    new_albedo = (
+        albedo_config.min
+        + (s.snow.albedo[pos] - albedo_config.min)
+        * np.exp(-1 / decay_timescale * model.timestep)
+    )
+
+    # Albedo refresh
+    snowfall_rate = s.meteo.snowfall[pos] / model.timestep
+    if albedo_config.refresh_method == 'binary':
+        new_albedo[snowfall_rate >= albedo_config.refresh_snowfall] = albedo_config.max
+    elif albedo_config.refresh_method == 'continuous':
+        new_albedo += (
+            (albedo_config.max - new_albedo)
+            * np.minimum(1, snowfall_rate * c.SECONDS_PER_HOUR / albedo_config.refresh_snowfall)  # minimum() to clip values at albedo_config.max
+        )
+
+    s.snow.albedo[pos] = new_albedo
 
 
 def _albedo_usaco(

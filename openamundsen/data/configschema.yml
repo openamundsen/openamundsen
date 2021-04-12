@@ -513,6 +513,7 @@ snow:
         method:
           type: string
           allowed:
+            - snow_age
             - usaco
             - fsm
           default: usaco
@@ -539,16 +540,28 @@ snow:
           type: number
           default: 0.5
 
-        # Parameters for the "fsm" method (prognostic albedo parameterization after Essery (2015))
+        # Parameters for the "snow_age" method
         cold_snow_decay_timescale:  # cold snow albedo decay timescale (h)
           type: number
           default: 1000
         melting_snow_decay_timescale:  # melting snow albedo decay timescale (h)
           type: number
           default: 100
-        refresh_snowfall: # snowfall to refresh albedo (kg m-2)
+        decay_timescale_determination_temperature: # use Ts or Ta for determining whether to use cold_snow_decay_timescale or melting_snow_decay_timescale
+          type: string
+          allowed:
+            - surface
+            - air
+          default: surface
+        refresh_snowfall: # snowfall to refresh albedo (kg m-2 h-1)
           type: number
-          default: 10
+          default: 1
+        refresh_method:
+          type: string
+          allowed:
+            - binary
+            - continuous
+          default: continuous
 
         # Firn and ice albedo (only relevant for the cryo layer model)
         firn:
