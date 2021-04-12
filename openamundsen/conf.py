@@ -41,7 +41,7 @@ class ConfigurationEncoder(json.JSONEncoder):
 def parse_end_date(end_date, timestep):
     # If end_date is specified without an hour value, the end hour should be inferred
     # (i.e., set to the latest time step of the end day).
-    if isinstance(end_date, datetime.date):
+    if type(end_date) is datetime.date:  # do not use isinstance() because we want to catch only datetime.date and not its subclasses (datetime.datetime, pd.Timestamp etc.)
         infer_end_hour = True
     elif isinstance(end_date, str) and re.match(r'^\d\d\d\d-\d\d-\d\d$', end_date.strip()):
         infer_end_hour = True

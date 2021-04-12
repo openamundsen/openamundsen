@@ -209,3 +209,9 @@ def test_missing_parameter(minimal_config):
 
         with pytest.raises(errors.ConfigurationError):
             oa.parse_config(config)
+
+
+def test_parse_twice(minimal_config):
+    c1 = oa.parse_config(minimal_config)
+    c2 = oa.parse_config(c1)
+    assert c1 == c2
