@@ -622,7 +622,7 @@ snow:
         # Surface heat flux for snow-covered conditions (W m-2)
         surface_heat_flux:
           type: number
-          default: 2
+          default: -2
 
 soil:
   type: dict

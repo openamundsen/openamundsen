@@ -856,7 +856,7 @@ def energy_balance_remainder(model, pos, surf_temp):
         + s.surface.sens_heat_flux[pos]
         + s.surface.lat_heat_flux[pos]
         + s.surface.advective_heat_flux[pos]
-        + s.surface.heat_flux[pos]
+        - s.surface.heat_flux[pos]
     )
 
     return en_bal
