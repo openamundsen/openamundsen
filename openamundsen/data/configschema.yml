@@ -513,9 +513,10 @@ snow:
         method:
           type: string
           allowed:
-            - usaco
-            - fsm
-          default: usaco
+            - snow_age
+            - usaco # deprecated
+            - fsm # deprecated
+          default: snow_age
 
         min:  # minimum snow albedo
           type: number
@@ -528,7 +529,30 @@ snow:
           max: 1
           default: 0.85
 
-        # Parameters for the "usaco" method (values from Rohrer (1992))
+        # Parameters for the "snow_age" method
+        cold_snow_decay_timescale:  # cold snow albedo decay timescale (h)
+          type: number
+          default: 480
+        melting_snow_decay_timescale:  # melting snow albedo decay timescale (h)
+          type: number
+          default: 200
+        decay_timescale_determination_temperature: # use Ts or Ta for determining whether to use cold_snow_decay_timescale or melting_snow_decay_timescale
+          type: string
+          allowed:
+            - surface
+            - air
+          default: surface
+        refresh_snowfall: # snowfall to refresh albedo (kg m-2 h-1)
+          type: number
+          default: 0.5
+        refresh_method:
+          type: string
+          allowed:
+            - binary
+            - continuous
+          default: binary
+
+        # Parameters for the "usaco" method (deprecated)
         k_pos:  # decay factor for positive air temperatures (d-1)
           type: number
           default: 0.12
@@ -538,17 +562,6 @@ snow:
         significant_snowfall:  # snowfall to refresh albedo (kg m-2 h-1)
           type: number
           default: 0.5
-
-        # Parameters for the "fsm" method (prognostic albedo parameterization after Essery (2015))
-        cold_snow_decay_timescale:  # cold snow albedo decay timescale (h)
-          type: number
-          default: 1000
-        melting_snow_decay_timescale:  # melting snow albedo decay timescale (h)
-          type: number
-          default: 100
-        refresh_snowfall: # snowfall to refresh albedo (kg m-2)
-          type: number
-          default: 10
 
         # Firn and ice albedo (only relevant for the cryo layer model)
         firn:
