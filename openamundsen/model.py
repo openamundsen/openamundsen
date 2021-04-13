@@ -61,6 +61,7 @@ class OpenAmundsen:
         self.require_soil = config.snow.model == 'multilayer'
         self.require_energy_balance = config.snow.melt.method == 'energy_balance'
         self.require_temperature_index = not self.require_energy_balance
+        self.require_evapotranspiration = config.evapotranspiration.enabled
 
         if config.snow.model == 'multilayer':
             self.snow = modules.snow.MultilayerSnowModel(self)
@@ -68,6 +69,9 @@ class OpenAmundsen:
             self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
             raise NotImplementedError
+
+        if self.require_evapotranspiration:
+            self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
 
         # Create snow redistribution factor state variables
         for precip_corr in config.meteo.precipitation_correction:
@@ -221,6 +225,9 @@ class OpenAmundsen:
         if self.require_soil:
             modules.soil.soil_heat_flux(self)
             modules.soil.soil_temperature(self)
+
+        if self.require_evapotranspiration:
+            self.evapotranspiration.evapotranspiration()
 
     def _initialize_logger(self):
         """

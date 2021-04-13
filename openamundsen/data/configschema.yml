@@ -706,6 +706,14 @@ soil:
       type: number
       default: 0.15
 
+evapotranspiration:
+  type: dict
+  default: {}
+  schema:
+    enabled:
+      type: boolean
+      default: false
+
 liveview:
   type: dict
   default: {}
