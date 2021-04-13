@@ -254,7 +254,7 @@ def cryo_layer_energy_balance(model):
     s.snow.melt[roi] = 0
 
     s.surface.heat_flux[snowies] = model.config.snow.cryolayers.surface_heat_flux
-    s.surface.heat_flux[snow_freeies] = 0.  # XXX
+    s.surface.heat_flux[snow_freeies] = np.nan
 
     # Where air temperature >= 0 °C -> potential melt, no iteration
     s.surface.temp[melties] = constants.T0
