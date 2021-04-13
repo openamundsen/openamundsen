@@ -245,12 +245,16 @@ def cryo_layer_energy_balance(model):
     snowies = model.roi_mask_to_global(snowies_roi)
     melties = model.roi_mask_to_global(melties_roi)
     frosties = model.roi_mask_to_global(frosties_roi)
+    snow_freeies = model.roi_mask_to_global(~snowies_roi)
 
     calc_saturation_specific_humidity(model, snowies)
     calc_moisture_availability(model, snowies)
     calc_latent_heat(model, snowies)
 
     s.snow.melt[roi] = 0
+
+    s.surface.heat_flux[snowies] = model.config.snow.cryolayers.surface_heat_flux
+    s.surface.heat_flux[snow_freeies] = 0.  # XXX
 
     # Where air temperature >= 0 °C -> potential melt, no iteration
     s.surface.temp[melties] = constants.T0
@@ -842,8 +846,6 @@ def energy_balance_remainder(model, pos, surf_temp):
     s = model.state
     s.surface.temp[pos] = surf_temp
 
-    ground_heat_flux = 2.  # TODO this should be a parameter
-
     calc_radiation_balance(model, pos)
     calc_saturation_specific_humidity(model, pos)
     calc_turbulent_fluxes(model, pos)
@@ -854,7 +856,7 @@ def energy_balance_remainder(model, pos, surf_temp):
         + s.surface.sens_heat_flux[pos]
         + s.surface.lat_heat_flux[pos]
         + s.surface.advective_heat_flux[pos]
-        + ground_heat_flux
+        + s.surface.heat_flux[pos]
     )
 
     return en_bal
