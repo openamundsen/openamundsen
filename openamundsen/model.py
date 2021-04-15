@@ -62,6 +62,7 @@ class OpenAmundsen:
         self.require_energy_balance = config.snow.melt.method == 'energy_balance'
         self.require_temperature_index = not self.require_energy_balance
         self.require_evapotranspiration = config.evapotranspiration.enabled
+        self.require_land_cover = self.require_evapotranspiration
 
         if config.snow.model == 'multilayer':
             self.snow = modules.snow.MultilayerSnowModel(self)
@@ -69,6 +70,9 @@ class OpenAmundsen:
             self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
             raise NotImplementedError
+
+        if self.require_land_cover:
+            self.state.base.add_variable('land_cover', long_name='Land cover class', dtype=int)
 
         if self.require_evapotranspiration:
             self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
@@ -409,6 +413,16 @@ class OpenAmundsen:
                 self.logger.info(f'Reading snow redistribution factor ({srf_file})')
                 self.state.base.srf[:] = fileio.read_raster_file(srf_file, check_meta=self.grid)
                 break
+
+        # Read land cover file
+        if self.require_land_cover:
+            land_cover_file = util.raster_filename('lc', self.config)
+
+            if land_cover_file.exists():
+                self.logger.info(f'Reading land cover ({land_cover_file})')
+                self.state.base.land_cover[:] = fileio.read_raster_file(land_cover_file, check_meta=self.grid)
+            else:
+                raise FileNotFoundError(f'Land cover file not found: {land_cover_file}')
 
         self.grid.prepare_roi_coordinates()
 
