@@ -67,7 +67,7 @@ class EvapotranspirationModel:
         s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
         s.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
         s.add_variable('clim_corr', '1', 'Climate correction term')
-        s.add_variable('cum_evaporation_soil_surface', 'kg m-2', 'Cumulative depth of evaporation from the soil surface layer')
+        s.add_variable('cum_evaporation_soil_surface', 'kg m-2', 'Cumulative evaporation from the soil surface layer')
         s.add_variable('total_evaporable_water', 'kg m-2', 'Total evaporable water')
 
     def initialize(self):
@@ -103,6 +103,10 @@ class EvapotranspirationModel:
                 * (swc_field_cap - 0.5 * swc_wilting_point)
                 * model.config.evapotranspiration.surface_soil_layer_evaporation_depth
             )
+
+        # Set D_e to TEW at the start of the model run, i.e., assume a long period of time has
+        # elapsed since the last wetting
+        s_et.cum_evaporation_soil_surface[roi] = s_et.total_evaporable_water[roi]
 
     def _climate_correction(self):
         """
