@@ -63,7 +63,7 @@ class EvapotranspirationModel:
 
     def _climate_correction(self):
         """
-        Calculate climate correction term for the crop coefficients (eq. (70) from [1]).
+        Calculate climate correction term for the crop coefficients.
         """
         model = self.model
         s = self.model.state
@@ -74,10 +74,11 @@ class EvapotranspirationModel:
         mean_min_rel_hum = np.clip(model.config.evapotranspiration.mean_min_humidity, 20, 80)
 
         for lcc, pos in self.land_cover_class_pixels.items():
-            h = DEFAULT_MAX_PLANT_HEIGHTS.get(lcc, np.nan)
-            s_et.clim_corr[pos] = (  # eq. (70)
-                (0.04 * (mean_wind_speed - 2) - 0.004 * (mean_min_rel_hum - 45))
-                * (h / 3)**0.3
+            plant_height = DEFAULT_MAX_PLANT_HEIGHTS.get(lcc, np.nan)
+            s_et.clim_corr[pos] = climate_correction(
+                mean_wind_speed,
+                mean_min_rel_hum,
+                plant_height,
             )
 
     def evapotranspiration(self):
@@ -159,6 +160,41 @@ class EvapotranspirationModel:
                 )
             else:
                 raise NotImplementedError
+
+
+def climate_correction(mean_wind_speed, mean_min_rel_hum, plant_height):
+    """
+    Calculate the climate correction term for the crop coefficients (right part
+    of eq. (70) from [1]).
+
+    Parameters
+    ----------
+    mean_wind_speed : float or ndarray(float)
+        Mean wind speed value during the period of interest (m s-1).
+
+    mean_min_rel_hum : float or ndarray(float)
+        Mean value for daily minimum relative humidity during the period of
+        interest (%).
+
+    plant_height : float
+        Plant height during the period of interest (m).
+
+    Returns
+    -------
+    clim_corr : float or ndarray(float)
+        Climate correction term.
+
+    References
+    ----------
+    .. [1] Allen, R.G., Pereira, L.S., Raes, D., et al. (1998). Crop
+       Evapotranspiration-Guidelines for Computing Crop Water Requirements-FAO
+       Irrigation and Drainage Paper 56. FAO, Rome, 300(9): D05109.
+       http://www.fao.org/3/x0490e/x0490e00.htm
+    """
+    return (
+        0.04 * (mean_wind_speed - 2)
+        - 0.004 * (mean_min_rel_hum - 45)
+    ) * (plant_height / 3)**0.3
 
 
 def basal_crop_coefficient(
