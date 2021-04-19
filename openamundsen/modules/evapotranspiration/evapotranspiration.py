@@ -131,10 +131,10 @@ class EvapotranspirationModel:
         s_et = s.evapotranspiration
 
         for lcc, pos in self.land_cover_class_pixels.items():
+            crop_coefficient_type = DEFAULT_CROP_COEFFICIENT_TYPES[lcc]
             plant_date, length_ini, length_dev, length_mid, length_late = DEFAULT_GROWTH_STAGE_LENGTHS[lcc]
             crop_coeff_ini, crop_coeff_mid, crop_coeff_end = DEFAULT_CROP_COEFFICIENTS[lcc]
             growing_period_day = doy - plant_date + 1  # (1-based)
-            total_length = length_ini + length_dev + length_mid + length_late
 
             # Apply climate correction for Kcb_mid and Kcb_end values >= 0.45 (eq. (70))
             # (convert crop_coeff_mid and crop_coeff_end into fields to allow for possibly
@@ -144,21 +144,95 @@ class EvapotranspirationModel:
             if crop_coeff_end >= 0.45:
                 crop_coeff_end = np.full(pos.sum(), crop_coeff_end) + s_et.clim_corr[pos]
 
-            if growing_period_day < 1 or growing_period_day > total_length:  # outside of growing period
-                s_et.basal_crop_coeff[pos] = 0.
-            elif growing_period_day < length_ini:  # initial
-                s_et.basal_crop_coeff[pos] = crop_coeff_ini
-            elif growing_period_day < (length_ini + length_dev):  # crop development
-                s_et.basal_crop_coeff[pos] = (  # eq. (66)
-                    crop_coeff_ini
-                    + (growing_period_day - length_ini) / length_dev
-                    * (crop_coeff_mid - crop_coeff_ini)
+            if crop_coefficient_type == 'single':
+                raise NotImplementedError
+            elif crop_coefficient_type == 'dual':
+                s_et.basal_crop_coeff[pos] = basal_crop_coefficient(
+                    growing_period_day,
+                    length_ini,
+                    length_dev,
+                    length_mid,
+                    length_late,
+                    crop_coeff_ini,
+                    crop_coeff_mid,
+                    crop_coeff_end,
                 )
-            elif growing_period_day < (length_ini + length_dev + length_mid):  # mid season
-                s_et.basal_crop_coeff[pos] = crop_coeff_mid
-            else:  # late season
-                s_et.basal_crop_coeff[pos] = (  # eq. (66)
-                    crop_coeff_mid
-                    + (growing_period_day - (length_ini + length_dev + length_mid)) / length_late
-                    * (crop_coeff_end - crop_coeff_mid)
-                )
+            else:
+                raise NotImplementedError
+
+
+def basal_crop_coefficient(
+    growing_period_day,
+    length_ini,
+    length_dev,
+    length_mid,
+    length_late,
+    crop_coeff_ini,
+    crop_coeff_mid,
+    crop_coeff_end,
+):
+    """
+    Calculate the daily basal crop coefficient K_cb following [1].
+
+    Parameters
+    ----------
+    growing_period_day : int
+        Day within the growing period (1 = first day of the period).
+
+    length_ini : int
+        Length of the initial growth stage (days).
+
+    length_dev : int
+        Length of the crop development stage (days).
+
+    length_mid : int
+        Length of the mid-season stage (days).
+
+    length_late : int
+        Length of the late season stage (days).
+
+    crop_coeff_ini : float
+        Crop coefficient for the initial stage.
+
+    crop_coeff_mid : float or ndarray(float)
+        Crop coefficient for the mid-season stage.
+
+    crop_coeff_end : float or ndarray(float)
+        Crop coefficient for the end of the late season stage.
+
+    Returns
+    -------
+    basal_crop_coefficient : float or ndarray(float)
+        Basal crop coefficient for the given day.
+        Depending on the data types of crop_coeff_mid and crop_coeff_end, this
+        is either a scalar or an array.
+
+    References
+    ----------
+    .. [1] Allen, R.G., Pereira, L.S., Raes, D., et al. (1998). Crop
+       Evapotranspiration-Guidelines for Computing Crop Water Requirements-FAO
+       Irrigation and Drainage Paper 56. FAO, Rome, 300(9): D05109.
+       http://www.fao.org/3/x0490e/x0490e00.htm
+    """
+    total_length = length_ini + length_dev + length_mid + length_late
+
+    if growing_period_day < 1 or growing_period_day > total_length:  # outside of growing period
+        bcc = 0.
+    elif growing_period_day < length_ini:  # initial
+        bcc = crop_coeff_ini
+    elif growing_period_day < (length_ini + length_dev):  # crop development
+        bcc = (  # eq. (66)
+            crop_coeff_ini
+            + (growing_period_day - length_ini) / length_dev
+            * (crop_coeff_mid - crop_coeff_ini)
+        )
+    elif growing_period_day < (length_ini + length_dev + length_mid):  # mid season
+        bcc = crop_coeff_mid
+    else:  # late season
+        bcc = (  # eq. (66)
+            crop_coeff_mid
+            + (growing_period_day - (length_ini + length_dev + length_mid)) / length_late
+            * (crop_coeff_end - crop_coeff_mid)
+        )
+
+    return bcc
