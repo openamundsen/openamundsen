@@ -75,6 +75,9 @@ class EvapotranspirationModel:
         s = model.state.add_category('evapotranspiration')
         s.add_variable('soil_texture', long_name='Soil texture class', dtype=int)  # TODO move to base or soil group eventually
         s.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
+        s.add_variable('evaporation', 'kg m-2', 'Evaporation')
+        s.add_variable('transpiration', 'kg m-2', 'Transpiration')
+        s.add_variable('evapotranspiration', 'kg m-2', 'Evapotranspiration')
         s.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
         s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
         s.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
@@ -223,6 +226,9 @@ class EvapotranspirationModel:
                 )
 
                 self._evaporation_coefficient(lcc, pos)
+
+                # Calculate evaporation
+                s_et.evaporation[pos] = s_et.evaporation_coeff[pos] * s_et.et_ref[pos]
             else:
                 raise NotImplementedError
 
@@ -265,6 +271,12 @@ class EvapotranspirationModel:
         evaporation_reduction_coeff[pos2] = (
             (s_et.total_evaporable_water[pos3] - s_et.cum_evaporation_soil_surface[pos3])
             / (s_et.total_evaporable_water[pos3] - s_et.readily_evaporable_water[pos3])
+        )
+
+        # Calculate evaporation coefficient (eq. (71))
+        s_et.evaporation_coeff[pos] = np.minimum(
+            evaporation_reduction_coeff[pos] * (max_crop_coeff - s_et.basal_crop_coeff[pos]),
+            exposed_wetted_frac * max_crop_coeff,
         )
 
 
