@@ -63,6 +63,7 @@ class OpenAmundsen:
         self.require_temperature_index = not self.require_energy_balance
         self.require_evapotranspiration = config.evapotranspiration.enabled
         self.require_land_cover = self.require_evapotranspiration
+        self.require_soil_texture = self.require_evapotranspiration
 
         if config.snow.model == 'multilayer':
             self.snow = modules.snow.MultilayerSnowModel(self)
@@ -426,6 +427,19 @@ class OpenAmundsen:
                 self.state.base.land_cover[:] = fileio.read_raster_file(land_cover_file, check_meta=self.grid)
             else:
                 raise FileNotFoundError(f'Land cover file not found: {land_cover_file}')
+
+        # Read soil texture file
+        if self.require_soil_texture:
+            soil_texture_file = util.raster_filename('soil', self.config)
+
+            if soil_texture_file.exists():
+                self.logger.info(f'Reading soil texture ({soil_texture_file})')
+                self.state.evapotranspiration.soil_texture[:] = fileio.read_raster_file(
+                    soil_texture_file,
+                    check_meta=self.grid,
+                )
+            else:
+                raise FileNotFoundError(f'Soil texture file not found: {soil_texture_file}')
 
         self.grid.prepare_roi_coordinates()
 

@@ -40,6 +40,7 @@ class EvapotranspirationModel:
         self.model = model
 
         s = model.state.add_category('evapotranspiration')
+        s.add_variable('soil_texture', long_name='Soil texture class', dtype=int)  # TODO move to base or soil group eventually
         s.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
         s.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
         s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
