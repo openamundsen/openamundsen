@@ -21,7 +21,8 @@ DEFAULT_MAX_PLANT_HEIGHTS = {  # maximum plant heights (m), see Table 12 in Alle
     LandCoverClass.DECIDUOUS_FOREST: 24.8,  # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
 }
 
-DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY = {
+# Default soil water characteristics for different soil types (from Table 19 in Allen et al. (1998))
+DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY = {  # m3 m-3
     SoilTextureClass.SAND: (0.07 + 0.17) / 2,
     SoilTextureClass.LOAMY_SAND: (0.11 + 0.19) / 2,
     SoilTextureClass.SANDY_LOAM: (0.18 + 0.28) / 2,
@@ -32,7 +33,7 @@ DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY = {
     SoilTextureClass.SILTY_CLAY: (0.30 + 0.42) / 2,
     SoilTextureClass.CLAY: (0.32 + 0.40) / 2,
 }
-DEFAULT_SOIL_WATER_CONTENTS_AT_WILTING_POINT = {
+DEFAULT_SOIL_WATER_CONTENTS_AT_WILTING_POINT = {  # m3 m-3
     SoilTextureClass.SAND: (0.02 + 0.07) / 2,
     SoilTextureClass.LOAMY_SAND: (0.03 + 0.10) / 2,
     SoilTextureClass.SANDY_LOAM: (0.06 + 0.16) / 2,
@@ -42,6 +43,17 @@ DEFAULT_SOIL_WATER_CONTENTS_AT_WILTING_POINT = {
     SoilTextureClass.SILT_CLAY_LOAM: (0.17 + 0.24) / 2,
     SoilTextureClass.SILTY_CLAY: (0.17 + 0.29) / 2,
     SoilTextureClass.CLAY: (0.20 + 0.24) / 2,
+}
+DEFAULT_READILY_EVAPORABLE_WATER = {  # kg m-2
+    SoilTextureClass.SAND: (2. + 7.) / 2,
+    SoilTextureClass.LOAMY_SAND: (4. + 8.) / 2,
+    SoilTextureClass.SANDY_LOAM: (6. + 10.) / 2,
+    SoilTextureClass.LOAM: (8. + 10.) / 2,
+    SoilTextureClass.SILT_LOAM: (8. + 11.) / 2,
+    SoilTextureClass.SILT: (8. + 11.) / 2,
+    SoilTextureClass.SILT_CLAY_LOAM: (8. + 11.) / 2,
+    SoilTextureClass.SILTY_CLAY: (8. + 12.) / 2,
+    SoilTextureClass.CLAY: (8. + 12.) / 2,
 }
 
 
@@ -69,6 +81,7 @@ class EvapotranspirationModel:
         s.add_variable('clim_corr', '1', 'Climate correction term')
         s.add_variable('cum_evaporation_soil_surface', 'kg m-2', 'Cumulative evaporation from the soil surface layer')
         s.add_variable('total_evaporable_water', 'kg m-2', 'Total evaporable water')
+        s.add_variable('readily_evaporable_water', 'kg m-2', 'Readily evaporable water')
 
     def initialize(self):
         model = self.model
@@ -94,7 +107,7 @@ class EvapotranspirationModel:
 
         self._climate_correction()
 
-        # Calculate total evaporable water (eq. (73))
+        # Calculate total evaporable water (eq. (73)) and initialize readily evaporable water
         for stc, pos in self.soil_texture_class_pixels.items():
             swc_field_cap = DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY[stc]
             swc_wilting_point = DEFAULT_SOIL_WATER_CONTENTS_AT_WILTING_POINT[stc]
@@ -103,6 +116,7 @@ class EvapotranspirationModel:
                 * (swc_field_cap - 0.5 * swc_wilting_point)
                 * model.config.evapotranspiration.surface_soil_layer_evaporation_depth
             )
+            s_et.readily_evaporable_water[pos] = DEFAULT_READILY_EVAPORABLE_WATER[stc]
 
         # Set D_e to TEW at the start of the model run, i.e., assume a long period of time has
         # elapsed since the last wetting
@@ -243,6 +257,15 @@ class EvapotranspirationModel:
 
         # Exposed and wetted soil fraction (eq. (75))
         exposed_wetted_frac = np.minimum(1 - veg_frac, wetted_frac)
+
+        # Calculate evaporation reduction coefficient (eq. (74))
+        pos2 = s_et.cum_evaporation_soil_surface[pos] > s_et.readily_evaporable_water[pos]
+        pos3 = model.global_mask(pos2, pos)
+        evaporation_reduction_coeff = np.ones(pos.shape)  # K_r = 1 when D_e,i-1 <= REW
+        evaporation_reduction_coeff[pos2] = (
+            (s_et.total_evaporable_water[pos3] - s_et.cum_evaporation_soil_surface[pos3])
+            / (s_et.total_evaporable_water[pos3] - s_et.readily_evaporable_water[pos3])
+        )
 
 
 def climate_correction(mean_wind_speed, mean_min_rel_hum, plant_height):
