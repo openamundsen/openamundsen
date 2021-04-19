@@ -158,8 +158,42 @@ class EvapotranspirationModel:
                     crop_coeff_mid,
                     crop_coeff_end,
                 )
+
+                self._evaporation_coefficient(lcc, pos)
             else:
                 raise NotImplementedError
+
+    def _evaporation_coefficient(self, lcc, pos):
+        model = self.model
+        s = model.state
+        s_et = s.evapotranspiration
+
+        plant_height = DEFAULT_MAX_PLANT_HEIGHTS[lcc]
+        min_crop_coeff = model.config.evapotranspiration.min_crop_coefficient
+
+        # Calculate K_c_max (eq. (72))
+        # TODO the climate correction term is intended to be calculated using mean values of wind
+        # speed and daily-minimum relative humidity over the period of interest - maybe better use
+        # 24-hour moving averages than instantaneous values?
+        clim_corr = climate_correction(
+            s.meteo.wind_speed[pos],
+            s.meteo.rel_hum[pos],
+            plant_height,
+        )
+        max_crop_coeff = np.maximum(1.2 + clim_corr, s_et.basal_crop_coeff[pos] + 0.05)
+
+        # Calculate fraction of the soil surface covered by vegetation (eq. (76))
+        veg_frac = (
+            (s_et.basal_crop_coeff[pos] - min_crop_coeff)
+            / (max_crop_coeff - min_crop_coeff)
+        )**(1 + 0.5 * plant_height)
+
+        # Fraction of soil surface wetted by irrigation or precipitation (use value for
+        # precipitation (= 1.0) from Table 20)
+        wetted_frac = 1.
+
+        # Exposed and wetted soil fraction (eq. (75))
+        exposed_wetted_frac = np.minimum(1 - veg_frac, wetted_frac)
 
 
 def climate_correction(mean_wind_speed, mean_min_rel_hum, plant_height):

@@ -714,9 +714,9 @@ evapotranspiration:
       type: boolean
       default: false
 
-    min_crop_coefficient: # crop coefficient for dry bare soil with almost no ground cover
+    min_crop_coefficient: # minimum crop coefficient for dry bare soil with no ground cover
       type: number
-      default: 0.175 # mean of the FAO lower (0.15) and upper (0.2) boundary recommendations
+      default: 0.175 # mean of the FAO range (0.15-0.20)
 
     grass_albedo: # albedo for grassland
       type: number
