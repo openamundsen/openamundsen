@@ -42,7 +42,7 @@ class EvapotranspirationModel:
         s = model.state.add_category('evapotranspiration')
         s.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
         s.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
-        s.add_variable('crop_coeff', '1', 'Basal crop coefficient')
+        s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
         s.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
         s.add_variable('clim_corr', '1', 'Climate correction term')
 
@@ -145,19 +145,19 @@ class EvapotranspirationModel:
                 crop_coeff_end = np.full(pos.sum(), crop_coeff_end) + s_et.clim_corr[pos]
 
             if growing_period_day < 1 or growing_period_day > total_length:  # outside of growing period
-                s_et.crop_coeff[pos] = 0.
+                s_et.basal_crop_coeff[pos] = 0.
             elif growing_period_day < length_ini:  # initial
-                s_et.crop_coeff[pos] = crop_coeff_ini
+                s_et.basal_crop_coeff[pos] = crop_coeff_ini
             elif growing_period_day < (length_ini + length_dev):  # crop development
-                s_et.crop_coeff[pos] = (  # eq. (66)
+                s_et.basal_crop_coeff[pos] = (  # eq. (66)
                     crop_coeff_ini
                     + (growing_period_day - length_ini) / length_dev
                     * (crop_coeff_mid - crop_coeff_ini)
                 )
             elif growing_period_day < (length_ini + length_dev + length_mid):  # mid season
-                s_et.crop_coeff[pos] = crop_coeff_mid
+                s_et.basal_crop_coeff[pos] = crop_coeff_mid
             else:  # late season
-                s_et.crop_coeff[pos] = (  # eq. (66)
+                s_et.basal_crop_coeff[pos] = (  # eq. (66)
                     crop_coeff_mid
                     + (growing_period_day - (length_ini + length_dev + length_mid)) / length_late
                     * (crop_coeff_end - crop_coeff_mid)
