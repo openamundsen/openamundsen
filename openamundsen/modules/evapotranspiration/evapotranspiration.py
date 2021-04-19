@@ -1,26 +1,47 @@
 from openamundsen import constants as c, meteo
 from .landcover import LandCoverClass
 import numpy as np
+from .soiltexture import SoilTextureClass
 
 
 DEFAULT_CROP_COEFFICIENT_TYPES = {
     LandCoverClass.CONIFEROUS_FOREST: 'dual',
     LandCoverClass.DECIDUOUS_FOREST: 'dual',
 }
-
 DEFAULT_CROP_COEFFICIENTS = {  # (ini, mid, end)
     LandCoverClass.CONIFEROUS_FOREST: (0.95, 0.95, 0.95),
     LandCoverClass.DECIDUOUS_FOREST: (0.4, 1.05, 0.6),
 }
-
 DEFAULT_GROWTH_STAGE_LENGTHS = {  # (plant date (DOY), ini, dev, mid, late)
     LandCoverClass.CONIFEROUS_FOREST: (1, 366, 0, 0),
     LandCoverClass.DECIDUOUS_FOREST: (60, 20, 70, 120, 60),
 }
-
 DEFAULT_MAX_PLANT_HEIGHTS = {  # maximum plant heights (m), see Table 12 in Allen et al. (1998)
     LandCoverClass.CONIFEROUS_FOREST: 26.,  # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
     LandCoverClass.DECIDUOUS_FOREST: 24.8,  # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
+}
+
+DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY = {
+    SoilTextureClass.SAND: (0.07 + 0.17) / 2,
+    SoilTextureClass.LOAMY_SAND: (0.11 + 0.19) / 2,
+    SoilTextureClass.SANDY_LOAM: (0.18 + 0.28) / 2,
+    SoilTextureClass.LOAM: (0.20 + 0.30) / 2,
+    SoilTextureClass.SILT_LOAM: (0.22 + 0.36) / 2,
+    SoilTextureClass.SILT: (0.28 + 0.36) / 2,
+    SoilTextureClass.SILT_CLAY_LOAM: (0.30 + 0.37) / 2,
+    SoilTextureClass.SILTY_CLAY: (0.30 + 0.42) / 2,
+    SoilTextureClass.CLAY: (0.32 + 0.40) / 2,
+}
+DEFAULT_SOIL_WATER_CONTENTS_AT_WILTING_POINT = {
+    SoilTextureClass.SAND: (0.02 + 0.07) / 2,
+    SoilTextureClass.LOAMY_SAND: (0.03 + 0.10) / 2,
+    SoilTextureClass.SANDY_LOAM: (0.06 + 0.16) / 2,
+    SoilTextureClass.LOAM: (0.07 + 0.17) / 2,
+    SoilTextureClass.SILT_LOAM: (0.09 + 0.21) / 2,
+    SoilTextureClass.SILT: (0.12 + 0.22) / 2,
+    SoilTextureClass.SILT_CLAY_LOAM: (0.17 + 0.24) / 2,
+    SoilTextureClass.SILTY_CLAY: (0.17 + 0.29) / 2,
+    SoilTextureClass.CLAY: (0.20 + 0.24) / 2,
 }
 
 
@@ -46,11 +67,14 @@ class EvapotranspirationModel:
         s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
         s.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
         s.add_variable('clim_corr', '1', 'Climate correction term')
+        s.add_variable('cum_evaporation_soil_surface', 'kg m-2', 'Cumulative depth of evaporation from the soil surface layer')
+        s.add_variable('total_evaporable_water', 'kg m-2', 'Total evaporable water')
 
     def initialize(self):
         model = self.model
         roi = model.grid.roi
         s = self.model.state
+        s_et = s.evapotranspiration
 
         # Prepare unique land cover classes occurring in the model domain and their associated pixel
         # locations
@@ -60,7 +84,25 @@ class EvapotranspirationModel:
         for lcc in lccs:
             self.land_cover_class_pixels[lcc] = s.base.land_cover == lcc
 
+        # Prepare unique soil texture classes occurring in the model domain and their associated
+        # pixel locations
+        stcs = np.unique(s.base.land_cover[roi])
+        stcs = stcs[stcs > 0]
+        self.soil_texture_class_pixels = {}
+        for stc in stcs:
+            self.soil_texture_class_pixels[stc] = s.base.land_cover == stc
+
         self._climate_correction()
+
+        # Calculate total evaporable water (eq. (73))
+        for stc, pos in self.soil_texture_class_pixels.items():
+            swc_field_cap = DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY[stc]
+            swc_wilting_point = DEFAULT_SOIL_WATER_CONTENTS_AT_WILTING_POINT[stc]
+            s_et.total_evaporable_water[pos] = (
+                1000
+                * (swc_field_cap - 0.5 * swc_wilting_point)
+                * model.config.evapotranspiration.surface_soil_layer_evaporation_depth
+            )
 
     def _climate_correction(self):
         """
@@ -131,6 +173,8 @@ class EvapotranspirationModel:
         doy = model.date.dayofyear
         s = model.state
         s_et = s.evapotranspiration
+
+        # TODO do not calculate for snow-covered pixels
 
         for lcc, pos in self.land_cover_class_pixels.items():
             crop_coefficient_type = DEFAULT_CROP_COEFFICIENT_TYPES[lcc]

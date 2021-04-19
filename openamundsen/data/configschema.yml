@@ -742,6 +742,12 @@ evapotranspiration:
       type: number
       default: 45. # default value from Allen et al. (1998) for a sub-humid climate with moderate wind speed
 
+   # Depth of the surface soil layer that is subject to drying by way of evaporation (m)
+   # (Z_e in eq. (73) in Allen et al. (1998))
+    surface_soil_layer_evaporation_depth:
+      type: number
+      default: 0.125 # mean of the FAO range (0.10-0.15 m)
+
 liveview:
   type: dict
   default: {}
