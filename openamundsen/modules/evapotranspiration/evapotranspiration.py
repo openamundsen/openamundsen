@@ -1,26 +1,26 @@
 from openamundsen import constants as c, meteo
-from .landcover import LandCoverID
+from .landcover import LandCoverClass
 import numpy as np
 
 
 DEFAULT_CROP_COEFFICIENT_TYPES = {
-    LandCoverID.CONIFEROUS_FOREST: 'dual',
-    LandCoverID.DECIDUOUS_FOREST: 'dual',
+    LandCoverClass.CONIFEROUS_FOREST: 'dual',
+    LandCoverClass.DECIDUOUS_FOREST: 'dual',
 }
 
 DEFAULT_CROP_COEFFICIENTS = {  # (ini, mid, end)
-    LandCoverID.CONIFEROUS_FOREST: (0.95, 0.95, 0.95),
-    LandCoverID.DECIDUOUS_FOREST: (0.4, 1.05, 0.6),
+    LandCoverClass.CONIFEROUS_FOREST: (0.95, 0.95, 0.95),
+    LandCoverClass.DECIDUOUS_FOREST: (0.4, 1.05, 0.6),
 }
 
 DEFAULT_GROWTH_STAGE_LENGTHS = {  # (plant date (DOY), ini, dev, mid, late)
-    LandCoverID.CONIFEROUS_FOREST: (1, 366, 0, 0),
-    LandCoverID.DECIDUOUS_FOREST: (60, 20, 70, 120, 60),
+    LandCoverClass.CONIFEROUS_FOREST: (1, 366, 0, 0),
+    LandCoverClass.DECIDUOUS_FOREST: (60, 20, 70, 120, 60),
 }
 
 DEFAULT_MAX_PLANT_HEIGHTS = {  # maximum plant heights (m), see Table 12 in Allen et al. (1998)
-    LandCoverID.CONIFEROUS_FOREST: 26.,  # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
-    LandCoverID.DECIDUOUS_FOREST: 24.8,  # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
+    LandCoverClass.CONIFEROUS_FOREST: 26.,  # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
+    LandCoverClass.DECIDUOUS_FOREST: 24.8,  # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
 }
 
 

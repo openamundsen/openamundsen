@@ -1,4 +1,4 @@
-class LandCoverID:
+class LandCoverClass:
     WATER = 1
     ROCK = 2
     SETTLEMENT = 3
