@@ -218,7 +218,7 @@ class EvapotranspirationModel:
             if crop_coefficient_type == 'single':
                 raise NotImplementedError
             elif crop_coefficient_type == 'dual':
-                s_et.basal_crop_coeff[pos] = basal_crop_coefficient(
+                s_et.basal_crop_coeff[pos] = crop_coefficient(
                     growing_period_day,
                     length_ini,
                     length_dev,
@@ -346,7 +346,7 @@ def climate_correction(mean_wind_speed, mean_min_rel_hum, plant_height):
     ) * (plant_height / 3)**0.3
 
 
-def basal_crop_coefficient(
+def crop_coefficient(
     growing_period_day,
     length_ini,
     length_dev,
@@ -357,7 +357,8 @@ def basal_crop_coefficient(
     crop_coeff_end,
 ):
     """
-    Calculate the daily basal crop coefficient K_cb following [1].
+    Calculate the crop coefficient Kc or basal crop coefficient K_cb for a given
+    day following [1].
 
     Parameters
     ----------
@@ -387,8 +388,8 @@ def basal_crop_coefficient(
 
     Returns
     -------
-    basal_crop_coefficient : float or ndarray(float)
-        Basal crop coefficient for the given day.
+    crop_coeff : float or ndarray(float)
+        Crop coefficient for the given day.
         Depending on the data types of crop_coeff_mid and crop_coeff_end, this
         is either a scalar or an array.
 
@@ -402,22 +403,22 @@ def basal_crop_coefficient(
     total_length = length_ini + length_dev + length_mid + length_late
 
     if growing_period_day < 1 or growing_period_day > total_length:  # outside of growing period
-        bcc = 0.
+        crop_coeff = 0.
     elif growing_period_day < length_ini:  # initial
-        bcc = crop_coeff_ini
+        crop_coeff = crop_coeff_ini
     elif growing_period_day < (length_ini + length_dev):  # crop development
-        bcc = (  # eq. (66)
+        crop_coeff = (  # eq. (66)
             crop_coeff_ini
             + (growing_period_day - length_ini) / length_dev
             * (crop_coeff_mid - crop_coeff_ini)
         )
     elif growing_period_day < (length_ini + length_dev + length_mid):  # mid season
-        bcc = crop_coeff_mid
+        crop_coeff = crop_coeff_mid
     else:  # late season
-        bcc = (  # eq. (66)
+        crop_coeff = (  # eq. (66)
             crop_coeff_mid
             + (growing_period_day - (length_ini + length_dev + length_mid)) / length_late
             * (crop_coeff_end - crop_coeff_mid)
         )
 
-    return bcc
+    return crop_coeff
