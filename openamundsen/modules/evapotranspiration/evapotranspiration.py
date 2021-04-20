@@ -100,7 +100,7 @@ class EvapotranspirationModel:
         lccs = lccs[lccs > 0]
         self.land_cover_class_pixels = {}
         for lcc in lccs:
-            self.land_cover_class_pixels[lcc] = s.base.land_cover == lcc
+            self.land_cover_class_pixels[lcc] = (s.base.land_cover == lcc) & roi
 
         self._climate_correction()
 
