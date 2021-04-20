@@ -145,8 +145,48 @@ class EvapotranspirationModel:
             )
 
     def evapotranspiration(self):
+        model = self.model
+        doy = model.date.dayofyear
+        s = model.state
+        s_et = s.evapotranspiration
+
         self._reference_evapotranspiration()
-        self.crop_coefficient()
+
+        # TODO do not calculate for snow-covered pixels or when snow is falling
+
+        for lcc, pos in self.land_cover_class_pixels.items():
+            crop_coefficient_type = DEFAULT_CROP_COEFFICIENT_TYPES[lcc]
+            plant_date, length_ini, length_dev, length_mid, length_late = DEFAULT_GROWTH_STAGE_LENGTHS[lcc]
+            crop_coeff_ini, crop_coeff_mid, crop_coeff_end = DEFAULT_CROP_COEFFICIENTS[lcc]
+            growing_period_day = doy - plant_date + 1  # (1-based)
+
+            # Apply climate correction for Kcb_mid and Kcb_end values >= 0.45 (eq. (70))
+            # (convert crop_coeff_mid and crop_coeff_end into fields to allow for possibly
+            # non-uniform climate correction values)
+            if crop_coeff_mid >= 0.45:
+                crop_coeff_mid = np.full(pos.sum(), crop_coeff_mid) + s_et.clim_corr[pos]
+            if crop_coeff_end >= 0.45:
+                crop_coeff_end = np.full(pos.sum(), crop_coeff_end) + s_et.clim_corr[pos]
+
+            crop_coeff = crop_coefficient(
+                growing_period_day,
+                length_ini,
+                length_dev,
+                length_mid,
+                length_late,
+                crop_coeff_ini,
+                crop_coeff_mid,
+                crop_coeff_end,
+            )
+
+            if crop_coefficient_type == 'single':
+                s_et.crop_coeff[pos] = crop_coeff
+                raise NotImplementedError
+            elif crop_coefficient_type == 'dual':
+                s_et.basal_crop_coeff[pos] = crop_coeff
+                self._dual_crop_evapotranspiration(lcc, pos)
+            else:
+                raise NotImplementedError
 
     def _reference_evapotranspiration(self):
         """
@@ -184,49 +224,6 @@ class EvapotranspirationModel:
         )
         ET0 = ET0.clip(min=0)  # do not allow negative values
         s_et.et_ref[roi] = ET0 * model.timestep / c.SECONDS_PER_HOUR  # (kg m-2)
-
-    def crop_coefficient(self):
-        """
-        Calculate the basal crop coefficient K_cb depending on the day of the growing period.
-        """
-        model = self.model
-        doy = model.date.dayofyear
-        s = model.state
-        s_et = s.evapotranspiration
-
-        # TODO do not calculate for snow-covered pixels or when snow is falling
-
-        for lcc, pos in self.land_cover_class_pixels.items():
-            crop_coefficient_type = DEFAULT_CROP_COEFFICIENT_TYPES[lcc]
-            plant_date, length_ini, length_dev, length_mid, length_late = DEFAULT_GROWTH_STAGE_LENGTHS[lcc]
-            crop_coeff_ini, crop_coeff_mid, crop_coeff_end = DEFAULT_CROP_COEFFICIENTS[lcc]
-            growing_period_day = doy - plant_date + 1  # (1-based)
-
-            # Apply climate correction for Kcb_mid and Kcb_end values >= 0.45 (eq. (70))
-            # (convert crop_coeff_mid and crop_coeff_end into fields to allow for possibly
-            # non-uniform climate correction values)
-            if crop_coeff_mid >= 0.45:
-                crop_coeff_mid = np.full(pos.sum(), crop_coeff_mid) + s_et.clim_corr[pos]
-            if crop_coeff_end >= 0.45:
-                crop_coeff_end = np.full(pos.sum(), crop_coeff_end) + s_et.clim_corr[pos]
-
-            if crop_coefficient_type == 'single':
-                raise NotImplementedError
-            elif crop_coefficient_type == 'dual':
-                s_et.basal_crop_coeff[pos] = crop_coefficient(
-                    growing_period_day,
-                    length_ini,
-                    length_dev,
-                    length_mid,
-                    length_late,
-                    crop_coeff_ini,
-                    crop_coeff_mid,
-                    crop_coeff_end,
-                )
-
-                self._dual_crop_evapotranspiration(lcc, pos)
-            else:
-                raise NotImplementedError
 
     def _dual_crop_evapotranspiration(self, lcc, pos):
         model = self.model
