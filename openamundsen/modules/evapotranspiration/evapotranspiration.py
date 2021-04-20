@@ -150,10 +150,10 @@ class EvapotranspirationModel:
             )
 
     def evapotranspiration(self):
-        self.reference_evapotranspiration()
+        self._reference_evapotranspiration()
         self.crop_coefficient()
 
-    def reference_evapotranspiration(self):
+    def _reference_evapotranspiration(self):
         """
         Calculate reference evapotranspiration (ETo).
         """
