@@ -79,12 +79,14 @@ class EvapotranspirationModel:
         s.add_variable('transpiration', 'kg m-2', 'Transpiration')
         s.add_variable('evapotranspiration', 'kg m-2', 'Evapotranspiration')
         s.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
+        s.add_variable('crop_coeff', '1', 'Crop coefficient')
         s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
         s.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
         s.add_variable('clim_corr', '1', 'Climate correction term')
         s.add_variable('cum_evaporation_soil_surface', 'kg m-2', 'Cumulative evaporation from the soil surface layer')
         s.add_variable('total_evaporable_water', 'kg m-2', 'Total evaporable water')
         s.add_variable('readily_evaporable_water', 'kg m-2', 'Readily evaporable water')
+        s.add_variable('deep_percolation_evaporation_layer', 'kg m-2', 'Deep percolation from the evaporation layer')
 
     def initialize(self):
         model = self.model
@@ -124,6 +126,8 @@ class EvapotranspirationModel:
         # Set D_e to TEW at the start of the model run, i.e., assume a long period of time has
         # elapsed since the last wetting
         s_et.cum_evaporation_soil_surface[roi] = s_et.total_evaporable_water[roi]
+
+        s_et.deep_percolation_evaporation_layer[roi] = 0.
 
     def _climate_correction(self):
         """
@@ -195,7 +199,7 @@ class EvapotranspirationModel:
         s = model.state
         s_et = s.evapotranspiration
 
-        # TODO do not calculate for snow-covered pixels
+        # TODO do not calculate for snow-covered pixels or when snow is falling
 
         for lcc, pos in self.land_cover_class_pixels.items():
             crop_coefficient_type = DEFAULT_CROP_COEFFICIENT_TYPES[lcc]
@@ -225,14 +229,11 @@ class EvapotranspirationModel:
                     crop_coeff_end,
                 )
 
-                self._evaporation_coefficient(lcc, pos)
-
-                # Calculate evaporation
-                s_et.evaporation[pos] = s_et.evaporation_coeff[pos] * s_et.et_ref[pos]
+                self._dual_crop_evapotranspiration(lcc, pos)
             else:
                 raise NotImplementedError
 
-    def _evaporation_coefficient(self, lcc, pos):
+    def _dual_crop_evapotranspiration(self, lcc, pos):
         model = self.model
         s = model.state
         s_et = s.evapotranspiration
@@ -253,7 +254,7 @@ class EvapotranspirationModel:
 
         # Calculate fraction of the soil surface covered by vegetation (eq. (76))
         veg_frac = (
-            (s_et.basal_crop_coeff[pos] - min_crop_coeff)
+            (s_et.basal_crop_coeff[pos] - min_crop_coeff).clip(min=0.01)
             / (max_crop_coeff - min_crop_coeff)
         )**(1 + 0.5 * plant_height)
 
@@ -267,7 +268,7 @@ class EvapotranspirationModel:
         # Calculate evaporation reduction coefficient (eq. (74))
         pos2 = s_et.cum_evaporation_soil_surface[pos] > s_et.readily_evaporable_water[pos]
         pos3 = model.global_mask(pos2, pos)
-        evaporation_reduction_coeff = np.ones(pos.shape)  # K_r = 1 when D_e,i-1 <= REW
+        evaporation_reduction_coeff = np.ones(pos.sum())  # K_r = 1 when D_e,i-1 <= REW
         evaporation_reduction_coeff[pos2] = (
             (s_et.total_evaporable_water[pos3] - s_et.cum_evaporation_soil_surface[pos3])
             / (s_et.total_evaporable_water[pos3] - s_et.readily_evaporable_water[pos3])
@@ -275,8 +276,38 @@ class EvapotranspirationModel:
 
         # Calculate evaporation coefficient (eq. (71))
         s_et.evaporation_coeff[pos] = np.minimum(
-            evaporation_reduction_coeff[pos] * (max_crop_coeff - s_et.basal_crop_coeff[pos]),
+            evaporation_reduction_coeff * (max_crop_coeff - s_et.basal_crop_coeff[pos]),
             exposed_wetted_frac * max_crop_coeff,
+        )
+
+        s_et.crop_coeff[pos] = s_et.basal_crop_coeff[pos] + s_et.evaporation_coeff[pos]
+        s_et.evaporation[pos] = s_et.evaporation_coeff[pos] * s_et.et_ref[pos]
+        s_et.transpiration[pos] = s_et.basal_crop_coeff[pos] * s_et.et_ref[pos]
+        s_et.evapotranspiration[pos] = s_et.evaporation[pos] + s_et.transpiration[pos]
+
+        # Calculate water balance
+        precip = s.meteo.rainfall[pos]
+        precip_runoff = 0.  # as suggested by [1]
+        irrigation = 0.
+        soil_transpiration = 0.  # as suggested by [1]
+
+        s_et.deep_percolation_evaporation_layer[pos] = (  # eq. (79)
+            precip - precip_runoff
+            + irrigation / wetted_frac
+            - s_et.deep_percolation_evaporation_layer[pos]
+        ).clip(min=0)
+
+        s_et.cum_evaporation_soil_surface[pos] = (  # eq. (77)
+            s_et.cum_evaporation_soil_surface[pos]
+            - (precip - precip_runoff)
+            - irrigation / wetted_frac
+            + s_et.evaporation[pos] / exposed_wetted_frac
+            + soil_transpiration
+            + s_et.deep_percolation_evaporation_layer[pos]
+        ).clip(min=0)
+        s_et.cum_evaporation_soil_surface[pos] = np.minimum(  # eq. (78)
+            s_et.cum_evaporation_soil_surface[pos],
+            s_et.total_evaporable_water[pos],
         )
 
 
