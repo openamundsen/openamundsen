@@ -146,13 +146,13 @@ class EvapotranspirationModel:
 
     def evapotranspiration(self):
         model = self.model
+        roi = model.grid.roi
         doy = model.date.dayofyear
         s = model.state
         s_et = s.evapotranspiration
+        snowies_roi = s.snow.swe[roi] > 0.
 
         self._reference_evapotranspiration()
-
-        # TODO do not calculate for snow-covered pixels or when snow is falling
 
         for lcc, pos in self.land_cover_class_pixels.items():
             crop_coefficient_type = DEFAULT_CROP_COEFFICIENT_TYPES[lcc]
@@ -178,13 +178,22 @@ class EvapotranspirationModel:
                 crop_coeff_mid,
                 crop_coeff_end,
             )
+            
+            # Derive global masks for pixels with the current land cover class which are
+            # snow-covered and snow-free
+            pos_snow = model.global_mask(pos[roi] & snowies_roi)
+            pos_snowfree = model.global_mask(pos[roi] & (~snowies_roi))
 
             if crop_coefficient_type == 'single':
                 s_et.crop_coeff[pos] = crop_coeff
-                self._single_coeff_et(pos)
+                self._single_coeff_et(pos_snowfree)
+                s_et.evapotranspiration[pos_snow] = 0.
             elif crop_coefficient_type == 'dual':
                 s_et.basal_crop_coeff[pos] = crop_coeff
-                self._dual_coeff_et(pos, lcc)
+                self._dual_coeff_et(pos_snowfree, lcc)
+                s_et.evaporation[pos_snow] = 0.
+                s_et.transpiration[pos_snow] = 0.
+                s_et.evapotranspiration[pos_snow] = 0.
             else:
                 raise NotImplementedError
 
