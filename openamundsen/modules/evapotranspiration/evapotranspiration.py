@@ -181,10 +181,10 @@ class EvapotranspirationModel:
 
             if crop_coefficient_type == 'single':
                 s_et.crop_coeff[pos] = crop_coeff
-                self._single_crop_evapotranspiration(pos)
+                self._single_coeff_et(pos)
             elif crop_coefficient_type == 'dual':
                 s_et.basal_crop_coeff[pos] = crop_coeff
-                self._dual_crop_evapotranspiration(pos, lcc)
+                self._dual_coeff_et(pos, lcc)
             else:
                 raise NotImplementedError
 
@@ -225,11 +225,11 @@ class EvapotranspirationModel:
         ET0 = ET0.clip(min=0)  # do not allow negative values
         s_et.et_ref[roi] = ET0 * model.timestep / c.SECONDS_PER_HOUR  # (kg m-2)
 
-    def _single_crop_evapotranspiration(self, pos):
+    def _single_coeff_et(self, pos):
         s_et = self.model.state.evapotranspiration
         s_et.evapotranspiration[pos] = s_et.crop_coeff[pos] * s_et.et_ref[pos]
 
-    def _dual_crop_evapotranspiration(self, pos, lcc):
+    def _dual_coeff_et(self, pos, lcc):
         model = self.model
         s = model.state
         s_et = s.evapotranspiration
