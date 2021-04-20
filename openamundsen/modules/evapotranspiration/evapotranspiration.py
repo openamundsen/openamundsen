@@ -102,18 +102,13 @@ class EvapotranspirationModel:
         for lcc in lccs:
             self.land_cover_class_pixels[lcc] = s.base.land_cover == lcc
 
-        # Prepare unique soil texture classes occurring in the model domain and their associated
-        # pixel locations
-        stcs = np.unique(s.base.land_cover[roi])
-        stcs = stcs[stcs > 0]
-        self.soil_texture_class_pixels = {}
-        for stc in stcs:
-            self.soil_texture_class_pixels[stc] = s.base.land_cover == stc
-
         self._climate_correction()
 
         # Calculate total evaporable water (eq. (73)) and initialize readily evaporable water
-        for stc, pos in self.soil_texture_class_pixels.items():
+        stcs = np.unique(s_et.soil_texture[roi])
+        stcs = stcs[stcs > 0]
+        for stc in stcs:
+            pos = s_et.soil_texture == stc
             swc_field_cap = DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY[stc]
             swc_wilting_point = DEFAULT_SOIL_WATER_CONTENTS_AT_WILTING_POINT[stc]
             s_et.total_evaporable_water[pos] = (
