@@ -374,7 +374,11 @@ def _resample_dataset(ds, freq, aggregate=False):
 
     # Precipitation is summed up regardless of the aggregation setting
     if 'precip' in df:
-        df_res['precip'] = df['precip'].resample(freq, label='right', closed='right').sum()
+        df_res['precip'] = df['precip'].resample(
+            freq,
+            label='right',
+            closed='right',
+        ).agg(pd.Series.sum, skipna=False)
 
     # Check if the desired frequency is a subset of the original frequency of the
     # data (e.g., resampling hourly to 3-hourly data is ok, but not hourly to
