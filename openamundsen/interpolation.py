@@ -53,7 +53,7 @@ def _idw(x_points, y_points, z_points, x_targets, y_targets, power, smoothing):
     return data
 
 
-def idw(x, y, z, x_targets, y_targets, power=2, smoothing=0):
+def idw(x, y, z, x_targets, y_targets, power=2, smoothing=0, ignore_nan=True):
     """
     Interpolate a set or irregularly distributed points using inverse distance
     weighting.
@@ -77,21 +77,34 @@ def idw(x, y, z, x_targets, y_targets, power=2, smoothing=0):
         Smoothing parameter. Increasing this value will produce smoother
         results, but means that the interpolation is no longer exact.
 
+    ignore_nan : bool, default True
+        Ignore NaN values in the interpolation points.
+
     Returns
     -------
     data : ndarray
         Interpolated values for the target locations.
     """
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    z = np.asarray(z, dtype=float)
+
     assert len(x) == len(y) == len(z)
+
+    if ignore_nan:
+        pos = np.isfinite(x) & np.isfinite(y) & np.isfinite(z)
+        x = x[pos]
+        y = y[pos]
+        z = z[pos]
 
     # If no input points are available return an all-nan array
     if len(x) == 0:
         return np.full(x_targets.shape, np.nan)
 
     return _idw(
-        np.asarray(x, dtype=float),
-        np.asarray(y, dtype=float),
-        np.asarray(z, dtype=float),
+        x,
+        y,
+        z,
         np.asarray(x_targets, dtype=float),
         np.asarray(y_targets, dtype=float),
         float(power),
