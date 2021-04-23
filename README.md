@@ -32,8 +32,8 @@ Main features include:
   desired time resolution if necessary
 * Flexible output of time series including arbitrary model variables for selected point locations in
   NetCDF or CSV format
-* Flexible periodic (e.g., daily or monthly) or sporadic (i.e., for specific dates) output of
-  gridded model variables, optionally aggregated to averages or sums
+* Flexible output of gridded model variables, either for specific dates or periodically (e.g., daily
+  or monthly), optionally aggregated to averages or sums
 * Live view window for displaying the model state in real time
 
 ## Quick start
@@ -68,9 +68,8 @@ which the model should be applied.
 
 #### Spatial input data
 
-The DEM file must be named using the convention `dem_{domain}_{resolution}.asc`, where `{domain}`
-refers to the (freely selectable) name of the respective model domain, and `{resolution}` to the
-spatial resolution in m.
+The DEM file must be named `dem_{domain}_{resolution}.asc`, where `{domain}` refers to the (freely
+selectable) name of the respective model domain, and `{resolution}` to the spatial resolution in m.
 Accordingly, the ROI file (if available) is named `roi_{domain}_{resolution}.asc`.
 
 #### Meteorological input data
@@ -84,9 +83,10 @@ When using CSV as input format, the input files should have one or more of the f
 
 * `date`: timestamp as a `pd.to_datetime`-compatible string (e.g. `YYYY-MM-DD HH:MM`)
 * `temp`: air temperature (K)
-* `precip`: precipitation sum (kg m-2)
-* `sw_in`: global radiation (W m-2)
-* `wind_speed`: wind speed (m s-1)
+* `precip`: precipitation sum (kg m<sup>-2</sup>)
+* `rel_hum`: relative humidity (%)
+* `sw_in`: global radiation (W m<sup>-2</sup>)
+* `wind_speed`: wind speed (m s<sup>-1</sup>)
 
 Additionally, a `stations.csv` file containing the metadata of the point locations must be specified
 containing the following columns:
@@ -257,11 +257,11 @@ snow:
 ```
 
 Only few configuration parameters (`domain`, `start_date`, `end_date`, `resolution`, `timezone` and
-the input data directories) are mandatory, for all other parameters default values are selected
+the input data directories) are mandatory, for all other parameters default values are used
 otherwise.
-A detailed documentation of all model parameters will be available soon.
-In the meantime, the available parameters and their default values can be looked up in
-[configschema.yml](./openamundsen/data/configschema.yml).
+A detailed documentation of all model parameters will be available soon (in
+the meantime, the available parameters and their default values can be looked up in
+[configschema.yml](./openamundsen/data/configschema.yml)).
 
 ### Running the model
 
@@ -274,6 +274,6 @@ import openamundsen as oa
 
 config = oa.read_config('config_file.yml')  # read in configuration file
 model = oa.OpenAmundsen(config)  # create OpenAmundsen object and populate unspecified parameters with default values
-model.initialize()  # read in input data files, initialize state variables, etc.
+model.initialize()  # read in input data files, initialize state variables etc.
 model.run()  # run the model
 ```
