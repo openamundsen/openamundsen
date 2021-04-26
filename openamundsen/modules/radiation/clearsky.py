@@ -139,7 +139,7 @@ def clear_sky_shortwave_irradiance(
 
     dir_irr = 0.9751 * pot_irr * trans_dir
 
-    # Rayleigh-scattered diffuse irradiance 
+    # Rayleigh-scattered diffuse irradiance
     diff_irr_rayleigh = (
         0.79
         * top_atmosphere_rad * np.cos(zenith_angle)
@@ -290,12 +290,15 @@ def _transmittances(
     trans_gases = np.exp(-0.0127 * rel_opt_air_mass_press_corr**0.26)
 
     # Transmittance by water vapor (eq. (3.16))
+    # Note: eq. (3.16) in [1] is missing a closing parenthesis; the exponent 0.6828 should apply to
+    # the entire (1 + 79.034 * w * m_r) term, see also e.g. eq. (13) in
+    # https://doi.org/10.1029/2003JD003973
     precipitable_water_gcm2 = precipitable_water / 10  # kg m-2 (= mm) to g cm-2 (= cm)
     wm = precipitable_water_gcm2 * rel_opt_air_mass
     trans_vapor = (
         1
         - 2.4959 * wm
-        * 1. / (1 + 79.034 * wm**0.6828 + 6.385 * wm)
+        * 1. / ((1 + 79.034 * wm)**0.6828 + 6.385 * wm)
     )
 
     # Transmittance by aerosols (eq. (3.17))
