@@ -115,8 +115,14 @@ def shortwave_irradiance(model, sun_over_horizon):
                                   'cloudiness from previous time step')
                 method = 'constant'
 
-    if method == 'constant':
-        pass  # use cloudiness from previous time step, i.e., do nothing
+    if method == 'constant':  # use cloudiness from previous time step
+        cloud_factor_roi_prev = m.cloud_factor[roi]
+
+        # When there is no cloudiness from the previous time step (i.e. when the model run starts
+        # during nighttime) set cloudiness to a constant value
+        cloud_factor_roi_prev[np.isnan(cloud_factor_roi_prev)] = 0.75
+
+        m.cloud_factor[roi] = cloud_factor_roi_prev
     elif method == 'humidity':
         lr_t = model.config.meteo.interpolation.temperature.lapse_rate[model.date.month - 1]
         lr_td = model.config.meteo.interpolation.humidity.lapse_rate[model.date.month - 1]
