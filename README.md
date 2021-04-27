@@ -58,7 +58,7 @@ When using conda, the recommended steps to install openAMUNDSEN are:
    `conda create --name openamundsen pip`
 3. Activate the environment by running
 
-   `source activate openamundsen` (on macOS or Linux)
+   `source activate openamundsen`
 4. Install openAMUNDSEN by running
 
    `pip install git+https://github.com/openamundsen/openamundsen.git`
