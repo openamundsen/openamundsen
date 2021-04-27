@@ -1,7 +1,6 @@
 # openAMUNDSEN
 
-openAMUNDSEN is a modular snow and hydrological modeling framework written in
-Python.
+openAMUNDSEN is a modular snow and hydroclimatological modeling framework written in Python.
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/17546246/115751189-3afe4c00-a399-11eb-8bfa-87d0a86c2119.gif" />
@@ -18,22 +17,21 @@ temporal resolution of 1–3 h, however its potential applications are very vers
 Main features include:
 
 * Spatial interpolation of scattered meteorological point measurements using a combined lapse
-  rate–inverse distance weighting scheme
+  rate – inverse distance weighting scheme
 * Calculation of solar radiation taking into account terrain slope and orientation, hill shading
-  and transmission losses and gains due to scattering, absorption, and reflections
+  and atmospheric transmission losses and gains due to scattering, absorption, and reflections
 * Adjustment of precipitation using several correction functions for wind-induced undercatch and
   redistribution of snow using terrain-based parameterizations
-* Simulation of the snow and ice mass and energy balance using either a multilayer scheme (based on
-  Essery (2015)) or a bulk-layering scheme using separate layers for new snow, old snow, firn and
-  ice
+* Simulation of the snow and ice mass and energy balance using either a multilayer scheme or a
+  bulk-layering scheme using separate layers for new snow, old snow, firn and ice
 * Calculation of snowmelt using the surface energy balance or a temperature index/enhanced
   temperature index method
-* Usage of arbitrary timesteps (e.g. 10-minutely, daily) while resampling forcing data to the
+* Usage of arbitrary timesteps (e.g. 10 minutes, daily) while resampling forcing data to the
   desired time resolution if necessary
 * Flexible output of time series including arbitrary model variables for selected point locations in
   NetCDF or CSV format
 * Flexible output of gridded model variables, either for specific dates or periodically (e.g., daily
-  or monthly), optionally aggregated to averages or sums
+  or monthly), optionally aggregated to averages or sums in NetCDF or ASCII Grid format
 * Live view window for displaying the model state in real time
 
 ## Quick start
