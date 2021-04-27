@@ -38,11 +38,11 @@ Main features include:
 
 ### Installation
 
-openAMUNDSEN is a Python (3.6+) package which, including its dependencies, is compatible with all
-major platforms (Linux, macOS, Windows) and architectures.
+openAMUNDSEN is a Python (3.6+) package and compatible with all major platforms (Linux, macOS,
+Windows) and architectures.
 
 To help keep its dependencies separated from other Python packages installed on your system, we
-recommend to install it either from within a conda environment (recommended if you are using the
+recommend to install it either from within a conda environment (if you are using the
 [conda](https://docs.conda.io/en/latest/) package manager) or a standard Python [virtual
 environment](https://docs.python.org/3/tutorial/venv.html).
 
@@ -59,20 +59,24 @@ When using conda, the recommended steps to install openAMUNDSEN are:
 3. Activate the environment by running
 
    `source activate openamundsen` (on macOS or Linux)
-   
-   or
-   `conda activate openamundsen` (on Windows)
 4. Install openAMUNDSEN by running
 
    `pip install git+https://github.com/openamundsen/openamundsen.git`
 
-   (This requires a working git installation.
-   If you encounter an error regarding git during running the command, you can install git by
-   running `conda install git` and then re-run the `pip install` command.)
+The above steps should work on Linux and macOS.
+On Windows, please follow these slightly different installation commands (since the required package
+[rasterio](https://github.com/mapbox/rasterio) currently cannot be installed on Windows using pip,
+this package must first be installed using conda):
+
+```
+conda create --name openamundsen python=3.7 pip git rasterio
+conda activate openamundsen
+pip install git+https://github.com/openamundsen/openamundsen.git
+```
 
 #### Using virtualenv
 
-If you want to install openAMUNDSEN in a virtualenv instead:
+If you want to install openAMUNDSEN in a virtual environment instead:
 
 1. Create a virtualenv in the current working directory by running
 
@@ -97,8 +101,9 @@ https://github.com/openamundsen/openamundsen-examples.
 
 Required input data for running the model is at the least:
 
-* a digital elevation model (DEM) as an Arc/Info ASCII Grid (.asc) file in a projected coordinate
-  reference system, with the same spatial resolution in which the model should be run,
+* a digital elevation model (DEM) as an [Arc/Info ASCII
+  Grid](https://en.wikipedia.org/wiki/Esri_grid) (.asc) file in a projected coordinate reference
+  system, with the same spatial resolution in which the model should be run,
 * and time series of the meteorological variables air temperature, precipitation, relative humidity,
   global radiation and wind speed in NetCDF or CSV format.
 
@@ -123,14 +128,16 @@ For each point location, a CSV or NetCDF file covering the entire time series mu
 When using CSV as input format, the input files should have one or more of the following columns
 (columns for variables not available can be omitted):
 
-* `date`: timestamp as a `pd.to_datetime`-compatible string (e.g. `YYYY-MM-DD HH:MM`)
+* `date`: timestamp as a
+  [`pd.to_datetime`](https://pandas.pydata.org/docs/reference/api/pandas.to_datetime.html)-compatible
+  string (e.g. `YYYY-MM-DD HH:MM`)
 * `temp`: air temperature (K)
 * `precip`: precipitation sum (kg m<sup>-2</sup>)
 * `rel_hum`: relative humidity (%)
 * `sw_in`: global radiation (W m<sup>-2</sup>)
 * `wind_speed`: wind speed (m s<sup>-1</sup>)
 
-Additionally, a `stations.csv` file containing the metadata of the point locations must be specified
+Additionally, a `stations.csv` file containing the metadata of the point locations must be provided
 containing the following columns:
 
 * `id`: station ID, corresponding to the filename of the respective data file
