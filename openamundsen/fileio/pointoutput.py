@@ -400,7 +400,7 @@ class PointOutputManager:
                         ds_out = ds_out.drop_vars(var.output_name)
 
                 for point in self.points:
-                    filename = self.model.config.results_dir / f'point_output_{point.name}.csv'
+                    filename = self.model.config.results_dir / f'point_{point.name}.csv'
 
                     ds_out_point = ds_out.sel(point=point.name)
 
