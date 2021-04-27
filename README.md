@@ -38,12 +38,53 @@ Main features include:
 
 ### Installation
 
-openAMUNDSEN requires Python 3.6+.
-To install it including the required dependencies, run
+openAMUNDSEN is a Python (3.6+) package which, including its dependencies, is compatible with all
+major platforms (Linux, macOS, Windows) and architectures.
 
-`pip install git+https://github.com/openamundsen/openamundsen.git`
+To help keep its dependencies separated from other Python packages installed on your system, we
+recommend to install it either from within a conda environment (recommended if you are using the
+[conda](https://docs.conda.io/en/latest/) package manager) or a standard Python [virtual
+environment](https://docs.python.org/3/tutorial/venv.html).
 
-(preferably in a virtualenv or a conda environment).
+#### Using conda
+
+When using conda, the recommended steps to install openAMUNDSEN are:
+
+1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) (recommended) or
+   [Anaconda](https://www.anaconda.com/products/individual#Downloads) by downloading and executing
+   the installer for your operating system and architecture.
+2. From the terminal, create a conda environment for openAMUNDSEN by running
+
+   `conda create --name openamundsen pip`
+3. Activate the environment by running
+
+   `source activate openamundsen` (on macOS or Linux)
+   
+   or
+   `conda activate openamundsen` (on Windows)
+4. Install openAMUNDSEN by running
+
+   `pip install git+https://github.com/openamundsen/openamundsen.git`
+
+   (This requires a working git installation.
+   If you encounter an error regarding git during running the command, you can install git by
+   running `conda install git` and then re-run the `pip install` command.)
+
+#### Using virtualenv
+
+If you want to install openAMUNDSEN in a virtualenv instead:
+
+1. Create a virtualenv in the current working directory by running
+
+   `python3 -m venv openamundsen`
+
+2. Activate the environment by running
+
+   `source openamundsen/bin/activate`
+
+3. Install openAMUNDSEN by running
+
+   `pip install git+https://github.com/openamundsen/openamundsen.git`
 
 ### Examples
 
@@ -61,8 +102,9 @@ Required input data for running the model is at the least:
 * and time series of the meteorological variables air temperature, precipitation, relative humidity,
   global radiation and wind speed in NetCDF or CSV format.
 
-Additionally, a region of interest (ROI) file can be supplied defining a subset of the DEM area in
-which the model should be applied.
+Optionally, a region of interest (ROI) file can be additionally supplied defining a subset of the
+DEM area in which the model should be applied.
+All model calculations are then only performed for the pixels which are marked as 1 in the ROI file.
 
 #### Spatial input data
 
@@ -75,6 +117,8 @@ Accordingly, the ROI file (if available) is named `roi_{domain}_{resolution}.asc
 Meteorological input time series must be provided in the same or higher temporal resolution in which
 the model should be run.
 For each point location, a CSV or NetCDF file covering the entire time series must be provided.
+
+##### CSV input
 
 When using CSV as input format, the input files should have one or more of the following columns
 (columns for variables not available can be omitted):
@@ -95,8 +139,13 @@ containing the following columns:
 * `y`: latitude or projected y coordinate
 * `alt`: altitude (m)
 
-When using NetCDF as input format, for each station a NetCDF file with the following schema should be
-provided (unavailable variables can be omitted):
+##### NetCDF input
+
+When using NetCDF as input format, for each station a NetCDF file containing the meteorological time
+series and the station metadata is read in (i.e., no additional metadata file is required in this
+case).
+The NetCDF files are expected to conform to the following schema (unavailable variables can be
+omitted):
 
 ```
 netcdf dummy {
@@ -152,7 +201,7 @@ The configuration of an openAMUNDSEN model run can either be read in from a
 [YAML](https://en.wikipedia.org/wiki/YAML) file or be passed directly as a dictionary from within
 Python.
 
-This is an example of a model run configuration file:
+This is an example of a YAML configuration file:
 
 ```yaml
 domain: rofental # name of the model domain (corresponding to the domain part of the spatial input data filenames)
