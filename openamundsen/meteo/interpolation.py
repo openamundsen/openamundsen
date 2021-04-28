@@ -325,5 +325,14 @@ def interpolate_param(
         sat_vapor_press = meteo.saturation_vapor_pressure(target_temps, 'water')
         data_interpol = 100 * vapor_press / sat_vapor_press
 
+    # Restrict interpolated values to the range of the point values if extrapolation is disabled in
+    # the parameter config
+    if not param_config['extrapolate'] and len(data) > 0:
+        min_range = np.nanmin(data)
+        max_range = np.nanmax(data)
+
+        if np.isfinite(min_range):
+            data_interpol = np.clip(data_interpol, min_range, max_range)
+
     min_range, max_range = constants.ALLOWED_METEO_VAR_RANGES[param]
     return np.clip(data_interpol, min_range, max_range)

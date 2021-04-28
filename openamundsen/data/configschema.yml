@@ -199,6 +199,10 @@ meteo:
                 - fixed
               default: regression
 
+            extrapolate:
+              type: boolean
+              default: true
+
             lapse_rate:
               type: list
               schema:
@@ -231,6 +235,10 @@ meteo:
                 - fractional
               default: regression
 
+            extrapolate:
+              type: boolean
+              default: true
+
             lapse_rate:
               type: list
               schema:
@@ -262,6 +270,10 @@ meteo:
                 - fixed
               default: regression
 
+            extrapolate:
+              type: boolean
+              default: true
+
             lapse_rate:
               type: list
               schema:
@@ -291,6 +303,10 @@ meteo:
               allowed:
                 - regression
               default: regression
+
+            extrapolate:
+              type: boolean
+              default: false
 
         cloudiness:
           type: dict
