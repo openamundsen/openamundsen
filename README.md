@@ -61,7 +61,7 @@ When using conda, the recommended steps to install openAMUNDSEN are:
    `source activate openamundsen`
 4. Install openAMUNDSEN by running
 
-   `pip install git+https://github.com/openamundsen/openamundsen.git`
+   `pip install openamundsen`
 
 The above steps should work on Linux and macOS.
 On Windows, please follow these slightly different installation commands (since the required package
@@ -69,9 +69,10 @@ On Windows, please follow these slightly different installation commands (since 
 this package must first be installed using conda):
 
 ```
-conda create --name openamundsen python=3.7 pip git rasterio
+conda create --name openamundsen pip
 conda activate openamundsen
-pip install git+https://github.com/openamundsen/openamundsen.git
+conda install --channel=conda-forge rasterio
+pip install openamundsen
 ```
 
 #### Using virtualenv
@@ -88,7 +89,7 @@ If you want to install openAMUNDSEN in a virtual environment instead:
 
 3. Install openAMUNDSEN by running
 
-   `pip install git+https://github.com/openamundsen/openamundsen.git`
+   `pip install openamundsen`
 
 ### Examples
 
