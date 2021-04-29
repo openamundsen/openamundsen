@@ -267,18 +267,18 @@ meteo:
     precipitation:
       trend_method: fractional # use fixed monthly fractional precipitation gradients
       lapse_rate: # (m-1)
-        - 0.00100 # J
-        - 0.00095 # F
-        - 0.00085 # M
-        - 0.00069 # A
-        - 0.00059 # M
-        - 0.00052 # J
-        - 0.00050 # J
-        - 0.00052 # A
-        - 0.00059 # S
-        - 0.00069 # O
-        - 0.00085 # N
-        - 0.00095 # D
+        - 0.00048 # J
+        - 0.00046 # F
+        - 0.00041 # M
+        - 0.00033 # A
+        - 0.00028 # M
+        - 0.00025 # J
+        - 0.00024 # J
+        - 0.00025 # A
+        - 0.00028 # S
+        - 0.00033 # O
+        - 0.00041 # N
+        - 0.00046 # D
 
     humidity:
       trend_method: fixed # use fixed monthly dew point temperature lapse rates
