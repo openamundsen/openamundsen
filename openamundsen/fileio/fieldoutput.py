@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 import netCDF4
 import numpy as np
-from openamundsen import fileio
+from openamundsen import constants, fileio, util
 import pandas as pd
+import pandas.tseries.frequencies
 import pyproj
 import xarray as xr
 
@@ -79,34 +80,7 @@ class FieldOutputManager:
             if 'dates' in field_cfg:
                 write_dates = pd.to_datetime(field_cfg['dates'])
             else:
-                # If a frequency is set, for non-aggregated fields the write dates are assigned
-                # to the start of the respective intervals (e.g. if the model timestep is
-                # hourly and the write frequency is 'D', the write dates are 00:00 of each
-                # day).
-                # For aggregated fields, the write dates are assigned to the end of the
-                # intervals (e.g., in this case the write dates would be 23:00 of each day).
-                if agg is None:
-                    write_dates = pd.date_range(
-                        start=model.dates[0],
-                        end=model.dates[-1],
-                        freq=freq,
-                    )
-                else:
-                    write_dates = pd.period_range(
-                        start=model.dates[0],
-                        end=model.dates[-1],
-                        freq=freq,
-                    ).asfreq(model.config.timestep, how='E').to_timestamp()
-
-                    # Write aggregated fields at the last model timestep even if the last
-                    # aggregation is not yet finished (e.g. if the aggregation is monthly
-                    # but the model run ends in the middle of the month)
-                    if model.dates[-1] not in write_dates:
-                        write_dates = (
-                            write_dates
-                            .append(pd.DatetimeIndex([model.dates[-1]]))
-                            .sort_values()
-                        )
+                write_dates = _freq_write_dates(model.dates, freq, agg is not None)
 
             if output_name is None:
                 output_name = field_cfg.var.split('.')[-1]
@@ -369,3 +343,85 @@ class FieldOutputManager:
                 ds[f'{time_var}_bounds'].encoding['dtype'] = np.float64
 
         return ds
+
+
+def _freq_write_dates(dates, out_freq, agg):
+    """
+    Calculate output dates for gridded outputs when a frequency string is set.
+
+    For non-aggregated fields the write dates are assigned to the start of the
+    respective intervals (e.g. if the model timestep is 1 hour and the write
+    frequency is 'D', the write dates are 00:00 of each day). For aggregated
+    fields, the write dates are assigned to the end of the intervals (e.g., in
+    this case the write dates would be 23:00 of each day).
+
+    Parameters
+    ----------
+    dates : pd.DatetimeIndex
+        Simulation dates.
+
+    out_freq : str
+        Output frequency as a pandas offset string (e.g. '3H', 'M').
+
+    agg : boolean
+        Prepare write dates for aggregated outputs (if True) or for
+        instantaneous values.
+
+    Returns
+    -------
+    write_dates : pd.DatetimeIndex
+    """
+    model_freq = dates.freqstr
+    model_freq_td = util.offset_to_timedelta(model_freq)
+    out_offset = pandas.tseries.frequencies.to_offset(out_freq)
+
+    if not out_offset.is_anchored():
+        # For non-anchored offsets (e.g., '3H', 'D'), the output frequency must be a multiple of
+        # (and not smaller than) the model timestep
+        out_freq_td = util.offset_to_timedelta(out_freq)
+
+        if out_freq_td < model_freq_td:
+            raise ValueError('Output frequency must not be smaller than the model timestep')
+        elif not (out_freq_td.total_seconds() / model_freq_td.total_seconds()).is_integer():
+            raise ValueError('Output frequency must be a multiple of the model timestep')
+
+    if agg:
+        if out_offset.is_anchored():  # e.g. 'M', 'A'
+            if model_freq_td.total_seconds() > constants.HOURS_PER_DAY * constants.SECONDS_PER_HOUR:
+                raise NotImplementedError('Aggregation of gridded outputs with anchored offsets '
+                                          'not supported for timesteps > 1d')
+
+            period_end_dates = (
+                pd.period_range(
+                    start=dates[0],
+                    end=dates[-1],
+                    freq=out_freq,
+                )
+                .asfreq(model_freq, how='end')
+                .to_timestamp()
+            )
+
+            d0 = dates[dates <= period_end_dates[0]][-1]
+            write_dates = period_end_dates + (d0 - period_end_dates[0])
+
+            if period_end_dates[0] - write_dates[0] > pd.Timedelta('1d'):
+                write_dates = write_dates.delete(0)
+
+            # Keep the last output interval only if it is fully covered (e.g., do not write half
+            # months)
+            if write_dates[-1] > dates[-1]:
+                write_dates = write_dates.delete(-1)
+        else:
+            write_dates = pd.date_range(
+                start=dates[0] + out_freq_td - model_freq_td,
+                end=dates[-1],
+                freq=out_freq,
+            )
+    else:
+        write_dates = pd.date_range(
+            start=dates[0],
+            end=dates[-1],
+            freq=out_freq,
+        )
+
+    return write_dates
