@@ -20,6 +20,14 @@ DEFAULT_MAX_PLANT_HEIGHTS = {  # maximum plant heights (m), see Table 12 in Alle
     LandCoverClass.CONIFEROUS_FOREST: 26.,  # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
     LandCoverClass.DECIDUOUS_FOREST: 24.8,  # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
 }
+DEFAULT_ROOTING_DEPTHS = {  # maximum effective rooting depths (m), from Table 22 in Allen et al. (1998)
+    LandCoverClass.CONIFEROUS_FOREST: (1.0 + 1.5) / 2.,
+    LandCoverClass.DECIDUOUS_FOREST: (1.7 + 2.4) / 2.,
+}
+DEFAULT_DEPLETION_FRACTIONS = {  # soil water depletion fractions for no stress, from Table 22 in Allen et al. (1998)
+    LandCoverClass.CONIFEROUS_FOREST: 0.7,
+    LandCoverClass.DECIDUOUS_FOREST: 0.5,
+}
 
 # Default soil water characteristics for different soil types (from Table 19 in Allen et al. (1998))
 DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY = {  # m3 m-3
@@ -74,18 +82,23 @@ class EvapotranspirationModel:
 
         s = model.state.add_category('evapotranspiration')
         s.add_variable('soil_texture', long_name='Soil texture class', dtype=int)  # TODO move to base or soil group eventually
-        s.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
         s.add_variable('evaporation', 'kg m-2', 'Evaporation')
         s.add_variable('transpiration', 'kg m-2', 'Transpiration')
         s.add_variable('evapotranspiration', 'kg m-2', 'Evapotranspiration')
+        s.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
         s.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
         s.add_variable('crop_coeff', '1', 'Crop coefficient')
         s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
         s.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
+        s.add_variable('water_stress_coeff', '1', 'Water stress coefficient')
         s.add_variable('clim_corr', '1', 'Climate correction term')
-        s.add_variable('cum_evaporation_soil_surface', 'kg m-2', 'Cumulative evaporation from the soil surface layer')
+        s.add_variable('cum_soil_surface_depletion', 'kg m-2', 'Cumulative evaporation from the soil surface layer')
+        s.add_variable('cum_root_zone_depletion', 'kg m-2', 'Cumulative evapotranspiration from the root zone')
         s.add_variable('total_evaporable_water', 'kg m-2', 'Total evaporable water')
+        s.add_variable('total_available_water', 'kg m-2', 'Total available water')
         s.add_variable('readily_evaporable_water', 'kg m-2', 'Readily evaporable water')
+        s.add_variable('readily_available_water', 'kg m-2', 'Readily available water')
+        s.add_variable('deep_percolation', 'kg m-2', 'Deep percolation')
         s.add_variable('deep_percolation_evaporation_layer', 'kg m-2', 'Deep percolation from the evaporation layer')
 
     def initialize(self):
@@ -104,13 +117,16 @@ class EvapotranspirationModel:
 
         self._climate_correction()
 
-        # Calculate total evaporable water (eq. (73)) and initialize readily evaporable water
+        # Calculate total evaporable water (eq. (73)), initialize readily evaporable water, and
+        # begin calculation of total available water (eq. (82)) and initial root zone depletion (eq.
+        # (87))
         stcs = np.unique(s_et.soil_texture[roi])
         stcs = stcs[stcs > 0]
         for stc in stcs:
             pos = s_et.soil_texture == stc
             swc_field_cap = DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY[stc]
             swc_wilting_point = DEFAULT_SOIL_WATER_CONTENTS_AT_WILTING_POINT[stc]
+
             s_et.total_evaporable_water[pos] = (
                 1000
                 * (swc_field_cap - 0.5 * swc_wilting_point)
@@ -118,9 +134,38 @@ class EvapotranspirationModel:
             )
             s_et.readily_evaporable_water[pos] = DEFAULT_READILY_EVAPORABLE_WATER[stc]
 
+            # In the calculation of TAW the multiplication by the rooting depth is missing here (as
+            # this is a land cover specific parameter and not soil specific) - follows below
+            s_et.total_available_water[pos] = (
+                1000
+                * (swc_field_cap - swc_wilting_point)
+                # * rooting_depth
+            )
+
+            # Same for the calculation of initial root zone depletion
+            swc = 0.  # assume dry soil (TODO: use actual soil water content)
+            s_et.cum_root_zone_depletion[pos] = (  # eq. (87)
+                1000
+                * (swc_field_cap - swc)
+                # * rooting_depth
+            )
+
+        # Finish calculation of TAW (eq. (82)) and root zone depletion (eq. (87)) and calculate
+        # readily available water (eq. (83))
+        # (depletion fractions are assumed constant; adjustment using ETc as suggested in [1] (p.
+        # 162) is not performed here)
+        for lcc, pos in self.land_cover_class_pixels.items():
+            rooting_depth = DEFAULT_ROOTING_DEPTHS[lcc]
+            depletion_fraction = DEFAULT_DEPLETION_FRACTIONS[lcc]
+            s_et.total_available_water[pos] *= rooting_depth
+            s_et.cum_root_zone_depletion[pos] *= rooting_depth
+            s_et.readily_available_water[pos] = depletion_fraction * s_et.total_available_water[pos]
+            # TODO modify depletion fractions depending on soil type (reduce by 5-10% for fine
+            # textured soils and increase by 5-10% for coarse textured soils) ([1], p. 167)
+
         # Set D_e to TEW at the start of the model run, i.e., assume a long period of time has
         # elapsed since the last wetting
-        s_et.cum_evaporation_soil_surface[roi] = s_et.total_evaporable_water[roi]
+        s_et.cum_soil_surface_depletion[roi] = s_et.total_evaporable_water[roi]
 
         s_et.deep_percolation_evaporation_layer[roi] = 0.
 
@@ -184,18 +229,31 @@ class EvapotranspirationModel:
             pos_snow = model.global_mask(pos[roi] & snowies_roi)
             pos_snowfree = model.global_mask(pos[roi] & (~snowies_roi))
 
+            # Calculate crop ET under standard conditions
             if crop_coefficient_type == 'single':
                 s_et.crop_coeff[pos] = crop_coeff
-                self._single_coeff_et(pos_snowfree)
+                self._single_coeff_crop_et(pos_snowfree)
                 s_et.evapotranspiration[pos_snow] = 0.
             elif crop_coefficient_type == 'dual':
                 s_et.basal_crop_coeff[pos] = crop_coeff
-                self._dual_coeff_et(pos_snowfree, lcc)
+                self._dual_coeff_crop_et(pos_snowfree, lcc)
                 s_et.evaporation[pos_snow] = 0.
                 s_et.transpiration[pos_snow] = 0.
                 s_et.evapotranspiration[pos_snow] = 0.
             else:
                 raise NotImplementedError
+
+            # Adjust ET for soil water stress conditions
+            self._water_stress_coefficient(pos_snowfree)
+            if crop_coefficient_type == 'single':
+                s_et.evapotranspiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]  # eq. (81)
+            elif crop_coefficient_type == 'dual':
+                s_et.transpiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]
+                s_et.evapotranspiration[pos_snowfree] = (
+                    s_et.evaporation[pos_snowfree]
+                    + s_et.transpiration[pos_snowfree]
+                )
+            self._root_zone_water_balance(pos_snowfree)
 
     def _reference_evapotranspiration(self):
         """
@@ -234,11 +292,11 @@ class EvapotranspirationModel:
         ET0 = ET0.clip(min=0)  # do not allow negative values
         s_et.et_ref[roi] = ET0 * model.timestep / c.SECONDS_PER_HOUR  # (kg m-2)
 
-    def _single_coeff_et(self, pos):
+    def _single_coeff_crop_et(self, pos):
         s_et = self.model.state.evapotranspiration
         s_et.evapotranspiration[pos] = s_et.crop_coeff[pos] * s_et.et_ref[pos]
 
-    def _dual_coeff_et(self, pos, lcc):
+    def _dual_coeff_crop_et(self, pos, lcc):
         model = self.model
         s = model.state
         s_et = s.evapotranspiration
@@ -271,11 +329,11 @@ class EvapotranspirationModel:
         exposed_wetted_frac = np.minimum(1 - veg_frac, wetted_frac)
 
         # Calculate evaporation reduction coefficient (eq. (74))
-        pos2 = s_et.cum_evaporation_soil_surface[pos] > s_et.readily_evaporable_water[pos]
+        pos2 = s_et.cum_soil_surface_depletion[pos] > s_et.readily_evaporable_water[pos]
         pos3 = model.global_mask(pos2, pos)
         evaporation_reduction_coeff = np.ones(pos.sum())  # K_r = 1 when D_e,i-1 <= REW
         evaporation_reduction_coeff[pos2] = (
-            (s_et.total_evaporable_water[pos3] - s_et.cum_evaporation_soil_surface[pos3])
+            (s_et.total_evaporable_water[pos3] - s_et.cum_soil_surface_depletion[pos3])
             / (s_et.total_evaporable_water[pos3] - s_et.readily_evaporable_water[pos3])
         )
 
@@ -290,29 +348,72 @@ class EvapotranspirationModel:
         s_et.transpiration[pos] = s_et.basal_crop_coeff[pos] * s_et.et_ref[pos]
         s_et.evapotranspiration[pos] = s_et.evaporation[pos] + s_et.transpiration[pos]
 
-        # Calculate water balance
+        # Initialize water balance variables
         precip = s.meteo.rainfall[pos]
         precip_runoff = 0.  # as suggested by [1]
         irrigation = 0.
         soil_transpiration = 0.  # as suggested by [1]
 
+        # Calculate water balance for the surface soil layer
         s_et.deep_percolation_evaporation_layer[pos] = (  # eq. (79)
             precip - precip_runoff
             + irrigation / wetted_frac
             - s_et.deep_percolation_evaporation_layer[pos]
         ).clip(min=0)
-
-        s_et.cum_evaporation_soil_surface[pos] = (  # eq. (77)
-            s_et.cum_evaporation_soil_surface[pos]
+        s_et.cum_soil_surface_depletion[pos] = (  # eq. (77)
+            s_et.cum_soil_surface_depletion[pos]
             - (precip - precip_runoff)
             - irrigation / wetted_frac
             + s_et.evaporation[pos] / exposed_wetted_frac
             + soil_transpiration
             + s_et.deep_percolation_evaporation_layer[pos]
         ).clip(min=0)
-        s_et.cum_evaporation_soil_surface[pos] = np.minimum(  # eq. (78)
-            s_et.cum_evaporation_soil_surface[pos],
+        s_et.cum_soil_surface_depletion[pos] = np.minimum(  # eq. (78)
+            s_et.cum_soil_surface_depletion[pos],
             s_et.total_evaporable_water[pos],
+        )
+
+    def _water_stress_coefficient(self, pos):
+        model = self.model
+        s = model.state
+        s_et = s.evapotranspiration
+
+        s_et.water_stress_coeff[pos] = (  # eq. (84)
+            (s_et.total_available_water[pos] - s_et.cum_root_zone_depletion[pos])
+            / (s_et.total_available_water[pos] - s_et.readily_available_water[pos])
+        ).clip(min=0, max=1)
+
+    def _root_zone_water_balance(self, pos):
+        """
+        Calculate water balance for the root zone.
+        """
+        model = self.model
+        s = model.state
+        s_et = s.evapotranspiration
+
+        precip = s.meteo.rainfall[pos]
+        precip_runoff = 0.  # as suggested by [1]
+        irrigation = 0.
+        capillary_rise = 0.  # assumed to be zero when the water table is more than about 1 m below the bottom of the root zone [1]
+
+        s_et.deep_percolation[pos] = (  # eq. (88)
+            (precip - precip_runoff)
+            + irrigation
+            - s_et.evapotranspiration[pos]
+            - s_et.cum_root_zone_depletion[pos]
+        ).clip(min=0)
+
+        s_et.cum_root_zone_depletion[pos] = (  # eq. (85)
+            s_et.cum_root_zone_depletion[pos]
+            - (precip - precip_runoff)
+            - irrigation
+            - capillary_rise
+            + s_et.evapotranspiration[pos]
+            + s_et.deep_percolation[pos]
+        ).clip(min=0)
+        s_et.cum_root_zone_depletion[pos] = np.minimum(  # eq. (86)
+            s_et.cum_root_zone_depletion[pos],
+            s_et.total_available_water[pos],
         )
 
 
