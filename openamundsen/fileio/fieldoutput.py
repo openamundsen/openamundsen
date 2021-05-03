@@ -156,17 +156,31 @@ class FieldOutputManager:
                 field.num_aggregations += 1
 
             if date in field.write_dates:
+                date_idx = np.flatnonzero(field.write_dates == date)[0]
+
                 if field.agg is None:
                     data = self.model.state[field.var]
                 else:
                     data = field.data
 
                 if self.format == 'netcdf':
-                    date_idx = np.flatnonzero(field.write_dates == date)[0]
                     ds[field.output_name][date_idx, :, :] = data
                 elif self.format == 'ascii':
+                    if field.agg is None:
+                        date_str = f'{date:%Y-%m-%dT%H%M}'
+                    else:
+                        # Find the start date of the current output interval for the output file
+                        # name
+                        if date_idx == 0:
+                            start_date = self.model.dates[0]
+                        else:
+                            start_date = field.write_dates[date_idx - 1] + pd.Timedelta(
+                                seconds=self.model.timestep)
+
+                        date_str = f'{start_date:%Y-%m-%dT%H%M}_{date:%Y-%m-%dT%H%M}'
+
                     if data.ndim == 2:
-                        filename = self.model.config.results_dir / f'{field.output_name}_{date:%Y-%m-%dT%H%M}.asc'
+                        filename = self.model.config.results_dir / f'{field.output_name}_{date_str}.asc'
                         self.model.logger.debug(f'Writing field {field.var} to {filename}')
                         fileio.write_raster_file(filename, data, self.model.grid.transform)
                     else:
@@ -174,7 +188,7 @@ class FieldOutputManager:
                         for layer_num in range(data.shape[0]):
                             filename = (
                                 self.model.config.results_dir
-                                / f'{field.output_name}_{layer_num}_{date:%Y-%m-%dT%H%M}.asc'
+                                / f'{field.output_name}_{layer_num}_{date_str}.asc'
                             )
                             self.model.logger.debug(f'Writing field {field.var} (layer {layer_num}) to {filename}')
                             fileio.write_raster_file(filename, data[layer_num, :, :], self.model.grid.transform)
