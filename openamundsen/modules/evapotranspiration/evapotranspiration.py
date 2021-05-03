@@ -5,26 +5,32 @@ from .soiltexture import SoilTextureClass
 
 
 DEFAULT_CROP_COEFFICIENT_TYPES = {
+    LandCoverClass.WATER: 'single',
     LandCoverClass.CONIFEROUS_FOREST: 'dual',
     LandCoverClass.DECIDUOUS_FOREST: 'dual',
 }
 DEFAULT_CROP_COEFFICIENTS = {  # (ini, mid, end)
+    LandCoverClass.WATER: (1.25, 0.65, 1.25),
     LandCoverClass.CONIFEROUS_FOREST: (0.95, 0.95, 0.95),
     LandCoverClass.DECIDUOUS_FOREST: (0.4, 1.05, 0.6),
 }
 DEFAULT_GROWTH_STAGE_LENGTHS = {  # (plant date (DOY), ini, dev, mid, late)
+    LandCoverClass.WATER: (1, 0, 183, 0, 183),  # TODO should be adjusted
     LandCoverClass.CONIFEROUS_FOREST: (1, 366, 0, 0),
     LandCoverClass.DECIDUOUS_FOREST: (60, 20, 70, 120, 60),
 }
 DEFAULT_MAX_PLANT_HEIGHTS = {  # maximum plant heights (m), see Table 12 in Allen et al. (1998)
+    LandCoverClass.WATER: 0.,
     LandCoverClass.CONIFEROUS_FOREST: 26.,  # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
     LandCoverClass.DECIDUOUS_FOREST: 24.8,  # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
 }
 DEFAULT_ROOTING_DEPTHS = {  # maximum effective rooting depths (m), from Table 22 in Allen et al. (1998)
+    LandCoverClass.WATER: np.nan,
     LandCoverClass.CONIFEROUS_FOREST: (1.0 + 1.5) / 2.,
     LandCoverClass.DECIDUOUS_FOREST: (1.7 + 2.4) / 2.,
 }
 DEFAULT_DEPLETION_FRACTIONS = {  # soil water depletion fractions for no stress, from Table 22 in Allen et al. (1998)
+    LandCoverClass.WATER: np.nan,
     LandCoverClass.CONIFEROUS_FOREST: 0.7,
     LandCoverClass.DECIDUOUS_FOREST: 0.5,
 }
@@ -244,16 +250,17 @@ class EvapotranspirationModel:
                 raise NotImplementedError
 
             # Adjust ET for soil water stress conditions
-            self._water_stress_coefficient(pos_snowfree)
-            if crop_coefficient_type == 'single':
-                s_et.evapotranspiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]  # eq. (81)
-            elif crop_coefficient_type == 'dual':
-                s_et.transpiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]
-                s_et.evapotranspiration[pos_snowfree] = (
-                    s_et.evaporation[pos_snowfree]
-                    + s_et.transpiration[pos_snowfree]
-                )
-            self._root_zone_water_balance(pos_snowfree)
+            if lcc != LandCoverClass.WATER:
+                self._water_stress_coefficient(pos_snowfree)
+                if crop_coefficient_type == 'single':
+                    s_et.evapotranspiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]  # eq. (81)
+                elif crop_coefficient_type == 'dual':
+                    s_et.transpiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]
+                    s_et.evapotranspiration[pos_snowfree] = (
+                        s_et.evaporation[pos_snowfree]
+                        + s_et.transpiration[pos_snowfree]
+                    )
+                self._root_zone_water_balance(pos_snowfree)
 
     def _reference_evapotranspiration(self):
         """
