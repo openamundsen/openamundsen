@@ -234,6 +234,7 @@ class EvapotranspirationModel:
                 crop_coeff_ini,
                 crop_coeff_mid,
                 crop_coeff_end,
+                model.config.evapotranspiration.min_crop_coefficient,
             )
             
             # Derive global masks for pixels with the current land cover class which are
@@ -475,6 +476,7 @@ def crop_coefficient(
     crop_coeff_ini,
     crop_coeff_mid,
     crop_coeff_end,
+    crop_coeff_min,
 ):
     """
     Calculate the crop coefficient Kc or basal crop coefficient K_cb for a given
@@ -506,6 +508,9 @@ def crop_coefficient(
     crop_coeff_end : float or ndarray(float)
         Crop coefficient for the end of the late season stage.
 
+    crop_coeff_min : float
+        Crop coefficient outside of the growing period.
+
     Returns
     -------
     crop_coeff : float or ndarray(float)
@@ -523,7 +528,7 @@ def crop_coefficient(
     total_length = length_ini + length_dev + length_mid + length_late
 
     if growing_period_day < 1 or growing_period_day > total_length:  # outside of growing period
-        crop_coeff = 0.
+        crop_coeff = crop_coeff_min
     elif growing_period_day < length_ini:  # initial
         crop_coeff = crop_coeff_ini
     elif growing_period_day < (length_ini + length_dev):  # crop development
