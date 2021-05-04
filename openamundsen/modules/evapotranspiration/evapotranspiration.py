@@ -247,6 +247,11 @@ class EvapotranspirationModel:
             pos_snow = model.global_mask(pos[roi] & snowies_roi)
             pos_snowfree = model.global_mask(pos[roi] & (~snowies_roi))
 
+            # Ignore snow cover for water
+            if lcc == LandCoverClass.WATER:
+                pos_snowfree = model.global_mask(pos[roi])
+                pos_snow = model.global_mask(~pos[roi])
+
             # Calculate crop ET under standard conditions
             if crop_coefficient_type == 'single':
                 s_et.crop_coeff[pos] = crop_coeff
