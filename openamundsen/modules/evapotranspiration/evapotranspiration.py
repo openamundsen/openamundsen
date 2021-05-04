@@ -76,6 +76,20 @@ DEFAULT_READILY_EVAPORABLE_WATER = {  # kg m-2
     SoilTextureClass.CLAY: (8. + 12.) / 2,
 }
 
+# Reduce depletion fractions for fine textured soils by 5-10% and increase by 5-10% for coarse
+# textured soils ([1], p. 167)
+DEFAULT_DEPLETION_FRACTION_ADJUSTMENTS = {
+    SoilTextureClass.SAND: 1.10,
+    SoilTextureClass.LOAMY_SAND: 1.075,
+    SoilTextureClass.SANDY_LOAM: 1.05,
+    SoilTextureClass.LOAM: 1.025,
+    SoilTextureClass.SILT_LOAM: 1.0,
+    SoilTextureClass.SILT: 0.975,
+    SoilTextureClass.SILT_CLAY_LOAM: 0.95,
+    SoilTextureClass.SILTY_CLAY: 0.925,
+    SoilTextureClass.CLAY: 0.90,
+}
+
 
 class EvapotranspirationModel:
     """
@@ -129,6 +143,11 @@ class EvapotranspirationModel:
 
         self._climate_correction()
 
+        # Initialize depletion fractions
+        depletion_fraction = np.full((model.grid['rows'], model.grid['cols']), np.nan)
+        for lcc, pos in self.land_cover_class_pixels.items():
+            depletion_fraction[pos] = DEFAULT_DEPLETION_FRACTIONS[lcc]
+
         # Calculate total evaporable water (eq. (73)), initialize readily evaporable water, and
         # begin calculation of total available water (eq. (82)) and initial root zone depletion (eq.
         # (87))
@@ -162,18 +181,20 @@ class EvapotranspirationModel:
                 # * rooting_depth
             )
 
+            # Adjust depletion fraction depending on soil type ([1], p. 167)
+            depletion_fraction[pos] *= DEFAULT_DEPLETION_FRACTION_ADJUSTMENTS[stc]
+
         # Finish calculation of TAW (eq. (82)) and root zone depletion (eq. (87)) and calculate
         # readily available water (eq. (83))
         # (depletion fractions are assumed constant; adjustment using ETc as suggested in [1] (p.
         # 162) is not performed here)
         for lcc, pos in self.land_cover_class_pixels.items():
             rooting_depth = DEFAULT_ROOTING_DEPTHS[lcc]
-            depletion_fraction = DEFAULT_DEPLETION_FRACTIONS[lcc]
             s_et.total_available_water[pos] *= rooting_depth
             s_et.cum_root_zone_depletion[pos] *= rooting_depth
-            s_et.readily_available_water[pos] = depletion_fraction * s_et.total_available_water[pos]
-            # TODO modify depletion fractions depending on soil type (reduce by 5-10% for fine
-            # textured soils and increase by 5-10% for coarse textured soils) ([1], p. 167)
+            s_et.readily_available_water[pos] = (
+                depletion_fraction[pos] * s_et.total_available_water[pos]
+            )
 
         # Set D_e to 0 at the start of the model run, i.e., assume the topsoil is near field
         # capacity following a heavy rain or irrigation
