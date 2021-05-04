@@ -250,6 +250,7 @@ class EvapotranspirationModel:
                 raise NotImplementedError
 
             # Adjust ET for soil water stress conditions
+            s_et.water_stress_coeff[pos] = 1.
             if lcc != LandCoverClass.WATER:
                 self._water_stress_coefficient(pos_snowfree)
                 if crop_coefficient_type == 'single':
