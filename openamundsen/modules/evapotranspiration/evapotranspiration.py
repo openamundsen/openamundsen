@@ -209,6 +209,11 @@ class EvapotranspirationModel:
         s_et = s.evapotranspiration
         snowies_roi = s.snow.swe[roi] > 0.
 
+        s_et.crop_coeff[roi] = np.nan
+        s_et.basal_crop_coeff[roi] = np.nan
+        s_et.evaporation_coeff[roi] = np.nan
+        s_et.water_stress_coeff[roi] = np.nan
+
         self._reference_evapotranspiration()
 
         for lcc, pos in self.land_cover_class_pixels.items():
@@ -257,7 +262,6 @@ class EvapotranspirationModel:
                 raise NotImplementedError
 
             # Adjust ET for soil water stress conditions
-            s_et.water_stress_coeff[pos] = 1.
             if lcc != LandCoverClass.WATER:
                 self._water_stress_coefficient(pos_snowfree)
                 if crop_coefficient_type == 'single':
