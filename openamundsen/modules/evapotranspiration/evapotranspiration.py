@@ -149,7 +149,7 @@ class EvapotranspirationModel:
             )
 
             # Same for the calculation of initial root zone depletion
-            swc = 0.  # assume dry soil (TODO: use actual soil water content)
+            swc = swc_field_cap  # assume root zone is near field capacity following heavy rain or irrigation
             s_et.cum_root_zone_depletion[pos] = (  # eq. (87)
                 1000
                 * (swc_field_cap - swc)
@@ -169,9 +169,9 @@ class EvapotranspirationModel:
             # TODO modify depletion fractions depending on soil type (reduce by 5-10% for fine
             # textured soils and increase by 5-10% for coarse textured soils) ([1], p. 167)
 
-        # Set D_e to TEW at the start of the model run, i.e., assume a long period of time has
-        # elapsed since the last wetting
-        s_et.cum_soil_surface_depletion[roi] = s_et.total_evaporable_water[roi]
+        # Set D_e to 0 at the start of the model run, i.e., assume the topsoil is near field
+        # capacity following a heavy rain or irrigation
+        s_et.cum_soil_surface_depletion[roi] = 0.
 
         s_et.deep_percolation_evaporation_layer[roi] = 0.
 
