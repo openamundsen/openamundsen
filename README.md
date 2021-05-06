@@ -31,7 +31,7 @@ Main features include:
 * Flexible output of time series including arbitrary model variables for selected point locations in
   NetCDF or CSV format
 * Flexible output of gridded model variables, either for specific dates or periodically (e.g., daily
-  or monthly), optionally aggregated to averages or sums in NetCDF or ASCII Grid format
+  or monthly), optionally aggregated to averages or sums in NetCDF, GeoTIFF or ASCII Grid format
 * Live view window for displaying the model state in real time
 
 ## Quick start
@@ -246,7 +246,7 @@ output_data:
 
   # Configuration for gridded outputs
   grids:
-    format: netcdf # NetCDF or ASCII
+    format: netcdf # "netcdf", "ascii", "geotiff" or "memory"
     variables:
       - var: meteo.precip # internal variable name
         name: precip_month # NetCDF output variable name
