@@ -210,15 +210,11 @@ class EvapotranspirationModel:
         s = self.model.state
         s_et = s.evapotranspiration
 
-        # Clip WS/RH values to allowed ranges according to [1]
-        mean_wind_speed = np.clip(model.config.evapotranspiration.mean_wind_speed, 1, 6)
-        mean_min_rel_hum = np.clip(model.config.evapotranspiration.mean_min_humidity, 20, 80)
-
         for lcc, pos in self.land_cover_class_pixels.items():
             plant_height = DEFAULT_MAX_PLANT_HEIGHTS.get(lcc, np.nan)
             s_et.clim_corr[pos] = climate_correction(
-                mean_wind_speed,
-                mean_min_rel_hum,
+                model.config.evapotranspiration.mean_wind_speed,
+                model.config.evapotranspiration.mean_min_humidity,
                 plant_height,
             )
 
@@ -491,6 +487,10 @@ def climate_correction(mean_wind_speed, mean_min_rel_hum, plant_height):
        Irrigation and Drainage Paper 56. FAO, Rome, 300(9): D05109.
        http://www.fao.org/3/x0490e/x0490e00.htm
     """
+    mean_wind_speed = np.clip(mean_wind_speed, 1, 6)
+    mean_min_rel_hum = np.clip(mean_min_rel_hum, 20, 80)
+    plant_height = np.clip(plant_height, 0.1, 10)
+
     return (
         0.04 * (mean_wind_speed - 2)
         - 0.004 * (mean_min_rel_hum - 45)
