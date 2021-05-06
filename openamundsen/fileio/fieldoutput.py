@@ -423,7 +423,7 @@ def _freq_write_dates(dates, out_freq, agg):
 
             # Keep the last output interval only if it is fully covered (e.g., do not write half
             # months)
-            if write_dates[-1] > dates[-1]:
+            if len(write_dates) > 0 and write_dates[-1] > dates[-1]:
                 write_dates = write_dates.delete(-1)
         else:
             write_dates = pd.date_range(
