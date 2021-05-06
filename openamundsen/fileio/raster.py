@@ -85,7 +85,7 @@ def read_raster_file(filename, check_meta=None):
     return data
 
 
-def write_raster_file(filename, data, transform):
+def write_raster_file(filename, data, transform, **kwargs):
     """
     Write a raster file.
 
@@ -98,6 +98,9 @@ def write_raster_file(filename, data, transform):
 
     transform : rasterio.Affine
         Georeferencing transformation parameters.
+
+    **kwargs
+        Additional keyword arguments to be passed over to `rasterio.open`.
     """
     meta = {
         'driver': 'AAIGrid',
@@ -109,6 +112,7 @@ def write_raster_file(filename, data, transform):
         'crs': None,
         'transform': transform,
     }
+    meta.update(kwargs)
 
     with rasterio.open(filename, 'w', **meta) as ds:
         ds.write(data, 1)

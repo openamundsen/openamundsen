@@ -95,6 +95,7 @@ output_data:
           allowed:
             - netcdf
             - ascii
+            - geotiff
           default: netcdf
 
         variables:

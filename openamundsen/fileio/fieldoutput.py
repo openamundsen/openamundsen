@@ -165,7 +165,19 @@ class FieldOutputManager:
 
                 if self.format == 'netcdf':
                     ds[field.output_name][date_idx, :, :] = data
-                elif self.format == 'ascii':
+                elif self.format in ('ascii', 'geotiff'):
+                    if self.format == 'ascii':
+                        ext = 'asc'
+                        rio_meta = {'driver': 'AAIGrid'}
+                        # (do not add CRS information when using AAIGrid output to avoid writing
+                        # .prj files)
+                    elif self.format == 'geotiff':
+                        ext = 'tif'
+                        rio_meta = {
+                            'driver': 'GTiff',
+                            'crs': self.model.grid.crs,
+                        }
+
                     if field.agg is None:
                         date_str = f'{date:%Y-%m-%dT%H%M}'
                     else:
@@ -180,18 +192,29 @@ class FieldOutputManager:
                         date_str = f'{start_date:%Y-%m-%dT%H%M}_{date:%Y-%m-%dT%H%M}'
 
                     if data.ndim == 2:
-                        filename = self.model.config.results_dir / f'{field.output_name}_{date_str}.asc'
+                        filename = self.model.config.results_dir / f'{field.output_name}_{date_str}.{ext}'
                         self.model.logger.debug(f'Writing field {field.var} to {filename}')
-                        fileio.write_raster_file(filename, data, self.model.grid.transform)
+                        fileio.write_raster_file(
+                            filename,
+                            data,
+                            self.model.grid.transform,
+                            **rio_meta,
+                        )
                     else:
                         # For 3-dimensional variables, write each layer as a separate file
                         for layer_num in range(data.shape[0]):
                             filename = (
                                 self.model.config.results_dir
-                                / f'{field.output_name}_{layer_num}_{date_str}.asc'
+                                / f'{field.output_name}_{layer_num}_{date_str}.{ext}'
                             )
-                            self.model.logger.debug(f'Writing field {field.var} (layer {layer_num}) to {filename}')
-                            fileio.write_raster_file(filename, data[layer_num, :, :], self.model.grid.transform)
+                            self.model.logger.debug(f'Writing field {field.var} (layer {layer_num})'
+                                                    ' to {filename}')
+                            fileio.write_raster_file(
+                                filename,
+                                data[layer_num, :, :],
+                                self.model.grid.transform,
+                                **rio_meta,
+                            )
                 else:
                     raise NotImplementedError
 
