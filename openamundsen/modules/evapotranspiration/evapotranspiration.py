@@ -1,5 +1,5 @@
 from openamundsen import constants as c, meteo
-from .landcover import LandCoverClass
+from openamundsen.landcover import LandCoverClass
 import numpy as np
 from .soiltexture import SoilTextureClass
 
