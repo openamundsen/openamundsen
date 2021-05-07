@@ -4,43 +4,6 @@ import numpy as np
 from .soiltexture import SoilTextureClass
 
 
-DEFAULT_CROP_COEFFICIENT_TYPES = {
-    LandCoverClass.WATER: 'single',
-    LandCoverClass.PASTURE: 'dual',
-    LandCoverClass.CONIFEROUS_FOREST: 'dual',
-    LandCoverClass.DECIDUOUS_FOREST: 'dual',
-}
-DEFAULT_CROP_COEFFICIENTS = {  # (ini, mid, end)
-    LandCoverClass.WATER: (1.25, 0.65, 1.25),
-    LandCoverClass.PASTURE: (0.30, 0.90, 0.80),
-    LandCoverClass.CONIFEROUS_FOREST: (0.95, 0.95, 0.95),
-    LandCoverClass.DECIDUOUS_FOREST: (0.4, 1.05, 0.6),
-}
-DEFAULT_GROWTH_STAGE_LENGTHS = {  # (plant date (DOY), ini, dev, mid, late)
-    LandCoverClass.WATER: (1, 0, 183, 0, 183),  # TODO should be adjusted
-    LandCoverClass.PASTURE: (60, 10, 20, 210, 30),  # TODO should be adjusted
-    LandCoverClass.CONIFEROUS_FOREST: (1, 366, 0, 0, 0),
-    LandCoverClass.DECIDUOUS_FOREST: (60, 20, 70, 120, 60),
-}
-DEFAULT_MAX_PLANT_HEIGHTS = {  # maximum plant heights (m), see Table 12 in Allen et al. (1998)
-    LandCoverClass.WATER: 0.,
-    LandCoverClass.PASTURE: (0.15 + 0.30) / 2.,
-    LandCoverClass.CONIFEROUS_FOREST: 26.,  # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
-    LandCoverClass.DECIDUOUS_FOREST: 24.8,  # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
-}
-DEFAULT_ROOTING_DEPTHS = {  # maximum effective rooting depths (m), from Table 22 in Allen et al. (1998)
-    LandCoverClass.WATER: np.nan,
-    LandCoverClass.PASTURE: 0.5,
-    LandCoverClass.CONIFEROUS_FOREST: (1.0 + 1.5) / 2.,
-    LandCoverClass.DECIDUOUS_FOREST: (1.7 + 2.4) / 2.,
-}
-DEFAULT_DEPLETION_FRACTIONS = {  # soil water depletion fractions for no stress, from Table 22 in Allen et al. (1998)
-    LandCoverClass.WATER: np.nan,
-    LandCoverClass.PASTURE: 0.6,
-    LandCoverClass.CONIFEROUS_FOREST: 0.7,
-    LandCoverClass.DECIDUOUS_FOREST: 0.5,
-}
-
 # Default soil water characteristics for different soil types (from Table 19 in Allen et al. (1998))
 DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY = {  # m3 m-3
     SoilTextureClass.SAND: (0.07 + 0.17) / 2,
@@ -146,7 +109,7 @@ class EvapotranspirationModel:
         # Initialize depletion fractions
         depletion_fraction = np.full((model.grid['rows'], model.grid['cols']), np.nan)
         for lcc, pos in self.land_cover_class_pixels.items():
-            depletion_fraction[pos] = DEFAULT_DEPLETION_FRACTIONS[lcc]
+            depletion_fraction[pos] = model.config['land_cover']['classes'][lcc]['depletion_fraction']
 
         # Calculate total evaporable water (eq. (73)), initialize readily evaporable water, and
         # begin calculation of total available water (eq. (82)) and initial root zone depletion (eq.
@@ -189,7 +152,7 @@ class EvapotranspirationModel:
         # (depletion fractions are assumed constant; adjustment using ETc as suggested in [1] (p.
         # 162) is not performed here)
         for lcc, pos in self.land_cover_class_pixels.items():
-            rooting_depth = DEFAULT_ROOTING_DEPTHS[lcc]
+            rooting_depth = model.config['land_cover']['classes'][lcc]['rooting_depth']
             s_et.total_available_water[pos] *= rooting_depth
             s_et.cum_root_zone_depletion[pos] *= rooting_depth
             s_et.readily_available_water[pos] = (
@@ -211,7 +174,7 @@ class EvapotranspirationModel:
         s_et = s.evapotranspiration
 
         for lcc, pos in self.land_cover_class_pixels.items():
-            plant_height = DEFAULT_MAX_PLANT_HEIGHTS.get(lcc, np.nan)
+            plant_height = model.config['land_cover']['classes'][lcc]['max_height']
             s_et.clim_corr[pos] = climate_correction(
                 model.config.evapotranspiration.mean_wind_speed,
                 model.config.evapotranspiration.mean_min_humidity,
@@ -234,9 +197,11 @@ class EvapotranspirationModel:
         self._reference_evapotranspiration()
 
         for lcc, pos in self.land_cover_class_pixels.items():
-            crop_coefficient_type = DEFAULT_CROP_COEFFICIENT_TYPES[lcc]
-            plant_date, length_ini, length_dev, length_mid, length_late = DEFAULT_GROWTH_STAGE_LENGTHS[lcc]
-            crop_coeff_ini, crop_coeff_mid, crop_coeff_end = DEFAULT_CROP_COEFFICIENTS[lcc]
+            lcc_params = model.config['land_cover']['classes'][lcc]
+            crop_coefficient_type = lcc_params['crop_coefficient_type']
+            plant_date = lcc_params['plant_date']
+            length_ini, length_dev, length_mid, length_late = lcc_params['growth_stage_lengths']
+            crop_coeff_ini, crop_coeff_mid, crop_coeff_end = lcc_params['crop_coefficients']
             growing_period_day = doy - plant_date + 1  # (1-based)
 
             # Apply climate correction for Kcb_mid and Kcb_end values >= 0.45 (eq. (70))
@@ -342,7 +307,7 @@ class EvapotranspirationModel:
         s = model.state
         s_et = s.evapotranspiration
 
-        plant_height = DEFAULT_MAX_PLANT_HEIGHTS[lcc]
+        plant_height = model.config['land_cover']['classes'][lcc]['max_height']
         min_crop_coeff = model.config.evapotranspiration.min_crop_coefficient
 
         # Calculate K_c_max (eq. (72))

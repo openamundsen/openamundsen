@@ -1,0 +1,34 @@
+crop_coefficient_type:
+  type: string
+  allowed:
+    - single
+    - dual
+
+crop_coefficients:
+  type: list
+  items:
+    - type: number # ini
+    - type: number # mid
+    - type: number # end
+
+plant_date:
+  type: integer
+  min: 1
+  max: 366
+
+growth_stage_lengths:
+  type: list
+  items:
+    - type: integer # ini
+    - type: integer # dev
+    - type: integer # mid
+    - type: integer # late
+
+max_height: # maximum plant height, see Table 12 in Allen et al. (1998)
+  type: number
+
+rooting_depth: # maximum effective rooting depth, see Table 22 in Allen et al. (1998)
+  type: number
+
+depletion_fraction: # soil water depletion fraction for no stress, see Table 22 in Allen et al. (1998)
+  type: number

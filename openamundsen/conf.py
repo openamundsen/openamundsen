@@ -9,6 +9,9 @@ from pathlib import Path
 import re
 
 
+DATA_DIR = Path(__file__).parent / 'data'
+
+
 class ConfigurationValidator(cerberus.Validator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -87,10 +90,8 @@ def read_config(filename):
 
 
 def parse_config(config):
-    module_dir = Path(__file__).parent
-    schema = util.read_yaml_file(f'{module_dir}/data/configschema.yml')
-
-    v = ConfigurationValidator(schema)
+    _init_schemas()
+    v = ConfigurationValidator(cerberus.schema_registry.get('openamundsen_config'))
     valid = v.validate(config)
 
     if not valid:
@@ -98,9 +99,62 @@ def parse_config(config):
 
     full_config = Configuration.fromDict(v.document)
     full_config['end_date'] = parse_end_date(full_config['end_date'], full_config['timestep'])
+
+    full_config['land_cover']['classes'] = _merge_land_cover_params(
+        full_config['land_cover']['classes']
+    )
+
     validate_config(full_config)
 
     return full_config
+
+
+def _init_schemas():
+    """
+    Read in the validation schemas and add them to the Cerberus registry.
+    """
+    schema_reg = cerberus.schema_registry
+    schemas = schema_reg.all()
+
+    if 'openamundsen_config' not in schemas:
+        config_schema = util.read_yaml_file(f'{DATA_DIR}/configschema.yml')
+        schema_reg.add('openamundsen_config', config_schema)
+
+        lcc_schema = util.read_yaml_file(f'{DATA_DIR}/land_cover_class_schema.yml')
+        schema_reg.add('openamundsen_land_cover_class', lcc_schema)
+
+
+def _merge_land_cover_params(class_params):
+    """
+    Merge the manually set land cover class parameters with the default parameters.
+    """
+    default_config = read_config(f'{DATA_DIR}/land_cover_class_params.yml')
+
+    dict_schema = {
+        'classes': {
+            'type': 'dict',
+            'valuesrules': {
+                'schema': 'openamundsen_land_cover_class',
+            },
+        },
+    }
+    v = cerberus.Validator(dict_schema)
+    valid = v.validate(default_config)
+
+    if not valid:
+        raise ConfigurationError('Invalid land cover configuration\n\n' + util.to_yaml(v.errors))
+
+    default_class_params = Configuration.fromDict(v.document)['classes']
+    merged_params = default_class_params.copy()
+
+    for lcc, lcc_params in class_params.items():
+        if lcc in merged_params:
+            for k, v in lcc_params.items():
+                merged_params[lcc][k] = v
+        else:
+            merged_params[lcc] = lcc_params
+
+    return merged_params
 
 
 def validate_config(config):

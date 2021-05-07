@@ -1,0 +1,68 @@
+classes:
+  # Water
+  1:
+    crop_coefficient_type: single
+    crop_coefficients:
+      - 1.25
+      - 0.65
+      - 1.25
+    plant_date: 1
+    growth_stage_lengths: # TODO should be adjusted
+      - 0
+      - 183
+      - 0
+      - 183
+    max_height: 0
+    rooting_depth: .nan
+    depletion_fraction: .nan
+
+  # Pasture
+  4:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.30
+      - 0.90
+      - 0.80
+    plant_date: 60 # TODO should be adjusted
+    growth_stage_lengths: # TODO should be adjusted
+      - 10
+      - 20
+      - 210
+      - 30
+    max_height: 0.225 # mean of 0.15–0.30
+    rooting_depth: 0.5
+    depletion_fraction: 0.6
+
+  # Coniferous forest
+  5:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.95
+      - 0.95
+      - 0.95
+    plant_date: 1
+    growth_stage_lengths:
+      - 366
+      - 0
+      - 0
+      - 0
+    max_height: 26. # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
+    rooting_depth: 1.25 # mean of 1.0–1.5
+    depletion_fraction: 0.7
+
+  # Deciduous forest
+  6:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.5
+      - 1.05
+      - 0.6
+    plant_date: 60
+    growth_stage_lengths:
+      - 20
+      - 70
+      - 120
+      - 60
+    max_height: 24.8 # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
+    rooting_depth: 2.05 # mean of 1.7–2.4
+    depletion_fraction: 0.5

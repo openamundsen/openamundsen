@@ -668,6 +668,16 @@ snow:
           type: number
           default: -2
 
+land_cover:
+  type: dict
+  default: {}
+  schema:
+    classes:
+      type: dict
+      default: {}
+      valuesrules:
+        schema: openamundsen_land_cover_class
+
 soil:
   type: dict
   default: {}
