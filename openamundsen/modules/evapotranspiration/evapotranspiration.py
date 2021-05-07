@@ -202,6 +202,8 @@ class EvapotranspirationModel:
             plant_date = lcc_params['plant_date']
             length_ini, length_dev, length_mid, length_late = lcc_params['growth_stage_lengths']
             crop_coeff_ini, crop_coeff_mid, crop_coeff_end = lcc_params['crop_coefficients']
+            is_water_body = lcc_params.get('is_water_body', False)
+
             growing_period_day = doy - plant_date + 1  # (1-based)
 
             # Apply climate correction for Kcb_mid and Kcb_end values >= 0.45 (eq. (70))
@@ -223,14 +225,14 @@ class EvapotranspirationModel:
                 crop_coeff_end,
                 model.config.evapotranspiration.min_crop_coefficient,
             )
-            
+
             # Derive global masks for pixels with the current land cover class which are
             # snow-covered and snow-free
             pos_snow = model.global_mask(pos[roi] & snowies_roi)
             pos_snowfree = model.global_mask(pos[roi] & (~snowies_roi))
 
             # Ignore snow cover for water
-            if lcc == LandCoverClass.WATER:
+            if is_water_body:
                 pos_snowfree = model.global_mask(pos[roi])
                 pos_snow = model.global_mask(~pos[roi])
 
@@ -248,8 +250,8 @@ class EvapotranspirationModel:
             else:
                 raise NotImplementedError
 
-            # Adjust ET for soil water stress conditions
-            if lcc != LandCoverClass.WATER:
+            # Adjust ET for soil water stress conditions (except for water bodies)
+            if not is_water_body:
                 self._water_stress_coefficient(pos_snowfree)
                 if crop_coefficient_type == 'single':
                     s_et.evapotranspiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]  # eq. (81)

@@ -32,3 +32,6 @@ rooting_depth: # maximum effective rooting depth, see Table 22 in Allen et al. (
 
 depletion_fraction: # soil water depletion fraction for no stress, see Table 22 in Allen et al. (1998)
   type: number
+
+is_water_body: # indicates if the land cover class is a water body (and hence e.g. soil water stress and snow coverage should be ignored)
+  type: boolean
