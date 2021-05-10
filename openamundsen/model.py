@@ -505,7 +505,7 @@ class OpenAmundsen:
     @property
     def is_first_timestep_of_day(self):
         return (
-            self.first_timestep_of_model_run
+            self.is_first_timestep_of_model_run
             or self.date.day != self.dates[self.date_idx - 1].day
         )
 
