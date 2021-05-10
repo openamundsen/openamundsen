@@ -102,6 +102,24 @@ classes:
     rooting_depth: 1.35
     depletion_fraction: 0.55
 
+  # Natural grassland
+  # TODO: currently uses the same parameters as for pastures; should be adjusted
+  9:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.30
+      - 0.90
+      - 0.80
+    plant_date: 60 # TODO should be adjusted
+    growth_stage_lengths: # TODO should be adjusted
+      - 10
+      - 20
+      - 210
+      - 30
+    max_height: 0.225 # mean of 0.15–0.30
+    rooting_depth: 0.5
+    depletion_fraction: 0.6
+
   # Transitional zone (assumed to be non-leaf dropping with 25% soil coverage)
   10:
     crop_coefficient_type: dual
@@ -120,6 +138,42 @@ classes:
     depletion_fraction: 0.5
     is_sparse: true
     sparse_vegetation_fraction: 0.25
+
+  # Alpine vegetation
+  # TODO: currently uses the same parameters as for pastures; should be adjusted
+  11:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.30
+      - 0.90
+      - 0.80
+    plant_date: 60 # TODO should be adjusted
+    growth_stage_lengths: # TODO should be adjusted
+      - 10
+      - 20
+      - 210
+      - 30
+    max_height: 0.225 # mean of 0.15–0.30
+    rooting_depth: 0.5
+    depletion_fraction: 0.6
+
+  # Wetland
+  # TODO: currently uses the same parameters as for pastures; should be adjusted
+  12:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.30
+      - 0.90
+      - 0.80
+    plant_date: 60 # TODO should be adjusted
+    growth_stage_lengths: # TODO should be adjusted
+      - 10
+      - 20
+      - 210
+      - 30
+    max_height: 0.225 # mean of 0.15–0.30
+    rooting_depth: 0.5
+    depletion_fraction: 0.6
 
   # Fruit
   14:
