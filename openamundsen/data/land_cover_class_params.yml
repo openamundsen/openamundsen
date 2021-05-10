@@ -67,3 +67,96 @@ classes:
     max_height: 24.8 # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
     rooting_depth: 2.05 # mean of 1.7–2.4
     depletion_fraction: 0.5
+
+  # Fruit
+  14:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.45
+      - 1.15
+      - 0.90
+    plant_date: 60
+    growth_stage_lengths:
+      - 40
+      - 60
+      - 80
+      - 64
+    max_height: 4
+    rooting_depth: 1.5
+    depletion_fraction: 0.5
+
+  # Wine
+  15:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.15
+      - 0.65
+      - 0.40
+    plant_date: 60
+    growth_stage_lengths:
+      - 30
+      - 60
+      - 40
+      - 80
+    max_height: 1.75
+    rooting_depth: 1.5
+    depletion_fraction: 0.45
+
+  # Agriculture (potatoes, vegetables, strawberries)
+  16:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.20
+      - 1.10
+      - 0.28
+    plant_date: 92
+    growth_stage_lengths:
+      - 27
+      - 40
+      - 75
+      - 40
+    max_height: 0.37
+    rooting_depth: 0.38
+    depletion_fraction: 0.4
+
+  # Fodder crops (maize, cereal)
+  17:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.15
+      - 1.10
+      - 0.28
+    plant_date: 92
+    growth_stage_lengths:
+      - 28
+      - 55
+      - 66
+      - 33
+    max_height: 1.5
+    rooting_depth: 0.75
+    depletion_fraction: 0.55
+
+  # Grassland agriculture
+  18:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.3
+      - 0.9
+      - 0.8
+    plant_date: 92
+    growth_stage_lengths:
+      - - 11
+        - 33
+        - 27
+        - 11
+      - - 6
+        - 22
+        - 11
+        - 11
+      - - 6
+        - 22
+        - 11
+        - 11
+    max_height: 0.7
+    rooting_depth: 1.0
+    depletion_fraction: 0.55
