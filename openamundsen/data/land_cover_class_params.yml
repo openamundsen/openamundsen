@@ -68,6 +68,40 @@ classes:
     rooting_depth: 2.05 # mean of 1.7–2.4
     depletion_fraction: 0.5
 
+  # Mixed forest (ET parameters currently the same as for coniferous forest)
+  7:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.95
+      - 0.95
+      - 0.95
+    plant_date: 1
+    growth_stage_lengths:
+      - 366
+      - 0
+      - 0
+      - 0
+    max_height: 26. # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
+    rooting_depth: 1.25 # mean of 1.0–1.5
+    depletion_fraction: 0.7
+
+  # Arable land
+  8:
+    crop_coefficient_type: dual
+    crop_coefficients: # FAO standard parameterization for cereals (barley, oats, wheat, maize, ...)
+      - 0.15
+      - 1.10
+      - 0.25
+    plant_date: 120
+    growth_stage_lengths:
+      - 30
+      - 40
+      - 50
+      - 25
+    max_height: 2
+    rooting_depth: 1.35
+    depletion_fraction: 0.55
+
   # Fruit
   14:
     crop_coefficient_type: dual
