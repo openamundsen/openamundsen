@@ -64,6 +64,7 @@ class EvapotranspirationModel:
        Evapotranspiration-Guidelines for Computing Crop Water Requirements-FAO
        Irrigation and Drainage Paper 56. FAO, Rome, 300(9): D05109.
        http://www.fao.org/3/x0490e/x0490e00.htm
+       https://www.researchgate.net/publication/284300773_FAO_Irrigation_and_drainage_paper_No_56
     """
 
     def __init__(self, model):
@@ -200,9 +201,17 @@ class EvapotranspirationModel:
             lcc_params = model.config['land_cover']['classes'][lcc]
             crop_coefficient_type = lcc_params['crop_coefficient_type']
             plant_date = lcc_params['plant_date']
-            length_ini, length_dev, length_mid, length_late = lcc_params['growth_stage_lengths']
             crop_coeff_ini, crop_coeff_mid, crop_coeff_end = lcc_params['crop_coefficients']
             is_water_body = lcc_params.get('is_water_body', False)
+
+            growth_stage_lengths = lcc_params['growth_stage_lengths']
+            if isinstance(growth_stage_lengths[0], int):
+                length_ini, length_dev, length_mid, length_late = growth_stage_lengths
+            elif isinstance(growth_stage_lengths[0], list):  # growing season composed of several subcycles
+                length_ini = [g[0] for g in growth_stage_lengths]
+                length_dev = [g[1] for g in growth_stage_lengths]
+                length_mid = [g[2] for g in growth_stage_lengths]
+                length_late = [g[3] for g in growth_stage_lengths]
 
             growing_period_day = doy - plant_date + 1  # (1-based)
 
@@ -453,6 +462,7 @@ def climate_correction(mean_wind_speed, mean_min_rel_hum, plant_height):
        Evapotranspiration-Guidelines for Computing Crop Water Requirements-FAO
        Irrigation and Drainage Paper 56. FAO, Rome, 300(9): D05109.
        http://www.fao.org/3/x0490e/x0490e00.htm
+       https://www.researchgate.net/publication/284300773_FAO_Irrigation_and_drainage_paper_No_56
     """
     mean_wind_speed = np.clip(mean_wind_speed, 1, 6)
     mean_min_rel_hum = np.clip(mean_min_rel_hum, 20, 80)
@@ -476,25 +486,31 @@ def crop_coefficient(
     crop_coeff_min,
 ):
     """
-    Calculate the crop coefficient Kc or basal crop coefficient K_cb for a given
-    day following [1].
+    Calculate the crop coefficient K_c or basal crop coefficient K_cb for a
+    given day following [1].
+
+    The lengths of the individual crop development stages can either be scalars
+    or arrays. The former corresponds to calculation of a single crop
+    coefficient curve (see [1], p. 127, "Annual crops"), whereas the latter
+    corresponds to a crop coefficient curve composed of a series of subcycles
+    (see [1], p. 127, "K_c curves for forage crops").
 
     Parameters
     ----------
     growing_period_day : int
         Day within the growing period (1 = first day of the period).
 
-    length_ini : int
-        Length of the initial growth stage (days).
+    length_ini : int or array-like
+        Length(s) of the initial growth stage(s) (days).
 
-    length_dev : int
-        Length of the crop development stage (days).
+    length_dev : int or array-like
+        Length(s) of the crop development stage(s) (days).
 
-    length_mid : int
-        Length of the mid-season stage (days).
+    length_mid : int or array-like
+        Length(s) of the mid-season stage(s) (days).
 
-    length_late : int
-        Length of the late season stage (days).
+    length_late : int or array-like
+        Length(s) of the late season stage(s) (days).
 
     crop_coeff_ini : float
         Crop coefficient for the initial stage.
@@ -521,25 +537,42 @@ def crop_coefficient(
        Evapotranspiration-Guidelines for Computing Crop Water Requirements-FAO
        Irrigation and Drainage Paper 56. FAO, Rome, 300(9): D05109.
        http://www.fao.org/3/x0490e/x0490e00.htm
+       https://www.researchgate.net/publication/284300773_FAO_Irrigation_and_drainage_paper_No_56
     """
-    total_length = length_ini + length_dev + length_mid + length_late
+    length_ini = np.atleast_1d(length_ini)
+    length_dev = np.atleast_1d(length_dev)
+    length_mid = np.atleast_1d(length_mid)
+    length_late = np.atleast_1d(length_late)
 
-    if growing_period_day < 1 or growing_period_day > total_length:  # outside of growing period
+    if not (
+        length_ini.shape
+        == length_dev.shape
+        == length_mid.shape
+        == length_late.shape
+    ):
+        raise ValueError('Growth period length arrays have unequal sizes')
+
+    lengths = np.vstack((length_ini, length_dev, length_mid, length_late)).flatten(order='F')
+    lengths_cum = lengths.cumsum()
+    idx = np.searchsorted(np.concatenate([[0], lengths_cum]), growing_period_day)
+    period_num = (idx - 1) % 4
+
+    if idx in (0, len(lengths_cum) + 1):  # outside of growing period
         crop_coeff = crop_coeff_min
-    elif growing_period_day < length_ini:  # initial
+    elif period_num == 0:  # initial
         crop_coeff = crop_coeff_ini
-    elif growing_period_day < (length_ini + length_dev):  # crop development
+    elif period_num == 1:  # crop development
         crop_coeff = (  # eq. (66)
             crop_coeff_ini
-            + (growing_period_day - length_ini) / length_dev
+            + (growing_period_day - lengths_cum[idx - 2]) / lengths[idx - 1]
             * (crop_coeff_mid - crop_coeff_ini)
         )
-    elif growing_period_day < (length_ini + length_dev + length_mid):  # mid season
+    elif period_num == 2:  # mid season
         crop_coeff = crop_coeff_mid
-    else:  # late season
+    elif period_num == 3:  # late season
         crop_coeff = (  # eq. (66)
             crop_coeff_mid
-            + (growing_period_day - (length_ini + length_dev + length_mid)) / length_late
+            + (growing_period_day - lengths_cum[idx - 2]) / lengths[idx - 1]
             * (crop_coeff_end - crop_coeff_mid)
         )
 
