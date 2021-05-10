@@ -101,6 +101,7 @@ class EvapotranspirationModel:
         # locations
         lccs = np.unique(s.base.land_cover[roi])
         lccs = lccs[lccs > 0]
+        lccs = set(lccs) & set(model.config.land_cover.classes.keys())  # calculate ET only for land cover classes with set parameters
         self.land_cover_class_pixels = {}
         for lcc in lccs:
             self.land_cover_class_pixels[lcc] = (s.base.land_cover == lcc) & roi
