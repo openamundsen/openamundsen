@@ -98,9 +98,28 @@ classes:
       - 40
       - 50
       - 25
-    max_height: 2
+    max_height: 2.
     rooting_depth: 1.35
     depletion_fraction: 0.55
+
+  # Transitional zone (assumed to be non-leaf dropping with 25% soil coverage)
+  10:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 1.20
+      - 1.20
+      - 1.20
+    plant_date: 1
+    growth_stage_lengths:
+      - 0
+      - 0
+      - 366
+      - 0
+    max_height: 3.
+    rooting_depth: 5.
+    depletion_fraction: 0.5
+    is_sparse: true
+    sparse_vegetation_fraction: 0.25
 
   # Fruit
   14:
