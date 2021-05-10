@@ -1,5 +1,4 @@
 from openamundsen import constants as c, meteo
-from openamundsen.landcover import LandCoverClass
 from openamundsen.modules.radiation import declination_angle
 import numpy as np
 from .soiltexture import SoilTextureClass
