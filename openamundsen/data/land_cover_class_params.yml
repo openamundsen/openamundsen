@@ -1,5 +1,6 @@
 classes:
   # Water
+  # (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-512.html)
   1:
     crop_coefficient_type: single
     crop_coefficients:
@@ -17,7 +18,7 @@ classes:
     depletion_fraction: .nan
     is_water_body: true
 
-  # Pasture
+  # Pasture (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-231.html)
   4:
     crop_coefficient_type: dual
     crop_coefficients:
@@ -34,7 +35,7 @@ classes:
     rooting_depth: 0.5
     depletion_fraction: 0.6
 
-  # Coniferous forest
+  # Coniferous forest (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-312.html)
   5:
     crop_coefficient_type: dual
     crop_coefficients:
@@ -51,7 +52,7 @@ classes:
     rooting_depth: 1.25 # mean of 1.0–1.5
     depletion_fraction: 0.7
 
-  # Deciduous forest
+  # Deciduous forest (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-311.html)
   6:
     crop_coefficient_type: dual
     crop_coefficients:
@@ -68,7 +69,8 @@ classes:
     rooting_depth: 2.05 # mean of 1.7–2.4
     depletion_fraction: 0.5
 
-  # Mixed forest (ET parameters currently the same as for coniferous forest)
+  # Mixed forest (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-313.html)
+  # (ET parameters currently the same as for coniferous forest)
   7:
     crop_coefficient_type: dual
     crop_coefficients:
@@ -102,7 +104,7 @@ classes:
     rooting_depth: 1.35
     depletion_fraction: 0.55
 
-  # Natural grassland
+  # Natural grassland (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-321.html)
   # TODO: currently uses the same parameters as for pastures; should be adjusted
   9:
     crop_coefficient_type: dual
@@ -120,7 +122,8 @@ classes:
     rooting_depth: 0.5
     depletion_fraction: 0.6
 
-  # Transitional zone (assumed to be non-leaf dropping with 25% soil coverage)
+  # Transitional zone (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-324.html)
+  # (assumed to be non-leaf dropping with 25% soil coverage)
   10:
     crop_coefficient_type: dual
     crop_coefficients:
@@ -139,7 +142,7 @@ classes:
     is_sparse: true
     sparse_vegetation_fraction: 0.25
 
-  # Alpine vegetation
+  # Alpine vegetation (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-322.html)
   # TODO: currently uses the same parameters as for pastures; should be adjusted
   11:
     crop_coefficient_type: dual
@@ -157,7 +160,7 @@ classes:
     rooting_depth: 0.5
     depletion_fraction: 0.6
 
-  # Wetland
+  # Wetland (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-411.html)
   # TODO: currently uses the same parameters as for pastures; should be adjusted
   12:
     crop_coefficient_type: dual
@@ -175,7 +178,7 @@ classes:
     rooting_depth: 0.5
     depletion_fraction: 0.6
 
-  # Fruit
+  # Fruit trees (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-222.html)
   14:
     crop_coefficient_type: dual
     crop_coefficients:
@@ -192,7 +195,7 @@ classes:
     rooting_depth: 1.5
     depletion_fraction: 0.5
 
-  # Wine
+  # Vineyards (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-221.html)
   15:
     crop_coefficient_type: dual
     crop_coefficients:
