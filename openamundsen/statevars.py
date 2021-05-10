@@ -294,7 +294,7 @@ def add_default_state_variables(model):
 
     # Snow variables (shared by all snow models, additional ones might be added from the individual models)
     snow = state.add_category('snow')
-    snow.add_variable('swe', 'kg m-2', 'Snow water equivalent', 'liquid_water_content_of_surface_snow')
+    snow.add_variable('swe', 'kg m-2', 'Snow water equivalent', 'surface_snow_amount')
     snow.add_variable('depth', 'm', 'Snow depth', 'surface_snow_thickness')
     snow.add_variable('melt', 'kg m-2', 'Snow melt', 'surface_snow_melt_amount')
     snow.add_variable('sublimation', 'kg m-2', 'Snow sublimation', 'surface_snow_sublimation_amount')
