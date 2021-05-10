@@ -1,5 +1,6 @@
 from openamundsen import constants as c, meteo
 from openamundsen.landcover import LandCoverClass
+from openamundsen.modules.radiation import declination_angle
 import numpy as np
 from .soiltexture import SoilTextureClass
 
@@ -223,6 +224,17 @@ class EvapotranspirationModel:
                 crop_coeff_mid = np.full(pos.sum(), crop_coeff_mid) + s_et.clim_corr[pos]
             if crop_coeff_end >= 0.45:
                 crop_coeff_end = np.full(pos.sum(), crop_coeff_end) + s_et.clim_corr[pos]
+
+            # Adjust Kcb_mid for sparse vegetation
+            if lcc_params.get('is_sparse', False):
+                crop_coeff_mid = sparse_vegetation_adjustment(
+                    model.config.evapotranspiration.min_crop_coefficient,
+                    crop_coeff_mid,
+                    lcc_params.sparse_vegetation_fraction,
+                    lcc_params.max_height,
+                    np.deg2rad(model.grid.center_lat),
+                    np.deg2rad(declination_angle(doy)),
+                )
 
             crop_coeff = crop_coefficient(
                 growing_period_day,
@@ -578,3 +590,69 @@ def crop_coefficient(
         )
 
     return crop_coeff
+
+
+def sparse_vegetation_adjustment(
+    crop_coeff_min,
+    crop_coeff_mid,
+    veg_frac,
+    plant_height,
+    lat,
+    declination_angle,
+):
+    """
+    Adjust the mid-season crop coefficient for sparsely covered vegetation
+    following [1] (Chapter 9), assuming round or spherical shaped canopies
+    (such as trees).
+
+    Parameters
+    ----------
+    crop_coeff_min : float
+        Crop coefficient outside of the growing period.
+
+    crop_coeff_mid : float or ndarray(float)
+        Unadjusted crop coefficient for the mid-season stage.
+
+    veg_frac : float
+        Fraction of soil surface covered by vegetation.
+
+    plant_height : float
+        Plant height (m).
+
+    lat : float
+        Latitude (radians).
+
+    declination_angle : float
+        Solar declination angle (radians).
+
+    Returns
+    -------
+    crop_coeff_mid_adj : float or ndarray(float)
+        Adjusted mid-season crop coefficient.
+
+    References
+    ----------
+    .. [1] Allen, R.G., Pereira, L.S., Raes, D., et al. (1998). Crop
+       Evapotranspiration-Guidelines for Computing Crop Water Requirements-FAO
+       Irrigation and Drainage Paper 56. FAO, Rome, 300(9): D05109.
+       http://www.fao.org/3/x0490e/x0490e00.htm
+       https://www.researchgate.net/publication/284300773_FAO_Irrigation_and_drainage_paper_No_56
+    """
+    # Mean angle above the sun during the period of maximum evapotranspiration
+    time_angle = 0.  # calculate for solar noon (12:00), i.e., time angle = 0
+    sin_mean_angle_above_sun = (
+        np.sin(lat) * np.sin(declination_angle)
+        + np.cos(lat) * np.cos(declination_angle) * np.cos(time_angle)
+    )
+
+    veg_frac_eff = np.array(veg_frac / sin_mean_angle_above_sun).clip(min=0)
+    crop_coeff_mid_adj = (  # eq. (98)
+        crop_coeff_min +
+        (crop_coeff_mid - crop_coeff_min)
+        * min(
+            1,
+            2 * veg_frac,
+            veg_frac_eff**(1 / (1 + plant_height)),
+        )
+    )
+    return crop_coeff_mid_adj

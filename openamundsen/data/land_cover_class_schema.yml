@@ -36,14 +36,20 @@ growth_stage_lengths:
           - type: integer # mid
           - type: integer # late
 
-max_height: # maximum plant height, see Table 12 in Allen et al. (1998)
+max_height: # maximum plant height, see Allen et al. (1998, Table 12)
   type: number
 
-rooting_depth: # maximum effective rooting depth, see Table 22 in Allen et al. (1998)
+rooting_depth: # maximum effective rooting depth, see Allen et al. (1998, Table 22)
   type: number
 
-depletion_fraction: # soil water depletion fraction for no stress, see Table 22 in Allen et al. (1998)
+depletion_fraction: # soil water depletion fraction for no stress, see Allen et al. (1998, Table 22)
   type: number
 
 is_water_body: # indicates if the land cover class is a water body (and hence e.g. soil water stress and snow coverage should be ignored)
   type: boolean
+
+is_sparse: # indicates sparse vegetation (adjust ET according to Allen et al. (1998, Chapter 9)) - requires specifying sparse_vegetation_fraction
+  type: boolean
+
+sparse_vegetation_fraction: # fraction of the soil surface covered by vegetation in the case of sparse vegetation (assumed constant, i.e. only applicable for non-leaf dropping vegetation)
+  type: number
