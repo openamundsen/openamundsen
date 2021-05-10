@@ -77,6 +77,7 @@ class EvapotranspirationModel:
         s.add_variable('evapotranspiration', 'kg m-2', 'Evapotranspiration')
         s.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
         s.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
+        s.add_variable('plant_height', 'm', 'Plant height')
         s.add_variable('crop_coeff', '1', 'Crop coefficient')
         s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
         s.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
@@ -235,7 +236,7 @@ class EvapotranspirationModel:
                     np.deg2rad(declination_angle(doy)),
                 )
 
-            crop_coeff = crop_coefficient(
+            (crop_coeff, plant_height) = crop_coefficient(
                 growing_period_day,
                 length_ini,
                 length_dev,
@@ -245,7 +246,15 @@ class EvapotranspirationModel:
                 crop_coeff_mid,
                 crop_coeff_end,
                 model.config.evapotranspiration.min_crop_coefficient,
+                max_plant_height=lcc_params.max_height,
             )
+
+            # If scale_height is True, set the plant height to the calculated value according to the
+            # crop coefficient curve, otherwise assume a constant height over the season
+            if lcc_params.get('scale_height', True):
+                s_et.plant_height[pos] = plant_height
+            else:
+                s_et.plant_height[pos] = lcc_params.max_height
 
             # Derive global masks for pixels with the current land cover class which are
             # snow-covered and snow-free
@@ -330,7 +339,7 @@ class EvapotranspirationModel:
         s = model.state
         s_et = s.evapotranspiration
 
-        plant_height = model.config['land_cover']['classes'][lcc]['max_height']
+        plant_height = s_et.plant_height[pos]
         min_crop_coeff = model.config.evapotranspiration.min_crop_coefficient
 
         # Calculate K_c_max (eq. (72))
@@ -496,6 +505,7 @@ def crop_coefficient(
     crop_coeff_mid,
     crop_coeff_end,
     crop_coeff_min,
+    max_plant_height=None,
 ):
     """
     Calculate the crop coefficient K_c or basal crop coefficient K_cb for a
@@ -506,6 +516,11 @@ def crop_coefficient(
     coefficient curve (see [1], p. 127, "Annual crops"), whereas the latter
     corresponds to a crop coefficient curve composed of a series of subcycles
     (see [1], p. 127, "K_c curves for forage crops").
+
+    If the `max_plant_height` parameter is set, in addition to the crop
+    coefficient the plant height for the given day is calculated by multiplying
+    the maximum plant height by Kcb/Kcb_mid, while assuming that the plant
+    height does not decrease with time (see [1], p. 277, footnote 3).
 
     Parameters
     ----------
@@ -536,12 +551,19 @@ def crop_coefficient(
     crop_coeff_min : float
         Crop coefficient outside of the growing period.
 
+    max_plant_height : float, default None
+        Maximum plant height during the mid-season stage.
+
     Returns
     -------
     crop_coeff : float or ndarray(float)
         Crop coefficient for the given day.
         Depending on the data types of crop_coeff_mid and crop_coeff_end, this
         is either a scalar or an array.
+
+    plant_height : float or ndarray(float)
+        Plant height for the given day (only returned if max_plant_height is
+        not None).
 
     References
     ----------
@@ -588,7 +610,27 @@ def crop_coefficient(
             * (crop_coeff_end - crop_coeff_mid)
         )
 
-    return crop_coeff
+    if max_plant_height is not None:
+        if idx in (0, len(lengths_cum) + 1):  # outside of growing period
+            min_plant_height = 0.
+        elif period_num == 0:  # initial
+            min_plant_height = crop_coeff_min / crop_coeff_mid * max_plant_height
+        elif period_num == 1:  # crop development
+            min_plant_height = crop_coeff_ini / crop_coeff_mid * max_plant_height
+        elif period_num == 2:  # mid season
+            min_plant_height = max_plant_height
+        elif period_num == 3:  # late season
+            min_plant_height = max_plant_height
+
+        plant_height = np.maximum(
+            crop_coeff / crop_coeff_mid * max_plant_height,
+            min_plant_height,
+        )
+
+    if max_plant_height is None:
+        return crop_coeff
+    else:
+        return (crop_coeff, plant_height)
 
 
 def sparse_vegetation_adjustment(

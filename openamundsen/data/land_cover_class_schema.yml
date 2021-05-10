@@ -39,6 +39,9 @@ growth_stage_lengths:
 max_height: # maximum plant height, see Allen et al. (1998, Table 12)
   type: number
 
+scale_height: # scale the plant height according to the maximum height and the crop coefficient curve (see Allen et al. (1998, p. 277, footnote 3)
+  type: boolean
+
 rooting_depth: # maximum effective rooting depth, see Allen et al. (1998, Table 22)
   type: number
 
