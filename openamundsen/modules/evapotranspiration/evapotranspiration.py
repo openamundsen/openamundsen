@@ -313,8 +313,8 @@ class EvapotranspirationModel:
         s = model.state
         s_et = s.evapotranspiration
 
-        s_et.soil_heat_flux[roi] = 0.1 * s.meteo.net_radiation[roi]  # eq. (45)
-        # XXX use 0.5 for nighttime periods (46)
+        soil_heat_flux_factor = 0.1 if model.sun_params['sun_over_horizon'] else 0.5
+        s_et.soil_heat_flux[roi] = soil_heat_flux_factor * s.meteo.net_radiation[roi]  # eq. (45-46)
 
         Wm2_to_MJm2h = 1e-6 * c.SECONDS_PER_HOUR  # conversion factor from W m-2 (= J m-2 s-1) to MJ m-2 h-1
 
