@@ -192,6 +192,8 @@ def sun_parameters(date, lon, lat, timezone):
         - 'declination_angle': declination angle (degrees)
         - 'equation_of_time': equation of time (minutes)
         - 'sun_vector': vector describing the position of the sun
+        - 'zenith_angle': zenith angle (degrees)
+        - 'sun_over_horizon': True if the sun is over the horizon
     """
     date = pd.to_datetime(date)
     eot = equation_of_time(date.dayofyear)
@@ -199,6 +201,7 @@ def sun_parameters(date, lon, lat, timezone):
     ha = hour_angle(date, timezone, lon, eot)
     dec = declination_angle(date.dayofyear)
     sv = sun_vector(lat, ha, dec)
+    zenith_angle = np.rad2deg(np.arccos(sv[2]))
 
     return {
         'day_angle': da,
@@ -206,4 +209,6 @@ def sun_parameters(date, lon, lat, timezone):
         'declination_angle': dec,
         'equation_of_time': eot,
         'sun_vector': sv,
+        'zenith_angle': zenith_angle,
+        'sun_over_horizon': zenith_angle < 90,
     }

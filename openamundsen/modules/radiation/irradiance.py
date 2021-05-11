@@ -14,14 +14,16 @@ def irradiance(model):
         model.grid.center_lat,
         model.config.timezone,
     )
-
-    day_angle = sun_params['day_angle']
-    sun_vec = sun_params['sun_vector']
-    zenith_angle = np.rad2deg(np.arccos(sun_vec[2]))
-    sun_over_horizon = zenith_angle < 90
-
-    clear_sky_shortwave_irradiance(model, day_angle, sun_vec, sun_over_horizon)
-    shortwave_irradiance(model, sun_over_horizon)
+    clear_sky_shortwave_irradiance(
+        model,
+        sun_params['day_angle'],
+        sun_params['sun_vector'],
+        sun_params['sun_over_horizon'],
+    )
+    shortwave_irradiance(
+        model,
+        sun_params['sun_over_horizon'],
+    )
     longwave_irradiance(model)
 
 
