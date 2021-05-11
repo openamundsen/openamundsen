@@ -1,5 +1,4 @@
 from openamundsen import constants as c, meteo
-from openamundsen.modules.radiation import declination_angle
 import numpy as np
 from .soiltexture import SoilTextureClass
 
@@ -245,7 +244,7 @@ class EvapotranspirationModel:
                     lcc_params.sparse_vegetation_fraction,
                     lcc_params.max_height,
                     np.deg2rad(model.grid.center_lat),
-                    np.deg2rad(declination_angle(doy)),
+                    model.sun_params['declination_angle'],
                 )
 
             (crop_coeff, plant_height) = crop_coefficient(
