@@ -504,9 +504,9 @@ class EvapotranspirationModel:
         )
 
         evaporation_Wm2 = (  # evaporation (W m-2) (eq. (3))
-            D * (Rn - G)
-            + rhoa * cp * (es - ea) / ra
-        ) / (D + gamma * (1 + rs / ra))
+            (D * (Rn - G) + rhoa * cp * (es - ea) / ra)
+            / (D + gamma * (1 + rs / ra))
+        ).clip(min=0)
         s_et.evaporation[pos] = np.minimum(  # (kg m-2)
             evaporation_Wm2 / c.LATENT_HEAT_OF_VAPORIZATION * model.timestep,
             s_et.sealed_interception[pos],
