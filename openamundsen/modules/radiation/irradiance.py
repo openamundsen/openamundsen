@@ -8,43 +8,36 @@ from openamundsen import (
 
 
 def irradiance(model):
-    sun_params = modules.radiation.sun_parameters(
+    model.sun_params = modules.radiation.sun_parameters(
         model.date,
         model.grid.center_lon,
         model.grid.center_lat,
         model.config.timezone,
     )
-    clear_sky_shortwave_irradiance(
-        model,
-        sun_params['day_angle'],
-        sun_params['sun_vector'],
-        sun_params['sun_over_horizon'],
-    )
-    shortwave_irradiance(
-        model,
-        sun_params['sun_over_horizon'],
-    )
+
+    clear_sky_shortwave_irradiance(model)
+    shortwave_irradiance(model)
     longwave_irradiance(model)
 
 
-def clear_sky_shortwave_irradiance(model, day_angle, sun_vec, sun_over_horizon):
+def clear_sky_shortwave_irradiance(model):
     roi = model.grid.roi
 
     mean_surface_albedo = model.state.surface.albedo[roi].mean()
 
-    if sun_over_horizon:
+    if model.sun_params['sun_over_horizon']:
         model.logger.debug('Calculating shadows')
         shadows = modules.radiation.shadows(
             model.state.base.dem,
             model.grid.resolution,
-            sun_vec,
+            model.sun_params['sun_vector'],
             num_sweeps=model.config.meteo.radiation.num_shadow_sweeps,
         )
 
         model.logger.debug('Calculating clear-sky shortwave irradiance')
         dir_irr, diff_irr = modules.radiation.clear_sky_shortwave_irradiance(
-            day_angle,
-            sun_vec,
+            model.sun_params['day_angle'],
+            model.sun_params['sun_vector'],
             shadows,
             model.state.base.dem,
             model.state.base.svf,
@@ -68,7 +61,7 @@ def clear_sky_shortwave_irradiance(model, day_angle, sun_vec, sun_over_horizon):
     model.state.meteo.diff_in_clearsky[roi] = diff_irr[roi]
 
 
-def shortwave_irradiance(model, sun_over_horizon):
+def shortwave_irradiance(model):
     model.logger.debug('Calculating actual shortwave irradiance')
     cloud_config = model.config.meteo.interpolation.cloudiness
     roi = model.grid.roi
@@ -93,7 +86,7 @@ def shortwave_irradiance(model, sun_over_horizon):
     num_temp_hum_stations = len(ds_temp_hum.station)
 
     method = 'constant'
-    if sun_over_horizon:
+    if model.sun_params['sun_over_horizon']:
         if cloud_config['day_method'] == 'clear_sky_fraction':
             if num_rad_stations > 0:
                 method = 'clear_sky_fraction'
