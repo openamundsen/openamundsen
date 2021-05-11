@@ -202,6 +202,8 @@ class EvapotranspirationModel:
         s_et.evaporation_coeff[roi] = np.nan
         s_et.water_stress_coeff[roi] = np.nan
 
+        model.logger.debug('Calculating evapotranspiration')
+
         self._reference_evapotranspiration()
 
         for lcc, pos in self.land_cover_class_pixels.items():
