@@ -88,9 +88,9 @@ INTERPOLATION_CONFIG_PARAM_MAPPINGS = {
 }
 
 ALLOWED_METEO_VAR_RANGES = {
-    'temp': (-273.15, None),
+    'temp': (0, None),
     'precip': (0, None),
     'rel_hum': (0, 100),
     'sw_in': (0, None),
-    'wind_speed': (0, None),
+    'wind_speed': (0.1, None),
 }
