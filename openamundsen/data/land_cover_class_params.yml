@@ -18,6 +18,26 @@ classes:
     depletion_fraction: .nan
     is_water_body: true
 
+  # Bare rock (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-332.html)
+  2:
+    is_sealed: true
+    albedo: 0.4
+    emissivity: 0.92
+    max_sealed_interception: 0.935
+    max_height: 1.9
+    depletion_fraction: .nan
+    rooting_depth: .nan
+
+  # Settlement (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-111.html)
+  3:
+    is_sealed: true
+    albedo: 0.4
+    emissivity: 0.92
+    max_sealed_interception: 0.935
+    max_height: 1.9
+    depletion_fraction: .nan
+    rooting_depth: .nan
+
   # Pasture (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-231.html)
   4:
     crop_coefficient_type: dual

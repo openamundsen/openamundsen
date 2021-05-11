@@ -91,6 +91,7 @@ class EvapotranspirationModel:
         s.add_variable('readily_available_water', 'kg m-2', 'Readily available water')
         s.add_variable('deep_percolation', 'kg m-2', 'Deep percolation')
         s.add_variable('deep_percolation_evaporation_layer', 'kg m-2', 'Deep percolation from the evaporation layer')
+        s.add_variable('sealed_interception', 'kg m-2', 'Interception for sealed surfaces')
 
     def initialize(self):
         model = self.model
@@ -168,6 +169,11 @@ class EvapotranspirationModel:
 
         s_et.deep_percolation_evaporation_layer[roi] = 0.
 
+        # Initialize sealed interception for sealed surfaces
+        for lcc, pos in self.land_cover_class_pixels.items():
+            if model.config['land_cover']['classes'][lcc].get('is_sealed', False):
+                s_et.sealed_interception[pos] = 0.
+
     def _climate_correction(self):
         """
         Calculate climate correction term for the crop coefficients.
@@ -201,6 +207,12 @@ class EvapotranspirationModel:
 
         for lcc, pos in self.land_cover_class_pixels.items():
             lcc_params = model.config['land_cover']['classes'][lcc]
+
+            if lcc_params.get('is_sealed', False):
+                # Sealed surfaces are treated separately
+                self._sealed_evaporation(pos, lcc)
+                continue
+
             crop_coefficient_type = lcc_params['crop_coefficient_type']
             plant_date = lcc_params['plant_date']
             crop_coeff_ini, crop_coeff_mid, crop_coeff_end = lcc_params['crop_coefficients']
@@ -311,8 +323,8 @@ class EvapotranspirationModel:
         G = s_et.soil_heat_flux[roi] * Wm2_to_MJm2h  # soil heat flux density (MJ m-2 h-1)
         T = s.meteo.temp[roi] - c.T0  # air temperature (°C)
         D = 4098 * (0.6108 * np.exp(17.27 * T / (T + 273.3))) / (T + 273.3)**2  # slope of the relationship between saturation vapor pressure and temperature (kPa °C-1) (eq. (13))
-        g = s.meteo.psych_const[roi] * 1e-3  # psychrometric constant (kPa °C-1)
-        e = s.meteo.sat_vap_press[roi] * 1e-3  # saturation vapor pressure (kPa)
+        gamma = s.meteo.psych_const[roi] * 1e-3  # psychrometric constant (kPa °C-1)
+        es = s.meteo.sat_vap_press[roi] * 1e-3  # saturation vapor pressure (kPa)
         ea = s.meteo.vap_press[roi] * 1e-3  # actual vapor pressure (kPa)
 
         grass_roughness_length = 0.03  # (m)
@@ -324,8 +336,8 @@ class EvapotranspirationModel:
         )
 
         ET0 = (  # reference evapotranspiration (kg m-2 h-1) (eq. (53))
-            (0.408 * D * (Rn - G) + g * 37 / (T + 273) * u2 * (e - ea))
-            / (D + g * (1 + 0.34 * u2))
+            (0.408 * D * (Rn - G) + gamma * 37 / (T + 273) * u2 * (es - ea))
+            / (D + gamma * (1 + 0.34 * u2))
         )
         ET0 = ET0.clip(min=0)  # do not allow negative values
         s_et.et_ref[roi] = ET0 * model.timestep / c.SECONDS_PER_HOUR  # (kg m-2)
@@ -453,6 +465,57 @@ class EvapotranspirationModel:
             s_et.cum_root_zone_depletion[pos],
             s_et.total_available_water[pos],
         )
+
+    def _sealed_evaporation(self, pos, lcc):
+        model = self.model
+        s = model.state
+        s_et = s.evapotranspiration
+        lcc_params = model.config.land_cover.classes[lcc]
+        max_interception = lcc_params.max_sealed_interception
+
+        s_et.sealed_interception[pos] += s.meteo.rainfall[pos]
+        runoff = (s_et.sealed_interception[pos] - max_interception).clip(min=0)
+        s_et.sealed_interception[pos] -= runoff
+        s_et.deep_percolation[pos] = runoff  # runoff is currently treated as deep percolation for sealed surfaces (should be improved)
+
+        rs = 0.  # stomatal resistance (s m-1)
+        zom = 0.123 * lcc_params.max_height  # roughness length governing momentum transfer (m)
+        zoh = 0.1 * zom  # roughness length governing heat and vapor (m)
+        d = 2./3 * lcc_params.max_height  # zero-plane displacement height (m)
+        ra = (  # aerodynamic resistance (s m-1) (eq. (4))
+            np.log((model.config.meteo.measurement_height.wind - d) / zom)
+            * np.log((model.config.meteo.measurement_height.temperature - d) / zoh)
+            / (c.VON_KARMAN**2 * s.meteo.wind_speed[pos])
+        )
+
+        Rn = s.meteo.net_radiation[pos]  # net radiation (W m-2)
+        G = s_et.soil_heat_flux[pos]  # soil heat flux density (W m-2)
+        T = s.meteo.temp[pos] - c.T0  # air temperature (°C)
+        D = 1e3 * 4098 * (0.6108 * np.exp(17.27 * T / (T + 273.3))) / (T + 273.3)**2  # slope of the relationship between saturation vapor pressure and temperature (Pa K-1) (eq. (13))
+
+        gamma = s.meteo.psych_const[pos]  # psychrometric constant (Pa K-1)
+        es = s.meteo.sat_vap_press[pos]  # saturation vapor pressure (Pa)
+        ea = s.meteo.vap_press[pos]  # actual vapor pressure (Pa)
+
+        Tv = 1.01 * s.meteo.temp[pos]  # virtual temperature (K)
+        rhoa = s.meteo.atmos_press[pos] / (c.GAS_CONSTANT_DRY_AIR * Tv)  # air density at constant pressure (kg m-3)
+        cp = (  # specific heat at constant pressure (J kg-1 K-1) (p. 26)
+            gamma * 0.622 * c.LATENT_HEAT_OF_VAPORIZATION
+            / s.meteo.atmos_press[pos]
+        )
+
+        evaporation_Wm2 = (  # evaporation (W m-2) (eq. (3))
+            D * (Rn - G)
+            + rhoa * cp * (es - ea) / ra
+        ) / (D + gamma * (1 + rs / ra))
+        s_et.evaporation[pos] = np.minimum(  # (kg m-2)
+            evaporation_Wm2 / c.LATENT_HEAT_OF_VAPORIZATION * model.timestep,
+            s_et.sealed_interception[pos],
+        )
+        s_et.sealed_interception[pos] -= s_et.evaporation[pos]
+
+        s_et.transpiration[pos] = 0.
+        s_et.evapotranspiration[pos] = s_et.evaporation[pos] + s_et.transpiration[pos]
 
 
 def climate_correction(mean_wind_speed, mean_min_rel_hum, plant_height):

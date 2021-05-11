@@ -51,8 +51,20 @@ depletion_fraction: # soil water depletion fraction for no stress, see Allen et 
 is_water_body: # indicates if the land cover class is a water body (and hence e.g. soil water stress and snow coverage should be ignored)
   type: boolean
 
+is_sealed: # indicates sealed surfaces (rocks, buildings, etc.)
+  type: boolean
+
 is_sparse: # indicates sparse vegetation (adjust ET according to Allen et al. (1998, Chapter 9)) - requires specifying sparse_vegetation_fraction
   type: boolean
 
 sparse_vegetation_fraction: # fraction of the soil surface covered by vegetation in the case of sparse vegetation (assumed constant, i.e. only applicable for non-leaf dropping vegetation)
+  type: number
+
+albedo: # surface albedo (only required for sealed surfaces)
+  type: number
+
+emissivity: # surface emissivity (only required for sealed surfaces)
+  type: number
+
+max_sealed_interception: # maximum interception for sealed surfaces (kg m-2)
   type: number
