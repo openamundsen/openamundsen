@@ -466,6 +466,10 @@ class EvapotranspirationModel:
         )
 
     def _sealed_evaporation(self, pos, lcc):
+        """
+        Calculate evaporation for sealed surfaces using the Penman-Monteith
+        equation.
+        """
         model = self.model
         s = model.state
         s_et = s.evapotranspiration
