@@ -60,7 +60,9 @@ def read_meteo_data_netcdf(
         logger.info(f'Reading meteo file: {nc_file}')
 
         ds = read_netcdf_meteo_file(nc_file, start_date=start_date, end_date=end_date)
-        ds = _resample_dataset(ds, freq, aggregate=aggregate)
+
+        if ds.time.to_index().inferred_freq != freq:
+            ds = _resample_dataset(ds, freq, aggregate=aggregate)
 
         if ds.dims['time'] == 0:
             logger.warning('File contains no meteo data for the specified period')
@@ -140,7 +142,9 @@ def read_meteo_data_csv(
         )
 
         ds = ds.sel(time=slice(start_date, end_date))
-        ds = _resample_dataset(ds, freq, aggregate=aggregate)
+
+        if ds.time.to_index().inferred_freq != freq:
+            ds = _resample_dataset(ds, freq, aggregate=aggregate)
 
         if ds.dims['time'] == 0:
             logger.warning('File contains no meteo data for the specified period')
