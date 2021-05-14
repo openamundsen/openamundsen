@@ -428,6 +428,7 @@ class OpenAmundsen:
 
         # reorder variables (only for aesthetic reasons)
         var_order = [
+            'station_name',
             'lon',
             'lat',
             'alt',
