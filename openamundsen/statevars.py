@@ -320,3 +320,9 @@ def add_default_state_variables(model):
     soil.add_variable('therm_cond', 'W m-1 K-1', 'Thermal conductivity of soil', dim3=num_soil_layers)
     soil.add_variable('therm_cond_minerals', 'W m-1 K-1', 'Thermal conductivity of soil minerals')
     soil.add_variable('therm_cond_dry', 'W m-1 K-1', 'Thermal conductivity of dry soil')
+
+    # Land cover variables
+    if model.require_land_cover:
+        lc = state.add_category('land_cover')
+        lc.add_variable('land_cover', long_name='Land cover class', dtype=int)
+        lc.add_variable('plant_height', 'm', 'Plant height')

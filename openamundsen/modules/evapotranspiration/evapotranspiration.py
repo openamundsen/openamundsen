@@ -76,7 +76,6 @@ class EvapotranspirationModel:
         s.add_variable('evapotranspiration', 'kg m-2', 'Evapotranspiration')
         s.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
         s.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
-        s.add_variable('plant_height', 'm', 'Plant height')
         s.add_variable('crop_coeff', '1', 'Crop coefficient')
         s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
         s.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
@@ -100,12 +99,12 @@ class EvapotranspirationModel:
 
         # Prepare unique land cover classes occurring in the model domain and their associated pixel
         # locations
-        lccs = np.unique(s.base.land_cover[roi])
+        lccs = np.unique(s.land_cover.land_cover[roi])
         lccs = lccs[lccs > 0]
         lccs = set(lccs) & set(model.config.land_cover.classes.keys())  # calculate ET only for land cover classes with set parameters
         self.land_cover_class_pixels = {}
         for lcc in lccs:
-            self.land_cover_class_pixels[lcc] = (s.base.land_cover == lcc) & roi
+            self.land_cover_class_pixels[lcc] = (s.land_cover.land_cover == lcc) & roi
 
         self._climate_correction()
 
@@ -265,9 +264,9 @@ class EvapotranspirationModel:
             # If scale_height is True, set the plant height to the calculated value according to the
             # crop coefficient curve, otherwise assume a constant height over the season
             if lcc_params.get('scale_height', True):
-                s_et.plant_height[pos] = plant_height
+                s.land_cover.plant_height[pos] = plant_height
             else:
-                s_et.plant_height[pos] = lcc_params.max_height
+                s.land_cover.plant_height[pos] = lcc_params.max_height
 
             # Derive global masks for pixels with the current land cover class which are
             # snow-covered and snow-free
@@ -352,7 +351,7 @@ class EvapotranspirationModel:
         s = model.state
         s_et = s.evapotranspiration
 
-        plant_height = s_et.plant_height[pos]
+        plant_height = s.land_cover.plant_height[pos]
         min_crop_coeff = model.config.evapotranspiration.min_crop_coefficient
 
         # Calculate K_c_max (eq. (72))

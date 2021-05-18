@@ -52,12 +52,6 @@ class OpenAmundsen:
         """
         config = self.config
 
-        self._initialize_logger()
-
-        self._prepare_time_steps()
-        self._initialize_grid()
-        self._initialize_state_variable_management()
-
         self.require_soil = config.snow.model == 'multilayer'
         self.require_energy_balance = config.snow.melt.method == 'energy_balance'
         self.require_temperature_index = not self.require_energy_balance
@@ -65,15 +59,18 @@ class OpenAmundsen:
         self.require_land_cover = self.require_evapotranspiration
         self.require_soil_texture = self.require_evapotranspiration
 
+        self._initialize_logger()
+
+        self._prepare_time_steps()
+        self._initialize_grid()
+        self._initialize_state_variable_management()
+
         if config.snow.model == 'multilayer':
             self.snow = modules.snow.MultilayerSnowModel(self)
         elif config.snow.model == 'cryolayers':
             self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
             raise NotImplementedError
-
-        if self.require_land_cover:
-            self.state.base.add_variable('land_cover', long_name='Land cover class', dtype=int)
 
         if self.require_evapotranspiration:
             self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
@@ -424,7 +421,10 @@ class OpenAmundsen:
 
             if land_cover_file.exists():
                 self.logger.info(f'Reading land cover ({land_cover_file})')
-                self.state.base.land_cover[:] = fileio.read_raster_file(land_cover_file, check_meta=self.grid)
+                self.state.land_cover.land_cover[:] = fileio.read_raster_file(
+                    land_cover_file,
+                    check_meta=self.grid,
+                )
             else:
                 raise FileNotFoundError(f'Land cover file not found: {land_cover_file}')
 
