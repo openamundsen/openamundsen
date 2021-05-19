@@ -12,6 +12,7 @@ from openamundsen import (
     terrain,
     util,
 )
+from .landcover import LandCover
 import numpy as np
 import pandas as pd
 import rasterio
@@ -71,6 +72,9 @@ class OpenAmundsen:
             self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
             raise NotImplementedError
+
+        if self.require_land_cover:
+            self.land_cover = LandCover(self)
 
         if self.require_evapotranspiration:
             self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
@@ -196,6 +200,9 @@ class OpenAmundsen:
         in every time step after the meteorological fields have been prepared.
         """
         modules.radiation.irradiance(self)
+
+        if self.require_land_cover:
+            self.land_cover.lai()
 
         self.snow.compaction()
         self.snow.accumulation()
@@ -344,11 +351,14 @@ class OpenAmundsen:
         modules.soil.initialize(self)
         self.state.surface.temp[self.grid.roi] = self.state.soil.temp[0, self.grid.roi]
 
-        if self.config.snow_management.enabled:
-            self.snow_management.initialize()
+        if self.require_land_cover:
+            self.land_cover.initialize()
 
         if self.require_evapotranspiration:
             self.evapotranspiration.initialize()
+
+        if self.config.snow_management.enabled:
+            self.snow_management.initialize()
 
     def _initialize_point_outputs(self):
         self.point_output = fileio.PointOutputManager(self)

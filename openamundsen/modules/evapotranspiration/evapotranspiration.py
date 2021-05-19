@@ -214,20 +214,15 @@ class EvapotranspirationModel:
                 continue
 
             crop_coefficient_type = lcc_params['crop_coefficient_type']
-            plant_date = lcc_params['plant_date']
+            growing_period_day = model.land_cover.growing_period_day(lcc)
             crop_coeff_ini, crop_coeff_mid, crop_coeff_end = lcc_params['crop_coefficients']
             is_water_body = lcc_params.get('is_water_body', False)
-
-            growth_stage_lengths = lcc_params['growth_stage_lengths']
-            if isinstance(growth_stage_lengths[0], int):
-                length_ini, length_dev, length_mid, length_late = growth_stage_lengths
-            elif isinstance(growth_stage_lengths[0], list):  # growing season composed of several subcycles
-                length_ini = [g[0] for g in growth_stage_lengths]
-                length_dev = [g[1] for g in growth_stage_lengths]
-                length_mid = [g[2] for g in growth_stage_lengths]
-                length_late = [g[3] for g in growth_stage_lengths]
-
-            growing_period_day = doy - plant_date + 1  # (1-based)
+            (
+                length_ini,
+                length_dev,
+                length_mid,
+                length_late,
+            ) = model.land_cover.growth_stage_lengths(lcc)
 
             # Apply climate correction for Kcb_mid and Kcb_end values >= 0.45 (eq. (70))
             # (convert crop_coeff_mid and crop_coeff_end into fields to allow for possibly
