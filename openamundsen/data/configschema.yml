@@ -716,6 +716,14 @@ soil:
       type: number
       default: 0.15
 
+canopy:
+  type: dict
+  default: {}
+  schema:
+    enabled:
+      type: boolean
+      default: false
+
 evapotranspiration:
   type: dict
   default: {}

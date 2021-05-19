@@ -56,8 +56,9 @@ class OpenAmundsen:
         self.require_soil = config.snow.model == 'multilayer'
         self.require_energy_balance = config.snow.melt.method == 'energy_balance'
         self.require_temperature_index = not self.require_energy_balance
+        self.require_canopy = config.canopy.enabled
         self.require_evapotranspiration = config.evapotranspiration.enabled
-        self.require_land_cover = self.require_evapotranspiration
+        self.require_land_cover = self.require_canopy or self.require_evapotranspiration
         self.require_soil_texture = self.require_evapotranspiration
 
         self._initialize_logger()
@@ -75,6 +76,9 @@ class OpenAmundsen:
 
         if self.require_land_cover:
             self.land_cover = LandCover(self)
+
+        if self.require_canopy:
+            self.canopy = modules.canopy.CanopyModel(self)
 
         if self.require_evapotranspiration:
             self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
@@ -353,6 +357,9 @@ class OpenAmundsen:
 
         if self.require_land_cover:
             self.land_cover.initialize()
+
+        if self.require_canopy:
+            self.canopy.initialize()
 
         if self.require_evapotranspiration:
             self.evapotranspiration.initialize()
