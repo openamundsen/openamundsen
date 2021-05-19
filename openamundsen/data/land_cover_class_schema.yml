@@ -57,6 +57,9 @@ is_sealed: # indicates sealed surfaces (rocks, buildings, etc.)
 is_sparse: # indicates sparse vegetation (adjust ET according to Allen et al. (1998, Chapter 9)) - requires specifying sparse_vegetation_fraction
   type: boolean
 
+is_forest: # determines if sub-canopy meteorology and snow-canopy processes should be calculated (if the canopy module is activated)
+  type: boolean
+
 sparse_vegetation_fraction: # fraction of the soil surface covered by vegetation in the case of sparse vegetation (assumed constant, i.e. only applicable for non-leaf dropping vegetation)
   type: number
 
@@ -68,3 +71,13 @@ emissivity: # surface emissivity (only required for sealed surfaces)
 
 max_sealed_interception: # maximum interception for sealed surfaces (kg m-2)
   type: number
+
+leaf_area_index:
+  type: dict
+  schema:
+    min: # minimum LAI (m2 m-2)
+      type: number
+    max: # maximum LAI (m2 m-2)
+      type: number
+    effective_add: # value to add to LAI to derive effective LAI (m2 m-2)
+      type: number

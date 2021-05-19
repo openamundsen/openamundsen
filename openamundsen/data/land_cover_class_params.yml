@@ -57,6 +57,7 @@ classes:
 
   # Coniferous forest (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-312.html)
   5:
+    is_forest: true
     crop_coefficient_type: dual
     crop_coefficients:
       - 0.95
@@ -72,9 +73,14 @@ classes:
     scale_height: false
     rooting_depth: 1.25 # mean of 1.0–1.5
     depletion_fraction: 0.7
+    leaf_area_index:
+      min: 3.8
+      max: 5.1
+      effective_add: 3.2
 
   # Deciduous forest (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-311.html)
   6:
+    is_forest: true
     crop_coefficient_type: dual
     crop_coefficients:
       - 0.5
@@ -90,10 +96,15 @@ classes:
     scale_height: false
     rooting_depth: 2.05 # mean of 1.7–2.4
     depletion_fraction: 0.5
+    leaf_area_index:
+      min: 0.5
+      max: 4.4
+      effective_add: 1.9
 
   # Mixed forest (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-313.html)
   # (ET parameters currently the same as for coniferous forest)
   7:
+    is_forest: true
     crop_coefficient_type: dual
     crop_coefficients:
       - 0.95
@@ -109,6 +120,10 @@ classes:
     scale_height: false
     rooting_depth: 1.25 # mean of 1.0–1.5
     depletion_fraction: 0.7
+    leaf_area_index:
+      min: 2.0
+      max: 4.7
+      effective_add: 2.5
 
   # Arable land
   8:
