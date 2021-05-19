@@ -64,9 +64,9 @@ classes:
       - 0.95
     plant_date: 1
     growth_stage_lengths:
+      - 0
+      - 0
       - 366
-      - 0
-      - 0
       - 0
     max_height: 26. # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
     scale_height: false
@@ -101,9 +101,9 @@ classes:
       - 0.95
     plant_date: 1
     growth_stage_lengths:
+      - 0
+      - 0
       - 366
-      - 0
-      - 0
       - 0
     max_height: 26. # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
     scale_height: false
