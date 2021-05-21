@@ -724,6 +724,17 @@ canopy:
       type: boolean
       default: false
 
+    # Extinction coefficient for solar radiation (theoretically vegetation-dependent, here constant)
+    extinction_coefficient:
+      type: number
+      default: 0.71
+    temperature_scaling_coefficient: # R_c from Strasser et al. (2011, eq. (4))
+      type: number
+      default: 0.8
+    canopy_flow_index_coefficient: # beta from Strasser et al. (2011, eq. (8))
+      type: number
+      default: 0.9
+
 evapotranspiration:
   type: dict
   default: {}
