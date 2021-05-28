@@ -401,28 +401,34 @@ class OpenAmundsen:
         Read the meteorological data files required for the model run and store
         them in the `meteo` variable.
         """
-        meteo_format = self.config.input_data.meteo.format
-        if meteo_format == 'netcdf':
-            self.meteo = fileio.read_meteo_data_netcdf(
-                self.config.input_data.meteo.dir,
-                self.config.start_date,
-                self.config.end_date,
-                freq=self.config['timestep'],
-                aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
-                logger=self.logger,
-            )
-        elif meteo_format == 'csv':
-            self.meteo = fileio.read_meteo_data_csv(
-                self.config.input_data.meteo.dir,
-                self.config.start_date,
-                self.config.end_date,
-                self.config.input_data.meteo.crs,
-                freq=self.config['timestep'],
-                aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
-                logger=self.logger,
-            )
-        else:
-            raise NotImplementedError('Unsupported meteo format')
+        bounds = self.config.input_data.meteo.bounds
+        if bounds == 'grid':
+            x_min = self.grid.x_min
+            y_min = self.grid.y_min
+            x_max = self.grid.x_max
+            y_max = self.grid.y_max
+        elif bounds == 'global':
+            x_min = -np.inf
+            y_min = -np.inf
+            x_max = np.inf
+            y_max = np.inf
+        elif isinstance(bounds, list):
+            x_min, y_min, x_max, y_max = bounds
+
+        self.meteo = fileio.read_meteo_data(
+            self.config.input_data.meteo.format,
+            self.config.input_data.meteo.dir,
+            self.config.start_date,
+            self.config.end_date,
+            meteo_crs=self.config.input_data.meteo.crs,
+            grid_crs=self.config.crs,
+            bounds=(x_min, y_min, x_max, y_max),
+            exclude=self.config.input_data.meteo.exclude,
+            include=self.config.input_data.meteo.include,
+            freq=self.config['timestep'],
+            aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
+            logger=self.logger,
+        )
 
         self._prepare_station_coordinates()
 

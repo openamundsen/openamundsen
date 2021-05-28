@@ -76,6 +76,32 @@ input_data:
           nullable: true
           default:
 
+        bounds:
+          oneof:
+            - type: string
+              allowed:
+                - grid # use stations within (extended) grid boundaries
+                - global # use all available stations
+            - type: list
+              items:
+                - type: number # xmin
+                - type: number # ymin
+                - type: number # xmax
+                - type: number # ymax
+          default: global
+
+        exclude: # list of station IDs to exclude
+          type: list
+          default: []
+          schema:
+            type: string
+
+        include: # list of station IDs to include (even if otherwise excluded via `bounds` or `exclude`)
+          type: list
+          default: []
+          schema:
+            type: string
+
         aggregate_when_downsampling: # use instantaneous values if the time series need to be downsampled (default) or aggregate them
           type: boolean
           default: false

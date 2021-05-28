@@ -7,19 +7,35 @@ from pathlib import Path
 import xarray as xr
 
 
-def read_meteo_data_netcdf(
-        meteo_data_dir,
-        start_date,
-        end_date,
-        freq='H',
-        aggregate=False,
-        logger=None,
+def read_meteo_data(
+    meteo_format,
+    meteo_data_dir,
+    start_date,
+    end_date,
+    meteo_crs=None,
+    grid_crs=None,
+    bounds=None,
+    exclude=None,
+    include=None,
+    freq='H',
+    aggregate=False,
+    logger=None,
 ):
     """
-    Read all available stations in NetCDF format for a given period.
+    Read all available stations in NetCDF or CSV format for a given period.
+
+    In case of NetCDF input, all available .nc files in `meteo_data_dir` are
+    used.
+    For CSV input a file named `stations.csv` must be provided in
+    the specified directory containing the metadata (IDs, names, x/y
+    coordinates, altitudes) of the stations. Station files must be in the same
+    directory and must be named `<station_id>.csv`
 
     Parameters
     ----------
+    meteo_format : str
+        Data format (either 'netcdf' or 'csv').
+
     meteo_data_dir : path-like
         Location of the NetCDF files.
 
@@ -28,6 +44,24 @@ def read_meteo_data_netcdf(
 
     end_date : datetime-like
         End date.
+
+    meteo_crs : str
+        CRS of the station coordinates specified in the stations.csv file
+        (required only when `meteo_format` is 'csv').
+
+    grid_crs : str
+        CRS of the model grid.
+
+    bounds : list or None
+        If specified, use only stations within the region specified as a list of
+        (x_min, y_min, x_max, y_max) coordinates in the model grid CRS.
+
+    exclude: list or None
+        List of station IDs to exclude.
+
+    include: list or None
+        List of station IDs to include even if otherwise excluded via `bounds`
+        or `exclude`.
 
     freq : str
         Pandas-compatible frequency string (e.g. '3H') to which the data should
@@ -49,17 +83,35 @@ def read_meteo_data_netcdf(
         logger = loguru.logger
 
     meteo_data_dir = Path(meteo_data_dir)
-    nc_files = sorted(list(meteo_data_dir.glob('*.nc')))
 
-    if len(nc_files) == 0:
-        raise errors.MeteoDataError('No meteo files found')
+    meta = _read_meteo_metadata(meteo_format, meteo_data_dir, meteo_crs, grid_crs)
+    if meta.empty:
+        raise errors.MeteoDataError('No stations found')
+
+    meta = _apply_station_rules(meta, bounds, exclude, include)
+    if meta.empty:
+        raise errors.MeteoDataError('No stations available after applying station rules')
 
     datasets = []
+    for station_id in meta.index:
+        if meteo_format == 'netcdf':
+            filename = meteo_data_dir / f'{station_id}.nc'
+            logger.info(f'Reading meteo file: {filename}')
+            ds = read_netcdf_meteo_file(filename, start_date=start_date, end_date=end_date)
+        elif meteo_format == 'csv':
+            filename = meteo_data_dir / f'{station_id}.csv'
+            logger.info(f'Reading meteo file: {filename}')
 
-    for nc_file in nc_files:
-        logger.info(f'Reading meteo file: {nc_file}')
-
-        ds = read_netcdf_meteo_file(nc_file, start_date=start_date, end_date=end_date)
+            ds = read_csv_meteo_file(
+                filename,
+                station_id,
+                meta.loc[station_id, 'name'],
+                meta.loc[station_id, 'x'],
+                meta.loc[station_id, 'y'],
+                meta.loc[station_id, 'alt'],
+                grid_crs,
+            )
+            ds = ds.sel(time=slice(start_date, end_date))
 
         if ds.time.to_index().inferred_freq != freq:
             ds = _resample_dataset(ds, freq, aggregate=aggregate)
@@ -72,89 +124,7 @@ def read_meteo_data_netcdf(
     if len(datasets) == 0:
         raise errors.MeteoDataError('No meteo data available for the specified period')
 
-    return combine_meteo_datasets(datasets)
-
-
-def read_meteo_data_csv(
-        meteo_data_dir,
-        start_date,
-        end_date,
-        crs,
-        freq='H',
-        aggregate=False,
-        logger=None,
-):
-    """
-    Read all available stations in CSV format for a given period.
-    This function expects a file named `stations.csv` in the specified
-    directory containing the metadata (IDs, names, x/y coordinates, altitudes)
-    of the stations. Station files must be in the same directory and must be
-    named `<station_id>.csv`
-
-    Parameters
-    ----------
-    meteo_data_dir : path-like
-        Location of the NetCDF files.
-
-    start_date : datetime-like
-        Start date.
-
-    end_date : datetime-like
-        End date.
-
-    crs : str
-        CRS of the station coordinates specified in the stations.csv file.
-
-    freq : str
-        Pandas-compatible frequency string (e.g. '3H') to which the data should
-        be resampled.
-
-    aggregate : boolean, default False
-        Aggregate data when downsampling to a lower frequency or take
-        instantaneous values.
-
-    logger : logger, default None
-        Logger to use for status messages.
-
-    Returns
-    -------
-    ds : Dataset
-        Station data.
-    """
-    if logger is None:
-        logger = loguru.logger
-
-    meta = pd.read_csv(f'{meteo_data_dir}/stations.csv', index_col=0)
-
-    datasets = []
-
-    for station_id, row in meta.iterrows():
-        filename = f'{meteo_data_dir}/{station_id}.csv'
-        logger.info(f'Reading meteo file: {filename}')
-        ds = read_csv_meteo_file(
-            filename,
-            station_id,
-            row['name'],
-            row['x'],
-            row['y'],
-            row['alt'],
-            crs,
-        )
-
-        ds = ds.sel(time=slice(start_date, end_date))
-
-        if ds.time.to_index().inferred_freq != freq:
-            ds = _resample_dataset(ds, freq, aggregate=aggregate)
-
-        if ds.dims['time'] == 0:
-            logger.warning('File contains no meteo data for the specified period')
-        else:
-            datasets.append(ds)
-
-    if len(datasets) == 0:
-        raise errors.MeteoDataError('No meteo data available for the specified period')
-
-    return combine_meteo_datasets(datasets)
+    return _combine_meteo_datasts(datasets)
 
 
 def read_netcdf_meteo_file(filename, start_date=None, end_date=None):
@@ -219,7 +189,7 @@ def read_netcdf_meteo_file(filename, start_date=None, end_date=None):
     drop_vars = list(set(ds_vars) - set(allowed_vars))
     ds = ds.drop_vars(drop_vars)
 
-    station_id = Path(filename).stem
+    station_id = _netcdf_station_id(filename)
 
     # set station name to station id (filename without extension) if not present
     if 'station_name' in ds.attrs:
@@ -305,7 +275,7 @@ def read_csv_meteo_file(filename, station_id, station_name, x, y, alt, crs):
     return ds
 
 
-def combine_meteo_datasets(datasets):
+def _combine_meteo_datasts(datasets):
     """
     Combine a list of meteo datasets as read by read_netcdf_meteo_file.
     The datasets are merged by adding an additional "station" (= station id)
@@ -400,3 +370,141 @@ def _resample_dataset(ds, freq, aggregate=False):
         ds_res[param] = df_res[param]
 
     return ds_res
+
+
+def _netcdf_station_id(filename):
+    """
+    Return the station ID of a station in NetCDF format, i.e., the base name of
+    the file without the .nc extension.
+    """
+    return Path(filename).stem
+
+
+def _read_meteo_metadata(meteo_format, meteo_data_dir, meteo_crs, grid_crs):
+    """
+    Read the metadata of the available meteorological stations.
+
+    Parameters
+    ----------
+    meteo_format : str
+        Data format (either 'netcdf' or 'csv').
+
+    meteo_data_dir : path-like
+        Location of the NetCDF files.
+
+    meteo_crs : str
+        CRS of the station coordinates specified in the stations.csv file
+        (required only when `meteo_format` is 'csv').
+
+    grid_crs : str
+        CRS of the model grid.
+
+    Returns
+    -------
+    meta : DataFrame
+        DataFrame containing the station IDs as index and the columns `name`,
+        `x` (x coordinate in the grid CRS), `y` (y coordinate in the grid CRS),
+        and `alt`.
+    """
+    if meteo_format == 'netcdf':
+        nc_files = sorted(list(meteo_data_dir.glob('*.nc')))
+        station_ids = []
+        names = []
+        lons = []
+        lats = []
+        alts = []
+
+        for nc_file in nc_files:
+            with xr.open_dataset(nc_file) as ds:
+                station_ids.append(_netcdf_station_id(nc_file))
+                names.append(None)  # name is not needed here, is set in read_netcdf_meteo_file
+                lons.append(float(ds.lon.values))
+                lats.append(float(ds.lat.values))
+                alts.append(float(ds.alt.values))
+
+        # Transform lon/lat coordinates to grid CRS
+        xs_gridcrs, ys_gridcrs = util.transform_coords(
+            lons,
+            lats,
+            constants.CRS_WGS84,
+            grid_crs,
+        )
+
+        meta = pd.DataFrame(
+            index=station_ids,
+            data=dict(
+                name=names,
+                x=xs_gridcrs,
+                y=ys_gridcrs,
+                alt=alts,
+            ),
+        )
+    elif meteo_format == 'csv':
+        meta = pd.read_csv(f'{meteo_data_dir}/stations.csv', index_col=0)
+        # TODO check if the stations.csv file has the correct format
+
+        # Transform x/y coordinates from meteo CRS to grid CRS
+        xs_gridcrs, ys_gridcrs = util.transform_coords(
+            meta.x,
+            meta.y,
+            meteo_crs,
+            grid_crs,
+        )
+
+        meta.x = xs_gridcrs
+        meta.y = ys_gridcrs
+    else:
+        raise NotImplementedError
+
+    return meta
+
+
+def _apply_station_rules(meta, bounds, exclude, include):
+    """
+    Extend or reduce the list of stations to read in using a defined region or
+    exclusion/inclusion lists.
+
+    Parameters
+    ----------
+    meta : DataFrame
+        Station metadata as returned by `_read_meteo_metadata`.
+
+    bounds : list or None
+        If specified, use only stations within the region specified as a list of
+        (x_min, y_min, x_max, y_max) coordinates in the model grid CRS.
+
+    exclude: list or None
+        List of station IDs to exclude.
+
+    include: list or None
+        List of station IDs to include even if otherwise excluded via `bounds`
+        or `exclude`.
+
+    Returns
+    -------
+    meta : DataFrame
+    """
+    meta_all = meta.copy()
+
+    if bounds is not None:
+        # TODO check if using ">=" and "<" is correct here or if ">" and "<=" should be used for y
+        # coordinates
+        meta = meta[
+            (meta.x >= bounds[0])
+            & (meta.y >= bounds[1])
+            & (meta.x < bounds[2])
+            & (meta.y < bounds[3])
+        ]
+
+    if exclude is not None:
+        meta = meta.drop(index=exclude, errors='ignore')
+
+    if include is not None:
+        for station_id in include:
+            try:
+                meta = meta.append(meta_all.loc[station_id])
+            except KeyError:
+                raise errors.MeteoDataError(f'Station to be included not found: {station_id}')
+
+    meta = meta[~meta.index.duplicated(keep='first')]  # remove potential duplicate entries
+    return meta
