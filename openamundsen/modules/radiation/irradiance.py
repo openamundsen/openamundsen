@@ -23,6 +23,14 @@ def irradiance(model):
 def clear_sky_shortwave_irradiance(model):
     roi = model.grid.roi
 
+    # Extend ROI with the station positions (when cloudiness is calculated via 'clear_sky_fraction',
+    # clear sky irradiance should be available for all radiation stations, not only the inside-ROI
+    # ones)
+    station_rows = model.meteo.row[model.meteo.within_grid_extent].values
+    station_cols = model.meteo.col[model.meteo.within_grid_extent].values
+    roi_plus_stations = roi.copy()
+    roi_plus_stations[station_rows, station_cols] = True
+
     mean_surface_albedo = model.state.surface.albedo[roi].mean()
 
     if model.sun_params['sun_over_horizon']:
@@ -45,7 +53,7 @@ def clear_sky_shortwave_irradiance(model):
             model.state.meteo.atmos_press,
             model.state.meteo.precipitable_water,
             mean_surface_albedo,
-            roi=roi,
+            roi=roi_plus_stations,
             ozone_layer_thickness=model.config.meteo.radiation.ozone_layer_thickness,
             atmospheric_visibility=model.config.meteo.radiation.atmospheric_visibility,
             single_scattering_albedo=model.config.meteo.radiation.single_scattering_albedo,
@@ -56,9 +64,9 @@ def clear_sky_shortwave_irradiance(model):
         diff_irr = np.zeros((model.grid.rows, model.grid.cols))
 
     pot_irr = dir_irr + diff_irr
-    model.state.meteo.sw_in_clearsky[roi] = pot_irr[roi]
-    model.state.meteo.dir_in_clearsky[roi] = dir_irr[roi]
-    model.state.meteo.diff_in_clearsky[roi] = diff_irr[roi]
+    model.state.meteo.sw_in_clearsky[roi_plus_stations] = pot_irr[roi_plus_stations]
+    model.state.meteo.dir_in_clearsky[roi_plus_stations] = dir_irr[roi_plus_stations]
+    model.state.meteo.diff_in_clearsky[roi_plus_stations] = diff_irr[roi_plus_stations]
 
 
 def shortwave_irradiance(model):
