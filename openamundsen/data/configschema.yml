@@ -88,7 +88,7 @@ input_data:
                 - type: number # ymin
                 - type: number # xmax
                 - type: number # ymax
-          default: global
+          default: grid
 
         exclude: # list of station IDs to exclude
           type: list
