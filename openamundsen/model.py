@@ -5,7 +5,6 @@ from openamundsen import (
     constants,
     errors,
     fileio,
-    liveview,
     meteo,
     modules,
     surface,
@@ -101,6 +100,7 @@ class OpenAmundsen:
         """
         if self.config.liveview.enabled:
             self.logger.info('Creating live view window')
+            from openamundsen import liveview
             lv = liveview.LiveView(self.config.liveview, self.state, self.grid.roi)
             lv.create_window()
             self.liveview = lv
