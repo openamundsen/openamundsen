@@ -477,16 +477,16 @@ snow:
             - enhanced_temperature_index
           default: energy_balance
 
-        threshold_temp:  # K
+        threshold_temp: # threshold temperature for the temperature index methods (K)
           type: number
           default: 273.15
 
-        degree_day_factor:  # must be provided for methods temperature_index and enhanced_temperature_index (validated afterwards)
+        degree_day_factor: # degree day factor (kg m-2 d-1 K-1), must be provided for methods temperature_index and enhanced_temperature_index (validated afterwards)
           type: number
           nullable: true
           default:
 
-        albedo_factor:  # must be provided for method enhanced_temperature_index (validated afterwards)
+        albedo_factor: # albedo factor (m2 kg m-2 W-1 d-1), must be provided for method enhanced_temperature_index (validated afterwards)
           type: number
           nullable: true
           default:
