@@ -16,3 +16,7 @@ class MeteoDataError(Exception):
 
 class CategoryError(Exception):
     pass
+
+
+class RuntimeError(Exception):
+    pass

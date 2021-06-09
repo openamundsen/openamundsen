@@ -41,6 +41,8 @@ class OpenAmundsen:
         self.logger = None
         self.state = None
         self.dates = None
+        self.date = None
+        self.date_idx = None
 
     def initialize(self):
         """
@@ -107,9 +109,38 @@ class OpenAmundsen:
 
         self.logger.info('Starting model run')
         start_time = time.time()
-        self._time_step_loop()
+
+        for _ in range(len(self.dates)):
+            self.run_single()
+
         time_diff = pd.Timedelta(seconds=(time.time() - start_time))
         self.logger.success('Model run finished. Runtime: ' + str(time_diff))
+
+    def run_single(self):
+        """
+        Process the next time step, i.e., increment the date counter and call the methods for
+        preparing the meteorological fields and the interface to the submodules.
+        """
+        if self.date_idx is None:
+            self.date_idx = 0
+        elif self.date_idx == len(self.dates) - 1:
+            raise errors.RuntimeError('Model run already finished')
+        else:
+            self.date_idx += 1
+
+        self.date = self.dates[self.date_idx]
+
+        self.logger.info(f'Processing time step {self.date:%Y-%m-%d %H:%M}')
+
+        meteo.interpolate_station_data(self)
+        self._process_meteo_data()
+        self._model_interface()
+        self.point_outputs.update()
+        self.field_outputs.update()
+
+        if self.config.liveview.enabled:
+            self.logger.debug('Updating live view window')
+            self.liveview.update(self.date)
 
     def global_mask(self, mask, global_mask=None, global_idxs=None):
         if global_idxs is None:
@@ -152,28 +183,6 @@ class OpenAmundsen:
 
         # Store timestep in seconds in the `timestep` attribute
         self.timestep = util.offset_to_timedelta(self.config['timestep']).total_seconds()
-
-    def _time_step_loop(self):
-        """
-        Run the main model loop, i.e. iterate over all time steps and call the
-        methods for preparing the meteorological fields and the interface to
-        the submodules.
-        """
-        for date_idx, date in enumerate(self.dates):
-            self.logger.info(f'Processing time step {date:%Y-%m-%d %H:%M}')
-
-            self.date = date
-            self.date_idx = date_idx
-
-            meteo.interpolate_station_data(self)
-            self._process_meteo_data()
-            self._model_interface()
-            self.point_outputs.update()
-            self.field_outputs.update()
-
-            if self.config.liveview.enabled:
-                self.logger.debug('Updating live view window')
-                self.liveview.update(date)
 
     def _model_interface(self):
         """
