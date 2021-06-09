@@ -360,7 +360,7 @@ class PointOutputManager:
         # Update dataset
         for var in self.vars:
             var_data = self.model.state[var.var_name]
-            ds_var = ds[var.output_name]
+            ds_var = ds.variables[var.output_name]  # faster than ds[var.output_name]
 
             if var_data.ndim == 2:
                 ds_var.values[date_idx, :] = var_data[self.point_rows, self.point_cols]
