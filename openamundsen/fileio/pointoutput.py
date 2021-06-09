@@ -355,7 +355,7 @@ class PointOutputManager:
         # label-based indexing (ds_var.loc[date, :]).
         # Using np.argmax is equivalent to using np.where to get the index,
         # but is faster because it stops at the first match.
-        date_idx = np.argmax(ds.time.values == ds.sel(time=date).time.values)
+        date_idx = np.argmax(ds.time.values == date.to_datetime64())
 
         # Update dataset
         for var in self.vars:
