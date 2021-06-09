@@ -95,11 +95,6 @@ class OpenAmundsen:
 
         self._initialize_state_variables()
 
-    def run(self):
-        """
-        Start the model run. Before calling this method, the model must be
-        properly initialized by calling `initialize()`.
-        """
         if self.config.liveview.enabled:
             self.logger.info('Creating live view window')
             from openamundsen import liveview
@@ -107,6 +102,11 @@ class OpenAmundsen:
             lv.create_window()
             self.liveview = lv
 
+    def run(self):
+        """
+        Start the model run. Before calling this method, the model must be
+        properly initialized by calling `initialize()`.
+        """
         self.logger.info('Starting model run')
         start_time = time.time()
 
