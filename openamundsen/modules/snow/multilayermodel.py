@@ -134,6 +134,7 @@ class MultilayerSnowModel(SnowModel):
             s.snow.liquid_water_content,
             s.snow.heat_cap,
             s.snow.temp,
+            s.snow.density,
             s.snow.depth,
         )
 
@@ -478,6 +479,7 @@ def _update_layers(
     liquid_water_content,
     heat_cap,
     temp,
+    density,
     depth,
 ):
     """
@@ -510,6 +512,9 @@ def _update_layers(
     temp : ndarray(float, ndim=3)
         Snow temperature (K).
 
+    density : ndarray(float, ndim=3)
+        Snow density (kg m-3).
+
     depth : ndarray(float, ndim=2)
         Snow depth (m).
 
@@ -535,6 +540,7 @@ def _update_layers(
         ice_content[:, i, j] = 0.
         liquid_water_content[:, i, j] = 0.
         temp[:, i, j] = c.T0
+        density[:, i, j] = np.nan
         internal_energy = np.zeros(max_num_layers)
 
         if depth[i, j] > 0:
@@ -593,3 +599,9 @@ def _update_layers(
                 + liquid_water_content[:ns, i, j] * c.SPEC_HEAT_CAP_WATER
             )
             temp[:ns, i, j] = c.T0 + internal_energy[:ns] / heat_cap[:ns, i, j]
+
+            # Update density
+            density[:ns, i, j] = (
+                (liquid_water_content[:ns, i, j] + ice_content[:ns, i, j])
+                / thickness[:ns, i, j]
+            )
