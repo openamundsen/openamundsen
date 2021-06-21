@@ -265,6 +265,9 @@ class CryoLayerSnowModel(SnowModel):
             s.density[CryoLayerID.FIRN, :] >= transition_params.ice,
         )
 
+        # Update snow depth (might have changed due to density changes)
+        s.depth[:] = s.thickness.sum(axis=0)
+
     def update_properties(self):
         model = self.model
         s = model.state
