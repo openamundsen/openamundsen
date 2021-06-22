@@ -137,6 +137,7 @@ class MultilayerSnowModel(SnowModel):
             s.snow.density,
             s.snow.depth,
         )
+        s.snow.albedo[s.snow.num_layers == 0] = np.nan
 
     def update_properties(self):
         snow.snow_properties(self.model)
