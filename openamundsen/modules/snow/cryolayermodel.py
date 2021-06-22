@@ -228,6 +228,8 @@ class CryoLayerSnowModel(SnowModel):
             runoff[pos] = runoff_cur
             s.snow.liquid_water_content[i, pos] -= runoff_cur
 
+        s.snow.runoff[:] = runoff
+
     def update_layers(self):
         model = self.model
         s = model.state.snow
