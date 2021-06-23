@@ -331,10 +331,20 @@ class FieldOutputManager:
 
             attrs['grid_mapping'] = 'crs'
 
+            # Assign output data type - float-like variables are written as float32, integer
+            # variables as int32 or float32 (the latter if agg == 'mean')
+            if (
+                np.issubdtype(self.model.state.meta(field.var).dtype, np.integer)
+                and field.agg != 'mean'
+            ):
+                dtype = np.int32
+            else:
+                dtype = np.float32
+
             if meta.dim3 == 0:  # 2-dimensional variable
                 data[field.output_name] = (
                     [field_time_var, 'y', 'x'],
-                    np.full((len(field.write_dates), len(y_coords), len(x_coords)), np.nan, dtype=np.float32),
+                    np.full((len(field.write_dates), len(y_coords), len(x_coords)), np.nan, dtype=dtype),
                     attrs,
                 )
             else:  # 3-dimensional variable
@@ -355,7 +365,7 @@ class FieldOutputManager:
                     np.full(
                         (len(field.write_dates), meta.dim3, len(y_coords), len(x_coords)),
                         np.nan,
-                        dtype=np.float32,
+                        dtype=dtype,
                     ),
                     attrs,
                 )
