@@ -82,6 +82,15 @@ class FieldOutputManager:
             else:
                 write_dates = _freq_write_dates(model.dates, freq, agg is not None)
 
+            write_dates = write_dates[
+                (write_dates >= model.dates[0])
+                & (write_dates <= model.dates[-1])
+            ]
+            if len(write_dates) == 0:
+                model.logger.debug(f'Discarding grid output variable {field_cfg["var"]}'
+                                   ' (nothing to be written)')
+                continue
+
             if output_name is None:
                 output_name = field_cfg.var.split('.')[-1]
 

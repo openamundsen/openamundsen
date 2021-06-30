@@ -195,3 +195,29 @@ def test_data_type(base_config, tmp_path):
     assert np.issubdtype(ds.num_layers.dtype, np.integer)
     assert np.issubdtype(ds.num_layers_sum.dtype, np.integer)
     assert np.issubdtype(ds.num_layers_mean.dtype, np.float32)
+
+
+def test_nothing_to_write(base_config, tmp_path):
+    config = base_config.copy()
+    config.start_date = '2020-01-01'
+    config.end_date = '2020-01-01 03:00'
+    config.results_dir = tmp_path
+    grid_cfg = config.output_data.grids
+    grid_cfg.variables = [
+        {'var': 'snow.swe', 'freq': 'D', 'agg': 'sum'},
+        {'var': 'meteo.temp', 'dates': ['2020-01-02 12:00']},
+    ]
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    assert not (tmp_path / 'output_grids.nc').exists()
+
+    grid_cfg.variables = [
+        {'var': 'snow.swe', 'freq': 'D', 'agg': 'sum'},
+        {'var': 'meteo.temp', 'dates': ['2020-01-01 02:00']},
+    ]
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    ds = xr.open_dataset(tmp_path / 'output_grids.nc')
+    assert list(ds.data_vars.keys()) == ['temp']
