@@ -45,7 +45,7 @@ def test_freq_write_dates():
     assert len(wd) == 2
 
 
-@pytest.mark.parametrize('fmt', ['netcdf', 'ascii', 'geotiff'])
+@pytest.mark.parametrize('fmt', ['netcdf', 'ascii', 'geotiff', 'memory'])
 def test_formats(fmt, base_config, tmp_path):
     config = base_config.copy()
     config.end_date = '2020-01-16'
@@ -56,14 +56,19 @@ def test_formats(fmt, base_config, tmp_path):
         {'var': 'meteo.temp', 'freq': 'D'},
         {'var': 'meteo.precip', 'freq': 'D', 'agg': 'sum'},
         {'var': 'meteo.sw_in', 'dates': ['2020-01-15 12:00'], 'name': 'myvar'},
+        {'var': 'base.dem', 'dates': ['2020-01-15 00:00']},
     ]
 
     model = oa.OpenAmundsen(config)
     model.initialize()
     model.run()
 
-    if fmt == 'netcdf':
-        ds = xr.open_dataset(tmp_path / 'output_grids.nc')
+    if fmt in ('netcdf', 'memory'):
+        if fmt == 'netcdf':
+            ds = xr.open_dataset(tmp_path / 'output_grids.nc')
+        elif fmt == 'memory':
+            ds = model.gridded_output.data
+
         assert 'temp' in ds.variables
         assert ds.time1.to_index().equals(pd.DatetimeIndex([
             '2020-01-15 00:00',
@@ -82,6 +87,7 @@ def test_formats(fmt, base_config, tmp_path):
         ]))
         assert 'myvar' in ds.variables
         assert ds.time3.to_index().equals(pd.DatetimeIndex(['2020-01-15 12:00']))
+        assert_allclose(model.state.base.dem, ds.dem.loc['2020-01-15 00:00', :, :].values)
     else:
         if fmt == 'ascii':
             ext = 'asc'
@@ -99,6 +105,10 @@ def test_formats(fmt, base_config, tmp_path):
         fn = tmp_path / f'myvar_2020-01-15T1200.{ext}'
         with rasterio.open(fn) as ds:
             ds.read(1)
+
+        fn = tmp_path / f'dem_2020-01-15T0000.{ext}'
+        with rasterio.open(fn) as ds:
+            assert_allclose(model.state.base.dem, ds.read(1))
 
 
 def test_values(base_config, tmp_path):

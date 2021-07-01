@@ -105,6 +105,7 @@ class GriddedOutputManager:
         self.fields = fields
         self.format = config.format
         self.nc_file_created = False
+        self.data = None
 
     def update(self):
         """
@@ -121,8 +122,6 @@ class GriddedOutputManager:
         date = self.model.date
         roi = self.model.grid.roi
 
-        # Open the NetCDF file in case of NetCDF output (and create it beforehand when calling the
-        # method for the first time)
         if self.format == 'netcdf':
             nc_file = self.model.config.results_dir / 'output_grids.nc'
 
@@ -132,6 +131,9 @@ class GriddedOutputManager:
                 self.nc_file_created = True
 
             ds = netCDF4.Dataset(nc_file, 'r+')
+        elif self.format == 'memory':
+            if self.data is None:
+                self.data = self._create_dataset()
 
         # Loop through all fields, update aggregations where necessary and write files at the
         # specified dates
@@ -224,6 +226,8 @@ class GriddedOutputManager:
                                 self.model.grid.transform,
                                 **rio_meta,
                             )
+                elif self.format == 'memory':
+                    self.data[field.output_name].values[date_idx, :, :] = data
                 else:
                     raise NotImplementedError
 
