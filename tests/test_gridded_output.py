@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose
 import openamundsen as oa
+import openamundsen.errors as errors
 from openamundsen.fileio.griddedoutput import _freq_write_dates
 import pandas as pd
 import pytest
@@ -109,6 +110,20 @@ def test_formats(fmt, base_config, tmp_path):
         fn = tmp_path / f'dem_2020-01-15T0000.{ext}'
         with rasterio.open(fn) as ds:
             assert_allclose(model.state.base.dem, ds.read(1))
+
+
+def test_duplicate_output_names(base_config, tmp_path):
+    config = base_config.copy()
+    config.results_dir = tmp_path
+    grid_cfg = config.output_data.grids
+    grid_cfg.variables = [
+        {'var': 'meteo.temp'},
+        {'var': 'snow.temp'},
+    ]
+
+    model = oa.OpenAmundsen(config)
+    with pytest.raises(errors.ConfigurationError):
+        model.initialize()
 
 
 def test_values(base_config, tmp_path):

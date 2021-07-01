@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import netCDF4
 import numpy as np
-from openamundsen import constants, fileio, util
+from openamundsen import constants, errors, fileio, util
 import pandas as pd
 import pandas.tseries.frequencies
 import pyproj
@@ -93,6 +93,9 @@ class GriddedOutputManager:
 
             if output_name is None:
                 output_name = field_cfg.var.split('.')[-1]
+
+            if output_name in [f.output_name for f in fields]:
+                raise errors.ConfigurationError(f'Duplicate grid output name: {output_name}')
 
             fields.append(OutputField(
                 var=field_cfg['var'],
