@@ -141,7 +141,7 @@ def test_values(base_config, tmp_path):
         data_vals['sw_in'][date] = model.state.meteo.sw_in.copy()
         data_vals['swe'][date] = model.state.snow.swe.copy()
 
-    ds = xr.load_dataset(tmp_path / 'output_grids.nc')
+    ds = model.gridded_output.data
     assert_allclose(
         data_vals['sw_in']['2020-01-17 12:00'],
         ds.sw_in.loc['2020-01-17 12:00', :, :].values,
@@ -200,7 +200,7 @@ def test_data_type(base_config, tmp_path):
     model.initialize()
     model.run()
 
-    ds = xr.open_dataset(tmp_path / 'output_grids.nc')
+    ds = model.gridded_output.data
     assert np.issubdtype(ds.temp.dtype, np.float32)
     assert np.issubdtype(ds.num_layers.dtype, np.integer)
     assert np.issubdtype(ds.num_layers_sum.dtype, np.integer)
@@ -220,7 +220,7 @@ def test_nothing_to_write(base_config, tmp_path):
     model = oa.OpenAmundsen(config)
     model.initialize()
     model.run()
-    assert not (tmp_path / 'output_grids.nc').exists()
+    assert model.gridded_output.data is None
 
     grid_cfg.variables = [
         {'var': 'snow.swe', 'freq': 'D', 'agg': 'sum'},
@@ -229,5 +229,5 @@ def test_nothing_to_write(base_config, tmp_path):
     model = oa.OpenAmundsen(config)
     model.initialize()
     model.run()
-    ds = xr.open_dataset(tmp_path / 'output_grids.nc')
+    ds = model.gridded_output.data
     assert list(ds.data_vars.keys()) == ['temp']

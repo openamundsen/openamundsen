@@ -62,6 +62,9 @@ def base_config():
                 name: num_snow_layers
               - var: snow.albedo
                 name: snow_albedo
+
+          grids:
+            format: memory
     ''')
 
     config = oa.Configuration.from_yaml(config_yaml)
