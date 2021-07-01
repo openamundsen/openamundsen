@@ -75,7 +75,7 @@ def base_config_point_results(base_config):
     model = oa.OpenAmundsen(base_config)
     model.initialize()
     model.run()
-    return model.point_outputs.data
+    return model.point_output.data
 
 
 @pytest.fixture(scope='function')

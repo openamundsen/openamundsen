@@ -135,7 +135,7 @@ class OpenAmundsen:
         meteo.interpolate_station_data(self)
         self._process_meteo_data()
         self._model_interface()
-        self.point_outputs.update()
+        self.point_output.update()
         self.field_outputs.update()
 
         if self.config.liveview.enabled:
@@ -339,7 +339,7 @@ class OpenAmundsen:
             self.snow_management.initialize()
 
     def _initialize_point_outputs(self):
-        self.point_outputs = fileio.PointOutputManager(self)
+        self.point_output = fileio.PointOutputManager(self)
 
     def _initialize_field_outputs(self):
         self.field_outputs = fileio.FieldOutputManager(self)

@@ -20,7 +20,7 @@ def point_results_cryolayers(base_config):
     model = oa.OpenAmundsen(config)
     model.initialize()
     model.run()
-    return model.point_outputs.data
+    return model.point_output.data
 
 
 @pytest.fixture(scope='function')
