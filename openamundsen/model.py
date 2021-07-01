@@ -91,7 +91,7 @@ class OpenAmundsen:
 
         config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
         self._initialize_point_outputs()
-        self._initialize_field_outputs()
+        self._initialize_gridded_outputs()
 
         self._initialize_state_variables()
 
@@ -136,7 +136,7 @@ class OpenAmundsen:
         self._process_meteo_data()
         self._model_interface()
         self.point_output.update()
-        self.field_outputs.update()
+        self.gridded_output.update()
 
         if self.config.liveview.enabled:
             self.logger.debug('Updating live view window')
@@ -341,8 +341,8 @@ class OpenAmundsen:
     def _initialize_point_outputs(self):
         self.point_output = fileio.PointOutputManager(self)
 
-    def _initialize_field_outputs(self):
-        self.field_outputs = fileio.FieldOutputManager(self)
+    def _initialize_gridded_outputs(self):
+        self.gridded_output = fileio.GriddedOutputManager(self)
 
     def _calculate_terrain_parameters(self):
         self.logger.info('Calculating terrain parameters')

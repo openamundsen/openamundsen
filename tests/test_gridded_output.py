@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose
 import openamundsen as oa
-from openamundsen.fileio.fieldoutput import _freq_write_dates
+from openamundsen.fileio.griddedoutput import _freq_write_dates
 import pandas as pd
 import pytest
 import rasterio

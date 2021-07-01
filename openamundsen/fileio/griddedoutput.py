@@ -47,7 +47,7 @@ def _field_key(field):
     return (tuple(field.write_dates), field.agg is None)
 
 
-class FieldOutputManager:
+class GriddedOutputManager:
     """
     Class for managing and storing gridded output data which should be written at
     specified dates.

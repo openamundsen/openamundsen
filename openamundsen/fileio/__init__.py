@@ -4,7 +4,7 @@ from .meteo import (
     read_netcdf_meteo_file,
 )
 
-from .fieldoutput import FieldOutputManager
+from .griddedoutput import GriddedOutputManager
 from .pointoutput import PointOutputManager
 
 from .raster import (
