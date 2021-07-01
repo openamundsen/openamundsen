@@ -204,6 +204,10 @@ class PointOutputManager:
             else:
                 point_name = f'point{point_num + 1}'
 
+            # Check if point name is already in use
+            if point_name in [p.name for p in points]:
+                raise errors.ConfigurationError(f'Duplicate point name: {point_name}')
+
             lon, lat = util.transform_coords(
                 point['x'],
                 point['y'],
