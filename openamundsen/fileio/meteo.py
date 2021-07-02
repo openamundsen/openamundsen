@@ -113,7 +113,13 @@ def read_meteo_data(
             )
             ds = ds.sel(time=slice(start_date, end_date))
 
-        if ds.time.to_index().inferred_freq != freq:
+        if ds.time.to_index().inferred_freq is None:
+            if ds.dims['time'] > 2:
+                # ("> 2" because inferring the frequency requires at least 3 points, so for shorter
+                # time series inferred_freq is always None)
+                raise errors.MeteoDataError('Missing records or non-uniform timesteps in '
+                                            f'{filename}')
+        elif ds.time.to_index().inferred_freq != freq:
             ds = _resample_dataset(ds, freq, aggregate=aggregate)
 
         if ds.dims['time'] == 0:
