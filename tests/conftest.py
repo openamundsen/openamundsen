@@ -19,7 +19,7 @@ data_fetcher = pooch.create(
         'meteo/rofental/csv/latschbloder.csv': '2d6a8a6297464d36ff9ccfc34ce4cd44a50f398c35de1a6e32e8922871503ff0',
         'meteo/rofental/csv/proviantdepot.csv': '7a068c921127c5e0f15ed3718c3a257c70146111ae8a1c5e97f0f8db1e60d2bc',
         'meteo/rofental/csv/stations.csv': '175b420d9659d3478d4755fc4b8d8c2569400b37d84ffb9906e1ab661afe5dc4',
-        'meteo/rofental/netcdf/bellavista.nc': '0ae9350ec9b092724775496a0c449f27d825cb30e7059ede206ca26032a0fd6a',
+        'meteo/rofental/netcdf/bellavista.nc': '96e5fc1af44f269015e52c2ec2a18f2e8d729401b5998d4fdbebb3b0014c8c58',
         'meteo/rofental/netcdf/latschbloder.nc': '0a885ebd2b70818a4e6c30498346827e61cd2e983a311eb9fc5b3257f5b01bd2',
         'meteo/rofental/netcdf/proviantdepot.nc': 'ecb70cdd0bbd1d87d77fcc0bebb3f28212b2aeae687380cf3a67c1b954f29c91',
     },
