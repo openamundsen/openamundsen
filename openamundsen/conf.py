@@ -134,6 +134,10 @@ def validate_config(config):
         except ValueError:
             raise ConfigurationError('write_freq must be a multiple of timestep')
 
+    if config.input_data.meteo.format == 'netcdf' and config.input_data.meteo.crs is not None:
+        print('Warning: Ignoring CRS specification for meteo input data '
+              '(CRS not required when using NetCDF format)')
+
     if config.snow.model == 'multilayer' and config.snow.melt.method != 'energy_balance':
         raise ConfigurationError(f'Melt method "{config.snow.melt.method}" not supported for the '
                                  f'snow model "{config.snow.model}"')

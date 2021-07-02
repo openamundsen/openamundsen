@@ -424,12 +424,20 @@ class OpenAmundsen:
         elif isinstance(bounds, list):
             x_min, y_min, x_max, y_max = bounds
 
+        if self.config.input_data.meteo.format == 'csv':
+            if self.config.input_data.meteo.crs is None:
+                meteo_crs = self.config.crs
+            else:
+                meteo_crs = self.config.input_data.meteo.crs
+        elif self.config.input_data.meteo.format == 'netcdf':
+            meteo_crs = None  # no CRS required for NetCDF input
+
         self.meteo = fileio.read_meteo_data(
             self.config.input_data.meteo.format,
             self.config.input_data.meteo.dir,
             self.config.start_date,
             self.config.end_date,
-            meteo_crs=self.config.input_data.meteo.crs,
+            meteo_crs=meteo_crs,
             grid_crs=self.config.crs,
             bounds=(x_min, y_min, x_max, y_max),
             exclude=self.config.input_data.meteo.exclude,
