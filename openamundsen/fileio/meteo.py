@@ -130,7 +130,14 @@ def read_meteo_data(
     if len(datasets) == 0:
         raise errors.MeteoDataError('No meteo data available for the specified period')
 
-    return _combine_meteo_datasts(datasets)
+    ds_combined = _combine_meteo_datasts(datasets)
+    dates_combined = ds_combined.time.to_index()
+    if dates_combined[0] > start_date or dates_combined[-1] < end_date:
+        raise errors.MeteoDataError('Insufficient meteo data available.\n'
+                                    f'Requested period: {start_date}..{end_date}\n'
+                                    f'Available period: {dates_combined[0]}..{dates_combined[-1]}')
+    
+    return ds_combined
 
 
 def read_netcdf_meteo_file(filename, start_date=None, end_date=None):
