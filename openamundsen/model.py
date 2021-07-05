@@ -296,10 +296,10 @@ class OpenAmundsen:
 
         grid = self.grid
         ds['within_grid_extent'] = (
-            (x_var >= grid.x_min)
-            & (x_var <= grid.x_max)
-            & (y_var >= grid.y_min)
-            & (y_var <= grid.y_max)
+            (col_var >= 0)
+            & (col_var < grid.cols)
+            & (row_var >= 0)
+            & (row_var < grid.rows)
         )
 
         within_roi_var = bool_var.copy()
