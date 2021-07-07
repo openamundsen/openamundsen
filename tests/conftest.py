@@ -32,6 +32,7 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
+    pytest.DATA_DIR = DATA_DIR
     config.addinivalue_line('markers', 'slow: mark test as slow to run')
 
 
