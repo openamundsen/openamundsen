@@ -347,9 +347,11 @@ def _resample_dataset(ds, freq, aggregate=False):
     # ds.resample() is extremely slow for some reason, so we resample using pandas
     df = ds.to_dataframe().drop(columns=['lon', 'lat', 'alt'])
 
+    resample_kwargs = dict(label='right', closed='right', origin='start')
+
     if aggregate:
         # Calculate averages
-        df_res = df.resample(freq, label='right', closed='right').mean()
+        df_res = df.resample(freq, **resample_kwargs).mean()
 
         # We might end up with an extra bin after resampling; take only the dates which we would
         # have taken when using instantaneous values
@@ -363,8 +365,7 @@ def _resample_dataset(ds, freq, aggregate=False):
     if 'precip' in df:
         df_res['precip'] = df['precip'].resample(
             freq,
-            label='right',
-            closed='right',
+            **resample_kwargs,
         ).agg(pd.Series.sum, skipna=False)
 
     # Check if the desired frequency is a subset of the original frequency of the
