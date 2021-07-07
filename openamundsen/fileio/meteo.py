@@ -344,6 +344,9 @@ def _resample_dataset(ds, freq, aggregate=False):
     ds_res : Dataset
         Resampled dataset.
     """
+    if util.offset_to_timedelta(freq) >= pd.Timedelta('1d'):
+        raise errors.MeteoDataError('Resampling to frequencies >= 1 day is not supported')
+
     # ds.resample() is extremely slow for some reason, so we resample using pandas
     df = ds.to_dataframe().drop(columns=['lon', 'lat', 'alt'])
 
