@@ -23,13 +23,13 @@ def test_numba(base_config, tmp_path):
     with open(config_file, 'w') as f:
         f.write(to_yaml(config.toDict()))
 
-    subprocess.check_call(['openamundsen', config_file])
+    subprocess.check_call(['openamundsen', str(config_file)])
     ds_points_numba = xr.load_dataset(tmp_path / 'output_timeseries.nc')
     ds_grids_numba = xr.load_dataset(tmp_path / 'output_grids.nc')
 
     env = os.environ.copy()
     env['NUMBA_DISABLE_JIT'] = '1'
-    subprocess.check_call(['openamundsen', config_file], env=env)
+    subprocess.check_call(['openamundsen', str(config_file)], env=env)
     ds_points_nonumba = xr.load_dataset(tmp_path / 'output_timeseries.nc')
     ds_grids_nonumba = xr.load_dataset(tmp_path / 'output_grids.nc')
 
