@@ -11,9 +11,12 @@ from textwrap import dedent
 def save_and_read_yaml_dict(d):
     yaml = YAML()
 
-    with tempfile.NamedTemporaryFile() as f:
-        yaml.dump(d, f)
-        return oa.read_config(f.name)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        filename = f'{temp_dir}/config.yml'
+        with open(filename, 'w') as f:
+            yaml.dump(d, f)
+
+        return oa.read_config(filename)
 
 
 def parse_yaml_config(config):
@@ -21,17 +24,20 @@ def parse_yaml_config(config):
 
 
 def save_and_parse_config(config):
-    with tempfile.NamedTemporaryFile('w+') as f:
-        if isinstance(config, dict):
-            yaml = YAML()
-            yaml.dump(config, f)
-        elif isinstance(config, str):
-            f.write(config)
-            f.flush()
-        else:
-            raise Exception('Unsupported type')
+    with tempfile.TemporaryDirectory() as temp_dir:
+        filename = f'{temp_dir}/config.yml'
 
-        return oa.parse_config(oa.read_config(f.name))
+        with open(filename, 'w') as f:
+            if isinstance(config, dict):
+                yaml = YAML()
+                yaml.dump(config, f)
+            elif isinstance(config, str):
+                f.write(config)
+                f.flush()
+            else:
+                raise Exception('Unsupported type')
+
+        return oa.parse_config(oa.read_config(filename))
 
 
 @pytest.fixture(scope='function')
