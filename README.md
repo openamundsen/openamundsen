@@ -38,7 +38,7 @@ Main features include:
 
 ### Installation
 
-openAMUNDSEN is a Python (3.6+) package and compatible with all major platforms (Linux, macOS,
+openAMUNDSEN is a Python (3.7+) package and compatible with all major platforms (Linux, macOS,
 Windows) and architectures.
 
 To help keep its dependencies separated from other Python packages installed on your system, we
