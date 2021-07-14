@@ -425,6 +425,9 @@ def _read_meteo_metadata(meteo_format, meteo_data_dir, meteo_crs, grid_crs):
     """
     if meteo_format == 'netcdf':
         nc_files = sorted(list(meteo_data_dir.glob('*.nc')))
+        if len(nc_files) == 0:
+            raise errors.MeteoDataError(f'No meteo data files found in {meteo_data_dir}')
+
         station_ids = []
         names = []
         lons = []
@@ -457,8 +460,16 @@ def _read_meteo_metadata(meteo_format, meteo_data_dir, meteo_crs, grid_crs):
             ),
         )
     elif meteo_format == 'csv':
-        meta = pd.read_csv(f'{meteo_data_dir}/stations.csv', index_col=0)
-        # TODO check if the stations.csv file has the correct format
+        filename = f'{meteo_data_dir}/stations.csv'
+        try:
+            meta = pd.read_csv(filename, index_col=0)
+        except FileNotFoundError:
+            raise errors.MeteoDataError(f'Missing station metadata file ({filename})')
+
+        required_cols = ['name', 'x', 'y', 'alt']
+        if not all(pd.Index(required_cols).isin(meta.columns)):
+            raise errors.MeteoDataError('Station metadata file does not contain all required '
+                                        f'columns ({required_cols})')
 
         # Transform x/y coordinates from meteo CRS to grid CRS
         xs_gridcrs, ys_gridcrs = util.transform_coords(
