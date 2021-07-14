@@ -74,6 +74,32 @@ def test_formats(base_config):
     xr.testing.assert_allclose(meteo['netcdf'], meteo['csv'])
 
 
+def test_no_files_found(base_config, tmp_path):
+    config = base_config.copy()
+    config.input_data.meteo.dir = str(tmp_path)
+
+    for fmt in ('netcdf', 'csv'):
+        config.input_data.meteo.format = fmt
+        model = oa.OpenAmundsen(config)
+        with pytest.raises(errors.MeteoDataError):
+            model.initialize()
+
+
+def test_missing_csv_metadata_columns(base_config, tmp_path):
+    config = base_config.copy()
+    config.input_data.meteo.format = 'csv'
+    config.input_data.meteo.dir = str(tmp_path)
+
+    p_orig = Path(f'{pytest.DATA_DIR}/meteo/rofental/csv')
+    meta = pd.read_csv(p_orig / 'stations.csv', index_col=0)
+    meta[['name', 'x', 'y']].loc[['bellavista']].to_csv(tmp_path / 'stations.csv')
+    (tmp_path / 'bellavista.csv').symlink_to(p_orig / 'bellavista.csv')
+
+    model = oa.OpenAmundsen(config)
+    with pytest.raises(errors.MeteoDataError):
+        model.initialize()
+
+
 def test_missing_records_inbetween(base_config, tmp_path):
     config = base_config.copy()
     config.timestep = 'H'
