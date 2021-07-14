@@ -12,4 +12,4 @@ def test_cli(base_config, tmp_path):
     with open(config_file, 'w') as f:
         f.write(to_yaml(config.toDict()))
 
-    subprocess.check_call(['openamundsen', config_file])
+    subprocess.check_call(['openamundsen', str(config_file)])
