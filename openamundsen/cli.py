@@ -1,13 +1,8 @@
-#!/usr/bin/env python3
-#
-# Command line interface for openAMUNDSEN.
-# Usage: openamundsen <config_file>
-
 import argparse
 import openamundsen as oa
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('config_file', help='configuration file')
     args = parser.parse_args()
