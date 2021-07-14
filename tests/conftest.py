@@ -5,9 +5,14 @@ import pytest
 import textwrap
 
 version = oa.__version__
+if '+' in version:
+    data_url = 'https://github.com/openamundsen/testdata/raw/{version}/'
+else:
+    data_url = 'https://github.com/openamundsen/testdata/raw/v{version}/'
+
 data_fetcher = pooch.create(
     path=pooch.os_cache('openamundsen-tests'),
-    base_url='https://github.com/openamundsen/testdata/raw/{version}/',
+    base_url=data_url,
     version=version,
     version_dev='main',
     registry={  # hashes generated with generate_hashes.py
