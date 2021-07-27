@@ -3,6 +3,17 @@ import numpy as np
 
 
 class CanopyModel:
+    """
+    Canopy model for adjusting meteorology for inside-canopy conditions and
+    calculating snow-canopy interactions following [1].
+
+    References
+    ----------
+    .. [1] Strasser, U., Warscher, M., & Liston, G. E. (2011). Modeling
+       Snow-Canopy Processes on an Idealized Mountain. Journal of Hydrometeorology,
+       12(4), 663–677.  https://doi.org/10.1175/2011JHM1344.1
+    """
+
     def __init__(self, model):
         self.model = model
         num_timesteps_per_day = int(c.HOURS_PER_DAY * c.SECONDS_PER_HOUR / model.timestep)
@@ -43,6 +54,9 @@ class CanopyModel:
         model.state.snow.canopy_intercepted_load[self.forest_pos] = 0.
 
     def meteorology(self):
+        """
+        Modify meteorology for inside-canopy conditions.
+        """
         model = self.model
         s = model.state
         pos = self.forest_pos
@@ -85,6 +99,9 @@ class CanopyModel:
         s.meteo.wind_speed[pos] *= np.exp(-0.4 * canopy_flow_index)  # eq. (7)
 
     def snow(self):
+        """
+        Calculate canopy snow processes (interception, sublimation and melt unload).
+        """
         model = self.model
         s = model.state
         pos = self.forest_pos
