@@ -42,7 +42,7 @@ class CanopyModel:
         )
         model.state.snow.canopy_intercepted_load[self.forest_pos] = 0.
 
-    def meteo_modification(self):
+    def meteorology(self):
         model = self.model
         s = model.state
         pos = self.forest_pos
@@ -84,7 +84,7 @@ class CanopyModel:
         canopy_flow_index = model.config.canopy.canopy_flow_index_coefficient * lai_eff  # eq. (8)
         s.meteo.wind_speed[pos] *= np.exp(-0.4 * canopy_flow_index)  # eq. (7)
 
-    def snow_processes(self):
+    def snow(self):
         model = self.model
         s = model.state
         pos = self.forest_pos

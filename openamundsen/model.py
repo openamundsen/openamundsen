@@ -212,8 +212,8 @@ class OpenAmundsen:
             self.evapotranspiration.above_canopy_meteorology()
 
         if self.require_canopy:
-            self.canopy.meteo_modification()
-            self.canopy.snow_processes()
+            self.canopy.meteorology()
+            self.canopy.snow()
 
         self.snow.compaction()
         self.snow.accumulation()
