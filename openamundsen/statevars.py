@@ -269,6 +269,12 @@ def add_default_state_variables(model):
     meteo.add_variable('lat_heat_vap', 'J kg-1', 'Latent heat of vaporization')
     meteo.add_variable('precipitable_water', 'kg m-2', 'Precipitable water')
     meteo.add_variable('dry_air_density', 'kg m-3', 'Dry air density')
+    if model.require_evapotranspiration or model.require_canopy:
+        meteo.add_variable('top_canopy_temp', 'K', 'Above-canopy air temperature')
+        meteo.add_variable('top_canopy_rel_hum', '%', 'Above-canopy relative humidity')
+        meteo.add_variable('top_canopy_wind_speed', 'm s-1', 'Above-canopy wind speed')
+        meteo.add_variable('top_canopy_sw_in', 'W m-2', 'Above-canopy incoming shortwave radiation')
+        meteo.add_variable('top_canopy_lw_in', 'W m-2', 'Above-canopy incoming longwave radiation')
 
     # Surface variables
     surf = state.add_category('surface')

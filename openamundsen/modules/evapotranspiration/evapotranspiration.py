@@ -70,12 +70,6 @@ class EvapotranspirationModel:
         self.model = model
         s = model.state
 
-        s.meteo.add_variable('top_canopy_temp', 'K', 'Above-canopy air temperature')
-        s.meteo.add_variable('top_canopy_rel_hum', '%', 'Above-canopy relative humidity')
-        s.meteo.add_variable('top_canopy_wind_speed', 'm s-1', 'Above-canopy wind speed')
-        s.meteo.add_variable('top_canopy_sw_in', 'W m-2', 'Above-canopy incoming shortwave radiation')
-        s.meteo.add_variable('top_canopy_lw_in', 'W m-2', 'Above-canopy incoming longwave radiation')
-
         s_et = s.add_category('evapotranspiration')
         s_et.add_variable('soil_texture', long_name='Soil texture class', dtype=int)  # TODO move to base or soil group eventually
         s_et.add_variable('evaporation', 'kg m-2', 'Evaporation')
@@ -194,21 +188,6 @@ class EvapotranspirationModel:
                 model.config.evapotranspiration.mean_min_humidity,
                 plant_height,
             )
-
-    def above_canopy_meteorology(self):
-        """
-        Save above-canopy meteorological variables before they (potentially)
-        are modified by the canopy model.
-        """
-        model = self.model
-        s_m = model.state.meteo
-        roi = model.grid.roi
-
-        s_m.top_canopy_temp[roi] = s_m.temp[roi]
-        s_m.top_canopy_rel_hum[roi] = s_m.rel_hum[roi]
-        s_m.top_canopy_wind_speed[roi] = s_m.wind_speed[roi]
-        s_m.top_canopy_sw_in[roi] = s_m.sw_in[roi]
-        s_m.top_canopy_lw_in[roi] = s_m.lw_in[roi]
 
     def evapotranspiration(self):
         model = self.model

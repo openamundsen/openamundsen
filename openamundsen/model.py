@@ -208,8 +208,8 @@ class OpenAmundsen:
         if self.require_land_cover:
             self.land_cover.lai()
 
-        if self.require_evapotranspiration:
-            self.evapotranspiration.above_canopy_meteorology()
+        if self.require_evapotranspiration or self.require_canopy:
+            modules.canopy.above_canopy_meteorology(self)
 
         if self.require_canopy:
             self.canopy.meteorology()

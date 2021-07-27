@@ -1,1 +1,1 @@
-from .canopy import CanopyModel
+from .canopy import above_canopy_meteorology, CanopyModel

@@ -1,5 +1,6 @@
 from openamundsen import constants as c, meteo
 import numpy as np
+import warnings
 
 
 class CanopyModel:
@@ -222,3 +223,18 @@ class CanopyModel:
         s.meteo.snowfall[pos] -= s.snow.canopy_intercepted_snowfall[pos]
         s.meteo.snowfall[pos] += s.snow.canopy_melt[pos]
         s.meteo.precip[pos] = s.meteo.snowfall[pos] + s.meteo.rainfall[pos]
+
+
+def above_canopy_meteorology(model):
+    """
+    Save above-canopy meteorological variables before they (potentially)
+    are modified by the canopy model.
+    """
+    s_m = model.state.meteo
+    roi = model.grid.roi
+
+    s_m.top_canopy_temp[roi] = s_m.temp[roi]
+    s_m.top_canopy_rel_hum[roi] = s_m.rel_hum[roi]
+    s_m.top_canopy_wind_speed[roi] = s_m.wind_speed[roi]
+    s_m.top_canopy_sw_in[roi] = s_m.sw_in[roi]
+    s_m.top_canopy_lw_in[roi] = s_m.lw_in[roi]
