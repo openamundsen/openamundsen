@@ -71,16 +71,20 @@ class CanopyModel:
         if self._temp_idx == s.meteo.last_24h_temps.shape[0]:
             self._temp_idx = 0
 
-        mean_24h_temp = np.nanmean(s.meteo.last_24h_temps, axis=0)[pos]
-        delta_t = ((mean_24h_temp - c.T0) / 3).clip(-2, 2)  # eq. (5)
-        s.meteo.temp[pos] -= (  # eq. (4)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', 'Mean of empty slice', RuntimeWarning)
+            mean_24h_temp = np.nanmean(s.meteo.last_24h_temps, axis=0)
+
+        pos_finite_temp = pos & np.isfinite(mean_24h_temp)
+        delta_t = ((mean_24h_temp[pos_finite_temp] - c.T0) / 3).clip(-2, 2)  # eq. (5)
+        s.meteo.temp[pos_finite_temp] -= (  # eq. (4)
             canopy_frac
             * (
-                s.meteo.temp[pos]
+                s.meteo.temp[pos_finite_temp]
                 - (
                     model.config.canopy.temperature_scaling_coefficient
-                    * (s.meteo.temp[pos] - mean_24h_temp)
-                    + mean_24h_temp
+                    * (s.meteo.temp[pos_finite_temp] - mean_24h_temp[pos_finite_temp])
+                    + mean_24h_temp[pos_finite_temp]
                     - delta_t
                 )
             )
