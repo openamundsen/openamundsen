@@ -12,6 +12,7 @@ from openamundsen import (
     terrain,
     util,
 )
+from .landcover import LandCover
 import numpy as np
 import pandas as pd
 import rasterio
@@ -55,8 +56,9 @@ class OpenAmundsen:
         self.require_soil = config.snow.model == 'multilayer'
         self.require_energy_balance = config.snow.melt.method == 'energy_balance'
         self.require_temperature_index = not self.require_energy_balance
+        self.require_canopy = config.canopy.enabled
         self.require_evapotranspiration = config.evapotranspiration.enabled
-        self.require_land_cover = self.require_evapotranspiration
+        self.require_land_cover = self.require_canopy or self.require_evapotranspiration
         self.require_soil_texture = self.require_evapotranspiration
 
         self._initialize_logger()
@@ -71,6 +73,12 @@ class OpenAmundsen:
             self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
             raise NotImplementedError
+
+        if self.require_land_cover:
+            self.land_cover = LandCover(self)
+
+        if self.require_canopy:
+            self.canopy = modules.canopy.CanopyModel(self)
 
         if self.require_evapotranspiration:
             self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
@@ -196,6 +204,16 @@ class OpenAmundsen:
         in every time step after the meteorological fields have been prepared.
         """
         modules.radiation.irradiance(self)
+
+        if self.require_land_cover:
+            self.land_cover.lai()
+
+        if self.require_evapotranspiration or self.require_canopy:
+            modules.canopy.above_canopy_meteorology(self)
+
+        if self.require_canopy:
+            self.canopy.meteorology()
+            self.canopy.snow()
 
         self.snow.compaction()
         self.snow.accumulation()
@@ -343,6 +361,15 @@ class OpenAmundsen:
         self.snow.initialize()
         modules.soil.initialize(self)
         self.state.surface.temp[self.grid.roi] = self.state.soil.temp[0, self.grid.roi]
+
+        if self.require_land_cover:
+            self.land_cover.initialize()
+
+        if self.require_canopy:
+            self.canopy.initialize()
+
+        if self.require_evapotranspiration:
+            self.evapotranspiration.initialize()
 
         if self.config.snow_management.enabled:
             self.snow_management.initialize()

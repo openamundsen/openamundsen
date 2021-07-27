@@ -24,6 +24,8 @@ Main features include:
   redistribution of snow using terrain-based parameterizations
 * Simulation of the snow and ice mass and energy balance using either a multilayer scheme or a
   bulk-layering scheme using separate layers for new snow, old snow, firn and ice
+* Modification of the meteorological variables for inside-canopy conditions in forested areas and
+  calculation of forest snow processes (interception, sublimation and melt unload)
 * Calculation of snowmelt using the surface energy balance or a temperature index/enhanced
   temperature index method
 * Calculation of evapotranspiration for snow-free surfaces using the FAO Penman-Monteith method

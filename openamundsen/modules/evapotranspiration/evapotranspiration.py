@@ -68,28 +68,29 @@ class EvapotranspirationModel:
 
     def __init__(self, model):
         self.model = model
+        s = model.state
 
-        s = model.state.add_category('evapotranspiration')
-        s.add_variable('soil_texture', long_name='Soil texture class', dtype=int)  # TODO move to base or soil group eventually
-        s.add_variable('evaporation', 'kg m-2', 'Evaporation')
-        s.add_variable('transpiration', 'kg m-2', 'Transpiration')
-        s.add_variable('evapotranspiration', 'kg m-2', 'Evapotranspiration')
-        s.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
-        s.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
-        s.add_variable('crop_coeff', '1', 'Crop coefficient')
-        s.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
-        s.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
-        s.add_variable('water_stress_coeff', '1', 'Water stress coefficient')
-        s.add_variable('clim_corr', '1', 'Climate correction term')
-        s.add_variable('cum_soil_surface_depletion', 'kg m-2', 'Cumulative evaporation from the soil surface layer')
-        s.add_variable('cum_root_zone_depletion', 'kg m-2', 'Cumulative evapotranspiration from the root zone')
-        s.add_variable('total_evaporable_water', 'kg m-2', 'Total evaporable water')
-        s.add_variable('total_available_water', 'kg m-2', 'Total available water')
-        s.add_variable('readily_evaporable_water', 'kg m-2', 'Readily evaporable water')
-        s.add_variable('readily_available_water', 'kg m-2', 'Readily available water')
-        s.add_variable('deep_percolation', 'kg m-2', 'Deep percolation')
-        s.add_variable('deep_percolation_evaporation_layer', 'kg m-2', 'Deep percolation from the evaporation layer')
-        s.add_variable('sealed_interception', 'kg m-2', 'Interception for sealed surfaces')
+        s_et = s.add_category('evapotranspiration')
+        s_et.add_variable('soil_texture', long_name='Soil texture class', dtype=int)  # TODO move to base or soil group eventually
+        s_et.add_variable('evaporation', 'kg m-2', 'Evaporation')
+        s_et.add_variable('transpiration', 'kg m-2', 'Transpiration')
+        s_et.add_variable('evapotranspiration', 'kg m-2', 'Evapotranspiration')
+        s_et.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
+        s_et.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
+        s_et.add_variable('crop_coeff', '1', 'Crop coefficient')
+        s_et.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
+        s_et.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
+        s_et.add_variable('water_stress_coeff', '1', 'Water stress coefficient')
+        s_et.add_variable('clim_corr', '1', 'Climate correction term')
+        s_et.add_variable('cum_soil_surface_depletion', 'kg m-2', 'Cumulative evaporation from the soil surface layer')
+        s_et.add_variable('cum_root_zone_depletion', 'kg m-2', 'Cumulative evapotranspiration from the root zone')
+        s_et.add_variable('total_evaporable_water', 'kg m-2', 'Total evaporable water')
+        s_et.add_variable('total_available_water', 'kg m-2', 'Total available water')
+        s_et.add_variable('readily_evaporable_water', 'kg m-2', 'Readily evaporable water')
+        s_et.add_variable('readily_available_water', 'kg m-2', 'Readily available water')
+        s_et.add_variable('deep_percolation', 'kg m-2', 'Deep percolation')
+        s_et.add_variable('deep_percolation_evaporation_layer', 'kg m-2', 'Deep percolation from the evaporation layer')
+        s_et.add_variable('sealed_interception', 'kg m-2', 'Interception for sealed surfaces')
 
     def initialize(self):
         model = self.model
@@ -214,20 +215,15 @@ class EvapotranspirationModel:
                 continue
 
             crop_coefficient_type = lcc_params['crop_coefficient_type']
-            plant_date = lcc_params['plant_date']
+            growing_period_day = model.land_cover.growing_period_day(lcc)
             crop_coeff_ini, crop_coeff_mid, crop_coeff_end = lcc_params['crop_coefficients']
             is_water_body = lcc_params.get('is_water_body', False)
-
-            growth_stage_lengths = lcc_params['growth_stage_lengths']
-            if isinstance(growth_stage_lengths[0], int):
-                length_ini, length_dev, length_mid, length_late = growth_stage_lengths
-            elif isinstance(growth_stage_lengths[0], list):  # growing season composed of several subcycles
-                length_ini = [g[0] for g in growth_stage_lengths]
-                length_dev = [g[1] for g in growth_stage_lengths]
-                length_mid = [g[2] for g in growth_stage_lengths]
-                length_late = [g[3] for g in growth_stage_lengths]
-
-            growing_period_day = doy - plant_date + 1  # (1-based)
+            (
+                length_ini,
+                length_dev,
+                length_mid,
+                length_late,
+            ) = model.land_cover.growth_stage_lengths(lcc)
 
             # Apply climate correction for Kcb_mid and Kcb_end values >= 0.45 (eq. (70))
             # (convert crop_coeff_mid and crop_coeff_end into fields to allow for possibly
@@ -321,7 +317,7 @@ class EvapotranspirationModel:
 
         Rn = s.meteo.net_radiation[roi] * Wm2_to_MJm2h  # net radiation at the grass surface (MJ m-2 h-1)
         G = s_et.soil_heat_flux[roi] * Wm2_to_MJm2h  # soil heat flux density (MJ m-2 h-1)
-        T = s.meteo.temp[roi] - c.T0  # air temperature (°C)
+        T = s.meteo.top_canopy_temp[roi] - c.T0  # air temperature (°C)
         D = 4098 * (0.6108 * np.exp(17.27 * T / (T + 273.3))) / (T + 273.3)**2  # slope of the relationship between saturation vapor pressure and temperature (kPa °C-1) (eq. (13))
         gamma = s.meteo.psych_const[roi] * 1e-3  # psychrometric constant (kPa °C-1)
         es = s.meteo.sat_vap_press[roi] * 1e-3  # saturation vapor pressure (kPa)
@@ -329,7 +325,7 @@ class EvapotranspirationModel:
 
         grass_roughness_length = 0.03  # (m)
         u2 = meteo.log_wind_profile(  # 2 m wind speed (m s-1)
-            s.meteo.wind_speed[roi],
+            s.meteo.top_canopy_wind_speed[roi],
             model.config.meteo.measurement_height.wind,
             2,
             grass_roughness_length,
@@ -359,8 +355,8 @@ class EvapotranspirationModel:
         # speed and daily-minimum relative humidity over the period of interest - maybe better use
         # 24-hour moving averages than instantaneous values?
         clim_corr = climate_correction(
-            s.meteo.wind_speed[pos],
-            s.meteo.rel_hum[pos],
+            s.meteo.top_canopy_wind_speed[pos],
+            s.meteo.top_canopy_rel_hum[pos],
             plant_height,
         )
         max_crop_coeff = np.maximum(1.2 + clim_corr, s_et.basal_crop_coeff[pos] + 0.05)
@@ -489,19 +485,19 @@ class EvapotranspirationModel:
         ra = (  # aerodynamic resistance (s m-1) (eq. (4))
             np.log((model.config.meteo.measurement_height.wind - d) / zom)
             * np.log((model.config.meteo.measurement_height.temperature - d) / zoh)
-            / (c.VON_KARMAN**2 * s.meteo.wind_speed[pos])
+            / (c.VON_KARMAN**2 * s.meteo.top_canopy_wind_speed[pos])
         )
 
         Rn = s.meteo.net_radiation[pos]  # net radiation (W m-2)
         G = s_et.soil_heat_flux[pos]  # soil heat flux density (W m-2)
-        T = s.meteo.temp[pos] - c.T0  # air temperature (°C)
+        T = s.meteo.top_canopy_temp[pos] - c.T0  # air temperature (°C)
         D = 1e3 * 4098 * (0.6108 * np.exp(17.27 * T / (T + 273.3))) / (T + 273.3)**2  # slope of the relationship between saturation vapor pressure and temperature (Pa K-1) (eq. (13))
 
         gamma = s.meteo.psych_const[pos]  # psychrometric constant (Pa K-1)
         es = s.meteo.sat_vap_press[pos]  # saturation vapor pressure (Pa)
         ea = s.meteo.vap_press[pos]  # actual vapor pressure (Pa)
 
-        Tv = 1.01 * s.meteo.temp[pos]  # virtual temperature (K)
+        Tv = 1.01 * s.meteo.top_canopy_temp[pos]  # virtual temperature (K)
         rhoa = s.meteo.atmos_press[pos] / (c.GAS_CONSTANT_DRY_AIR * Tv)  # air density at constant pressure (kg m-3)
         cp = (  # specific heat at constant pressure (J kg-1 K-1) (p. 26)
             gamma * 0.622 * c.LATENT_HEAT_OF_VAPORIZATION

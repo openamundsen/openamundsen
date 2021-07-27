@@ -716,6 +716,47 @@ soil:
       type: number
       default: 0.15
 
+canopy:
+  type: dict
+  default: {}
+  schema:
+    enabled:
+      type: boolean
+      default: false
+
+    # Extinction coefficient for solar radiation (theoretically vegetation-dependent, here constant)
+    extinction_coefficient:
+      type: number
+      default: 0.71
+
+    temperature_scaling_coefficient: # R_c from Strasser et al. (2011, eq. (4))
+      type: number
+      default: 0.8
+
+    canopy_flow_index_coefficient: # beta from Strasser et al. (2011, eq. (8))
+      type: number
+      default: 0.9
+
+    spherical_ice_particle_radius: # radius of a spherical ice particle (m)
+      type: number
+      default: 500.e-6
+
+    kinematic_air_viscosity: # kinematic viscosity of air (m2 s-1)
+      type: number
+      default: 1.3e-5
+
+    max_interception_storage_coefficient: # coefficient to be multiplied by LAI to derive the maximum interception storage capacity
+      type: number
+      default: 4.4
+
+    exposure_coefficient_coefficient: # dimensionless coefficient to derive the canopy exposure coefficient
+      type: number
+      default: 0.010
+
+    degree_day_factor: # degree day factor for calculating melt of canopy-intercepted snow (kg m-2 d-1 K-1)
+      type: number
+      default: 5. # value from Liston & Elder (2006)
+
 evapotranspiration:
   type: dict
   default: {}
