@@ -26,6 +26,7 @@ Main features include:
   bulk-layering scheme using separate layers for new snow, old snow, firn and ice
 * Calculation of snowmelt using the surface energy balance or a temperature index/enhanced
   temperature index method
+* Calculation of evapotranspiration for snow-free surfaces using the FAO Penman-Monteith method
 * Usage of arbitrary timesteps (e.g. 10 minutes, daily) while resampling forcing data to the
   desired time resolution if necessary
 * Flexible output of time series including arbitrary model variables for selected point locations in

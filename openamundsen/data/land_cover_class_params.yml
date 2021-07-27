@@ -1,0 +1,202 @@
+classes:
+  # Water
+  # (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-512.html)
+  1:
+    crop_coefficient_type: single
+    crop_coefficients:
+      - 1.25
+      - 0.65
+      - 1.25
+    plant_date: 1
+    growth_stage_lengths: # TODO should be adjusted
+      - 0
+      - 183
+      - 0
+      - 183
+    max_height: 0
+    rooting_depth: .nan
+    depletion_fraction: .nan
+    is_water_body: true
+
+  # Bare rock (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-332.html)
+  2:
+    is_sealed: true
+    albedo: 0.4
+    emissivity: 0.92
+    max_sealed_interception: 0.935
+    max_height: 1.9
+    depletion_fraction: .nan
+    rooting_depth: .nan
+
+  # Settlement (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-111.html)
+  3:
+    is_sealed: true
+    albedo: 0.4
+    emissivity: 0.92
+    max_sealed_interception: 0.935
+    max_height: 1.9
+    depletion_fraction: .nan
+    rooting_depth: .nan
+
+  # Pasture (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-231.html)
+  4:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.30
+      - 0.90
+      - 0.80
+    plant_date: 60 # TODO should be adjusted
+    growth_stage_lengths: # TODO should be adjusted
+      - 10
+      - 20
+      - 210
+      - 30
+    max_height: 0.225 # mean of 0.15–0.30
+    rooting_depth: 0.5
+    depletion_fraction: 0.6
+
+  # Coniferous forest (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-312.html)
+  5:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.95
+      - 0.95
+      - 0.95
+    plant_date: 1
+    growth_stage_lengths:
+      - 366
+      - 0
+      - 0
+      - 0
+    max_height: 26. # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
+    scale_height: false
+    rooting_depth: 1.25 # mean of 1.0–1.5
+    depletion_fraction: 0.7
+
+  # Deciduous forest (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-311.html)
+  6:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.5
+      - 1.05
+      - 0.6
+    plant_date: 60
+    growth_stage_lengths:
+      - 20
+      - 70
+      - 120
+      - 60
+    max_height: 24.8 # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
+    scale_height: false
+    rooting_depth: 2.05 # mean of 1.7–2.4
+    depletion_fraction: 0.5
+
+  # Mixed forest (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-313.html)
+  # (ET parameters currently the same as for coniferous forest)
+  7:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.95
+      - 0.95
+      - 0.95
+    plant_date: 1
+    growth_stage_lengths:
+      - 366
+      - 0
+      - 0
+      - 0
+    max_height: 26. # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
+    scale_height: false
+    rooting_depth: 1.25 # mean of 1.0–1.5
+    depletion_fraction: 0.7
+
+  # Arable land
+  8:
+    crop_coefficient_type: dual
+    crop_coefficients: # FAO standard parameterization for cereals (barley, oats, wheat, maize, ...)
+      - 0.15
+      - 1.10
+      - 0.25
+    plant_date: 120
+    growth_stage_lengths:
+      - 30
+      - 40
+      - 50
+      - 25
+    max_height: 2.
+    rooting_depth: 1.35
+    depletion_fraction: 0.55
+
+  # Natural grassland (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-321.html)
+  # TODO: currently uses the same parameters as for pastures; should be adjusted
+  9:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.30
+      - 0.90
+      - 0.80
+    plant_date: 60 # TODO should be adjusted
+    growth_stage_lengths: # TODO should be adjusted
+      - 10
+      - 20
+      - 210
+      - 30
+    max_height: 0.225 # mean of 0.15–0.30
+    rooting_depth: 0.5
+    depletion_fraction: 0.6
+
+  # Transitional zone (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-324.html)
+  # (assumed to be non-leaf dropping with 25% soil coverage)
+  10:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 1.20
+      - 1.20
+      - 1.20
+    plant_date: 1
+    growth_stage_lengths:
+      - 0
+      - 0
+      - 366
+      - 0
+    max_height: 3.
+    rooting_depth: 5.
+    depletion_fraction: 0.5
+    is_sparse: true
+    sparse_vegetation_fraction: 0.25
+
+  # Alpine vegetation (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-322.html)
+  # TODO: currently uses the same parameters as for pastures; should be adjusted
+  11:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.30
+      - 0.90
+      - 0.80
+    plant_date: 60 # TODO should be adjusted
+    growth_stage_lengths: # TODO should be adjusted
+      - 10
+      - 20
+      - 210
+      - 30
+    max_height: 0.225 # mean of 0.15–0.30
+    rooting_depth: 0.5
+    depletion_fraction: 0.6
+
+  # Wetland (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-411.html)
+  # TODO: currently uses the same parameters as for pastures; should be adjusted
+  12:
+    crop_coefficient_type: dual
+    crop_coefficients:
+      - 0.30
+      - 0.90
+      - 0.80
+    plant_date: 60 # TODO should be adjusted
+    growth_stage_lengths: # TODO should be adjusted
+      - 10
+      - 20
+      - 210
+      - 30
+    max_height: 0.225 # mean of 0.15–0.30
+    rooting_depth: 0.5
+    depletion_fraction: 0.6

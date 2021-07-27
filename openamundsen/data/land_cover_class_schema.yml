@@ -1,0 +1,70 @@
+crop_coefficient_type:
+  type: string
+  allowed:
+    - single
+    - dual
+
+crop_coefficients:
+  type: list
+  items:
+    - type: number # ini
+    - type: number # mid
+    - type: number # end
+
+plant_date:
+  type: integer
+  min: 1
+  max: 366
+
+# growth_stage_lengths is either a 4-element list of L_ini, L_dev, L_mid, L_late, or (in the case of
+# crops which are harvested several times during the growing season) a list of 4-element lists
+# representing the lengths of the individual cutting cycles
+growth_stage_lengths:
+  oneof:
+    - type: list
+      items:
+        - type: integer # ini
+        - type: integer # dev
+        - type: integer # mid
+        - type: integer # late
+    - type: list
+      schema:
+        type: list
+        items:
+          - type: integer # ini
+          - type: integer # dev
+          - type: integer # mid
+          - type: integer # late
+
+max_height: # maximum plant height, see Allen et al. (1998, Table 12)
+  type: number
+
+scale_height: # scale the plant height according to the maximum height and the crop coefficient curve (see Allen et al. (1998, p. 277, footnote 3)
+  type: boolean
+
+rooting_depth: # maximum effective rooting depth, see Allen et al. (1998, Table 22)
+  type: number
+
+depletion_fraction: # soil water depletion fraction for no stress, see Allen et al. (1998, Table 22)
+  type: number
+
+is_water_body: # indicates if the land cover class is a water body (and hence e.g. soil water stress and snow coverage should be ignored)
+  type: boolean
+
+is_sealed: # indicates sealed surfaces (rocks, buildings, etc.)
+  type: boolean
+
+is_sparse: # indicates sparse vegetation (adjust ET according to Allen et al. (1998, Chapter 9)) - requires specifying sparse_vegetation_fraction
+  type: boolean
+
+sparse_vegetation_fraction: # fraction of the soil surface covered by vegetation in the case of sparse vegetation (assumed constant, i.e. only applicable for non-leaf dropping vegetation)
+  type: number
+
+albedo: # surface albedo (only required for sealed surfaces)
+  type: number
+
+emissivity: # surface emissivity (only required for sealed surfaces)
+  type: number
+
+max_sealed_interception: # maximum interception for sealed surfaces (kg m-2)
+  type: number

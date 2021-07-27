@@ -52,15 +52,18 @@ class OpenAmundsen:
         """
         config = self.config
 
+        self.require_soil = config.snow.model == 'multilayer'
+        self.require_energy_balance = config.snow.melt.method == 'energy_balance'
+        self.require_temperature_index = not self.require_energy_balance
+        self.require_evapotranspiration = config.evapotranspiration.enabled
+        self.require_land_cover = self.require_evapotranspiration
+        self.require_soil_texture = self.require_evapotranspiration
+
         self._initialize_logger()
 
         self._prepare_time_steps()
         self._initialize_grid()
         self._initialize_state_variable_management()
-
-        self.require_soil = config.snow.model == 'multilayer'
-        self.require_energy_balance = config.snow.melt.method == 'energy_balance'
-        self.require_temperature_index = not self.require_energy_balance
 
         if config.snow.model == 'multilayer':
             self.snow = modules.snow.MultilayerSnowModel(self)
@@ -68,6 +71,9 @@ class OpenAmundsen:
             self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
             raise NotImplementedError
+
+        if self.require_evapotranspiration:
+            self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
 
         # Create snow redistribution factor state variables
         for precip_corr in config.meteo.precipitation_correction:
@@ -222,6 +228,9 @@ class OpenAmundsen:
             modules.soil.soil_heat_flux(self)
             modules.soil.soil_temperature(self)
 
+        if self.require_evapotranspiration:
+            self.evapotranspiration.evapotranspiration()
+
     def _initialize_logger(self):
         """
         Initialize the logger for the model instance.
@@ -338,6 +347,9 @@ class OpenAmundsen:
         if self.config.snow_management.enabled:
             self.snow_management.initialize()
 
+        if self.require_evapotranspiration:
+            self.evapotranspiration.initialize()
+
     def _initialize_point_outputs(self):
         self.point_output = fileio.PointOutputManager(self)
 
@@ -402,6 +414,32 @@ class OpenAmundsen:
                 self.logger.info(f'Reading snow redistribution factor ({srf_file})')
                 self.state.base.srf[:] = fileio.read_raster_file(srf_file, check_meta=self.grid)
                 break
+
+        # Read land cover file
+        if self.require_land_cover:
+            land_cover_file = util.raster_filename('lc', self.config)
+
+            if land_cover_file.exists():
+                self.logger.info(f'Reading land cover ({land_cover_file})')
+                self.state.land_cover.land_cover[:] = fileio.read_raster_file(
+                    land_cover_file,
+                    check_meta=self.grid,
+                )
+            else:
+                raise FileNotFoundError(f'Land cover file not found: {land_cover_file}')
+
+        # Read soil texture file
+        if self.require_soil_texture:
+            soil_texture_file = util.raster_filename('soil', self.config)
+
+            if soil_texture_file.exists():
+                self.logger.info(f'Reading soil texture ({soil_texture_file})')
+                self.state.evapotranspiration.soil_texture[:] = fileio.read_raster_file(
+                    soil_texture_file,
+                    check_meta=self.grid,
+                )
+            else:
+                raise FileNotFoundError(f'Soil texture file not found: {soil_texture_file}')
 
         self.grid.prepare_roi_coordinates()
 

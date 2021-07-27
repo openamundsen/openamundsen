@@ -668,6 +668,16 @@ snow:
           type: number
           default: -2
 
+land_cover:
+  type: dict
+  default: {}
+  schema:
+    classes:
+      type: dict
+      default: {}
+      valuesrules:
+        schema: openamundsen_land_cover_class
+
 soil:
   type: dict
   default: {}
@@ -705,6 +715,48 @@ soil:
     albedo:  # snow-free albedo
       type: number
       default: 0.15
+
+evapotranspiration:
+  type: dict
+  default: {}
+  schema:
+    enabled:
+      type: boolean
+      default: false
+
+    min_crop_coefficient: # minimum crop coefficient for dry bare soil with no ground cover
+      type: number
+      default: 0.175 # mean of the FAO range (0.15-0.20)
+
+    grass_albedo: # albedo for grassland
+      type: number
+      default: 0.23
+    grass_emissivity: # emissivity for grassland
+      type: number
+      default: 0.985
+
+    sealed_albedo: # albedo for sealed surfaces
+      type: number
+      default: 0.4
+    sealed_emissivity: # emissivity for sealed surfaces
+      type: number
+      default: 0.92
+
+    # Parameters for the climatic correction of the crop coefficient for the
+    # mid-season growth stage (eq. (70) in Allen et al. (1998)), assumed to be
+    # valid for the entire area
+    mean_wind_speed: # mean value for daily wind speed at 2 m height over grass during the mid-season growth stage (m s-1)
+      type: number
+      default: 2. # default value from Allen et al. (1998) for a sub-humid climate with moderate wind speed
+    mean_min_humidity: # mean value for daily minimum relative humidity during the mid-season growth stage (%)
+      type: number
+      default: 45. # default value from Allen et al. (1998) for a sub-humid climate with moderate wind speed
+
+   # Depth of the surface soil layer that is subject to drying by way of evaporation (m)
+   # (Z_e in eq. (73) in Allen et al. (1998))
+    surface_soil_layer_evaporation_depth:
+      type: number
+      default: 0.125 # mean of the FAO range (0.10-0.15 m)
 
 liveview:
   type: dict
