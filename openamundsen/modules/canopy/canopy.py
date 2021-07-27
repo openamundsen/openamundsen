@@ -1,4 +1,4 @@
-from openamundsen import constants as c
+from openamundsen import constants as c, meteo
 import numpy as np
 
 
@@ -8,16 +8,39 @@ class CanopyModel:
         num_timesteps_per_day = int(c.HOURS_PER_DAY * c.SECONDS_PER_HOUR / model.timestep)
         model.state.meteo.add_variable(
             'last_24h_temps',
-            long_name='Air temperatures of the previous 24 hours',
+            'K',
+            'Air temperatures of the previous 24 hours',
             dim3=max(num_timesteps_per_day, 1),
         )
         self._temp_idx = 0  # current index within the last_24h_temps array
+
+        model.state.snow.add_variable(
+            'canopy_intercepted_load',
+            'kg m-2',
+            'Canopy snow interception storage',
+        )
+        model.state.snow.add_variable(
+            'canopy_intercepted_snowfall',
+            'kg m-2',
+            'Canopy-intercepted snowfall',
+        )
+        model.state.snow.add_variable(
+            'canopy_sublimation',
+            'kg m-2',
+            'Canopy snow sublimation',
+        )
+        model.state.snow.add_variable(
+            'canopy_melt',
+            'kg m-2',
+            'Melt of canopy-intercepted snow',
+        )
 
     def initialize(self):
         model = self.model
         self.forest_pos = np.logical_or.reduce(
             [model.land_cover.class_pixels[lcc] for lcc in model.land_cover.forest_classes]
         )
+        model.state.snow.canopy_intercepted_load[self.forest_pos] = 0.
 
     def meteo_modification(self):
         model = self.model
@@ -60,3 +83,121 @@ class CanopyModel:
         # from Liston & Elder (2006, eq. (16)) becomes 0.4
         canopy_flow_index = model.config.canopy.canopy_flow_index_coefficient * lai_eff  # eq. (8)
         s.meteo.wind_speed[pos] *= np.exp(-0.4 * canopy_flow_index)  # eq. (7)
+
+    def snow_processes(self):
+        model = self.model
+        s = model.state
+        pos = self.forest_pos
+
+        # Absorbed solar radiation by a snow particle in the canopy (W) (eq. (11))
+        absorbed_rad = (
+            np.pi
+            * model.config.canopy.spherical_ice_particle_radius**2
+            * (1 - s.surface.albedo[pos])
+            * s.meteo.top_canopy_sw_in[pos]
+        )
+
+        reynolds = (  # Reynolds number (eq. (12))
+            2 * model.config.canopy.spherical_ice_particle_radius
+            * s.meteo.wind_speed[pos]
+            / model.config.canopy.kinematic_air_viscosity
+        ).clip(0.7, 10)
+        nusselt = 1.79 + 0.606 * np.sqrt(reynolds)  # Nusselt number (eq. (13))
+        sherwood = nusselt  # Sherwood number
+
+        # Saturation density of water vapor (kg m-3) (eq. (15))
+        wat_vap_sat_dens = 0.622 * meteo.absolute_humidity(
+            s.meteo.temp[pos],
+            s.meteo.sat_vap_press[pos],
+        )
+
+        # Diffusivity of water vapor in the atmosphere (m2 s-1) (eq. (16))
+        diff_wat_vap = 2.06e-5 * (s.meteo.temp[pos] / 273.)**1.75
+
+        omega = (  # eq. (18)
+            1. / (c.THERM_COND_AIR * s.meteo.temp[pos] * nusselt)
+            * (
+                c.LATENT_HEAT_OF_SUBLIMATION
+                * c.MOLAR_MASS_WATER
+                / (c.UNIVERSAL_GAS_CONSTANT * s.meteo.temp[pos])
+                - 1.
+            )
+        )
+
+        # Mass loss rate from an ice sphere (kg s-1) (eq. (17))
+        mass_loss_rate = (
+            2 * np.pi * model.config.canopy.spherical_ice_particle_radius
+            * (s.meteo.rel_hum[pos] / 100. - 1.)
+            - absorbed_rad * omega
+        ) / (
+            c.LATENT_HEAT_OF_SUBLIMATION * omega
+            + 1. / (diff_wat_vap * wat_vap_sat_dens * sherwood)
+        )
+        mass_loss_rate[np.isnan(mass_loss_rate)] = 0.
+
+        # Particle mass (kg) (eq. (20))
+        particle_mass = (
+            4./3. * np.pi
+            * c.ICE_DENSITY
+            * model.config.canopy.spherical_ice_particle_radius**3
+        )
+
+        # Sublimation loss rate coefficient from an ice sphere (s-1) (eq. (19))
+        sublim_loss_rate_coeff = mass_loss_rate / particle_mass
+
+        # Update canopy-intercepted load (kg m-2) (eq. (20))
+        max_interception_storage = (
+            model.config.canopy.max_interception_storage_coefficient
+            * s.land_cover.lai_eff[pos]
+        )
+        new_canopy_intercepted_load = (
+            s.snow.canopy_intercepted_load[pos]
+            + 0.7
+            * (max_interception_storage - s.snow.canopy_intercepted_load[pos])
+            * (1 - np.exp(-s.meteo.snowfall[pos] / max_interception_storage))
+        )
+        s.snow.canopy_intercepted_snowfall[pos] = (
+            new_canopy_intercepted_load
+            - s.snow.canopy_intercepted_load[pos]
+        ).clip(min=0)
+        s.snow.canopy_intercepted_load[pos] = new_canopy_intercepted_load
+
+        # Canopy exposure coefficient (eq. (23))
+        exposure_coeff = np.zeros(new_canopy_intercepted_load.shape)
+        pos_int = new_canopy_intercepted_load > 0
+        exposure_coeff[pos_int] = (
+            model.config.canopy.exposure_coefficient_coefficient
+            * (new_canopy_intercepted_load[pos_int] / max_interception_storage[pos_int])**(-0.4)
+        )
+
+        # Canopy sublimation (eq. (22))
+        s.snow.canopy_sublimation[pos] = np.minimum(
+            (
+                -exposure_coeff
+                * new_canopy_intercepted_load
+                * sublim_loss_rate_coeff
+                * model.timestep
+            ),
+            new_canopy_intercepted_load,
+        ).clip(min=0)
+        s.snow.canopy_intercepted_load[pos] -= s.snow.canopy_sublimation[pos]
+
+        # Calculate melt unload using a temperature index method
+        # Instead of applying an additional scaling factor to the default degree day factors for
+        # snow on the ground as in [1], here a distinct degree day factor for canopy-intercepted
+        # snow is used directly.
+        s.snow.canopy_melt[pos] = np.minimum(
+            (
+                model.config.canopy.degree_day_factor
+                * (s.meteo.temp[pos] - c.T0).clip(min=0)
+                * model.timestep / (c.SECONDS_PER_HOUR * c.HOURS_PER_DAY)
+            ),
+            s.snow.canopy_intercepted_load[pos],
+        )
+        s.snow.canopy_intercepted_load[pos] -= s.snow.canopy_melt[pos]
+
+        # Precipitation reaching the ground: reduce snowfall by canopy interception and increase by
+        # melt unload
+        s.meteo.snowfall[pos] -= s.snow.canopy_intercepted_snowfall[pos]
+        s.meteo.snowfall[pos] += s.snow.canopy_melt[pos]
+        s.meteo.precip[pos] = s.meteo.snowfall[pos] + s.meteo.rainfall[pos]

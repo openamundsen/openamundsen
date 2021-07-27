@@ -213,6 +213,7 @@ class OpenAmundsen:
 
         if self.require_canopy:
             self.canopy.meteo_modification()
+            self.canopy.snow_processes()
 
         self.snow.compaction()
         self.snow.accumulation()
