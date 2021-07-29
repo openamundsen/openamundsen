@@ -70,22 +70,37 @@ def pytest_addoption(parser):
         default=None,
         help='baseline model results directory',
     )
+    parser.addoption(
+        '--prepare-reports',
+        action='store_true',
+        default=False,
+        help='prepare test reports',
+    )
+    parser.addoption(
+        '--reports-dir',
+        type=str,
+        default='.',
+        help='test reports directory',
+    )
 
 
 def pytest_configure(config):
     pytest.DATA_DIR = DATA_DIR
-    config.addinivalue_line('markers', 'slow: mark test as slow to run')
+    config.addinivalue_line('markers', 'slow: marks test as slow')
+    config.addinivalue_line('markers', 'report: marks test as report-producing')
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption('--run-slow'):
-        return
-
+    run_slow = config.getoption('--run-slow')
+    prepare_reports = config.getoption('--prepare-reports')
     skip_slow = pytest.mark.skip(reason='need --run-slow option to run')
+    skip_reports = pytest.mark.skip(reason='need --prepare-reports option to run')
 
     for item in items:
-        if 'slow' in item.keywords:
+        if 'slow' in item.keywords and not run_slow:
             item.add_marker(skip_slow)
+        elif 'report' in item.keywords and not prepare_reports:
+            item.add_marker(skip_reports)
 
 
 def pytest_sessionstart(session):
@@ -115,6 +130,17 @@ def comparison_data_dir(request, prepare_comparison_data):
         d.mkdir(parents=True, exist_ok=True)
 
     return d
+
+
+@pytest.fixture(scope='session')
+def prepare_reports(request):
+    return request.config.getoption('--prepare-reports')
+
+
+@pytest.fixture(scope='session')
+def reports_dir(request):
+    d = request.config.getoption('--reports-dir')
+    return Path(d)
 
 
 def base_config():

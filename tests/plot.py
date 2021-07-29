@@ -1,4 +1,5 @@
 import numpy as np
+from pathlib import Path
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 import warnings
@@ -94,3 +95,11 @@ def make_point_comparison_plot(
     fig.update_layout(height=plot_height * num_rows)
 
     return fig
+
+
+def fig_to_html(fig, filename, create_dir=True):
+    if create_dir:
+        filename.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(filename, 'w') as f:
+        f.write(fig.to_html(include_plotlyjs='cdn'))

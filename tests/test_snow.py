@@ -1,3 +1,4 @@
+from .compare import point_comparison
 from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -14,8 +15,8 @@ single_point_results_all = [
 
 def base_config_snow():
     config = base_config()
-    config.start_date = '2020-01-15'
-    config.end_date = '2020-04-30'
+    config.start_date = '2019-10-01'
+    config.end_date = '2020-05-31'
     config.output_data.timeseries.variables = [
         {'var': 'snow.num_layers', 'name': 'num_snow_layers'},
         {'var': 'snow.albedo', 'name': 'snow_albedo'},
@@ -87,17 +88,6 @@ def test_swe(ds):
     )
     assert np.all(ice_content >= 0.)
     assert np.all(liquid_water_content >= 0.)
-
-
-@pytest.mark.slow
-def test_swe_max_mean(single_point_results_multilayer, single_point_results_cryolayers):
-    swe = single_point_results_multilayer.swe.values
-    assert_allclose(swe.max(), 123.95, atol=1)
-    assert_allclose(swe.mean(), 67.38, atol=1)
-
-    swe = single_point_results_cryolayers.swe.values
-    assert_allclose(swe.max(), 109.6, atol=1)
-    assert_allclose(swe.mean(), 56.29, atol=1)
 
 
 @pytest.mark.slow
@@ -207,4 +197,40 @@ def test_cryolayers_cold_content(single_point_results_cryolayers):
             ((ic + lwc).sum(axis=1) + melt + sublimation) * cold_holding_capacity
             - cc.sum(axis=1)
         ) >= -0.1
+    )
+
+
+@pytest.mark.slow
+@pytest.mark.report
+def test_plot_multilayer(
+        multilayer_run,
+        comparison_data_dir,
+        prepare_comparison_data,
+        reports_dir,
+):
+    point_comparison(
+        'snow_multilayer_point',
+        multilayer_run.point_output.data,
+        'proviantdepot',
+        comparison_data_dir,
+        prepare_comparison_data,
+        reports_dir,
+    )
+
+
+@pytest.mark.slow
+@pytest.mark.report
+def test_plot_cryolayers(
+        cryolayer_run,
+        comparison_data_dir,
+        prepare_comparison_data,
+        reports_dir,
+):
+    point_comparison(
+        'snow_cryolayers_point',
+        cryolayer_run.point_output.data,
+        'proviantdepot',
+        comparison_data_dir,
+        prepare_comparison_data,
+        reports_dir,
     )
