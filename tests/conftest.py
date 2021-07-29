@@ -1,4 +1,5 @@
 import openamundsen as oa
+from pathlib import Path
 import pooch
 import pytest
 import textwrap
@@ -63,6 +64,18 @@ _BASE_CONFIG = oa.parse_config(oa.Configuration.from_yaml(_BASE_CONFIG_YAML))
 
 def pytest_addoption(parser):
     parser.addoption('--run-slow', action='store_true', default=False, help='run slow tests')
+    parser.addoption(
+        '--prepare-comparison-data',
+        action='store_true',
+        default=False,
+        help='prepare baseline model results for comparisons',
+    )
+    parser.addoption(
+        '--comparison-data-dir',
+        type=str,
+        default=None,
+        help='baseline model results directory',
+    )
 
 
 def pytest_configure(config):
@@ -106,6 +119,26 @@ def base_config_single_point_results(base_config_point_results):
 @pytest.fixture(scope='function')
 def single_point_results_multilayer(base_config_single_point_results):
     return base_config_single_point_results
+
+
+@pytest.fixture(scope='session')
+def prepare_comparison_data(request):
+    return request.config.getoption('--prepare-comparison-data')
+
+
+@pytest.fixture(scope='session')
+def comparison_data_dir(request, prepare_comparison_data):
+    d = request.config.getoption('--comparison-data-dir')
+
+    if d is None and prepare_comparison_data:
+        raise Exception('--comparison-data-dir must be specified when '
+                        '--prepare-comparison-data is set')
+
+    if d is not None:
+        d = Path(d)
+        d.mkdir(parents=True, exist_ok=True)
+
+    return d
 
 
 def base_config():
