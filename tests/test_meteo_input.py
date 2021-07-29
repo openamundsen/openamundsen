@@ -103,6 +103,7 @@ def test_missing_csv_metadata_columns(tmp_path):
 
 def test_missing_records_inbetween(tmp_path):
     config = base_config()
+    config.end_date = '2020-04-30'
     config.timestep = 'H'
     config.input_data.meteo.format = 'csv'
     config.input_data.meteo.dir = str(tmp_path)

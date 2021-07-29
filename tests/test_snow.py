@@ -12,6 +12,39 @@ single_point_results_all = [
 ]
 
 
+def base_config_snow():
+    config = base_config()
+    config.start_date = '2020-01-15'
+    config.end_date = '2020-04-30'
+    config.output_data.timeseries.variables = [
+        {'var': 'snow.num_layers', 'name': 'num_snow_layers'},
+        {'var': 'snow.albedo', 'name': 'snow_albedo'},
+    ]
+    return config
+
+
+@pytest.fixture(scope='session')
+def multilayer_run():
+    config = base_config_snow()
+    config.snow.model = 'multilayer'
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    return model
+
+
+@pytest.fixture(scope='session')
+def cryolayer_run():
+    config = base_config_snow()
+    config.snow.model = 'cryolayers'
+    config.output_data.timeseries.variables.append({'var': 'snow.cold_content'})
+    config.output_data.timeseries.variables.append({'var': 'snow.layer_albedo'})
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    return model
+
+
 @pytest.fixture(scope='module')
 def point_results_cryolayers():
     config = base_config()
@@ -25,20 +58,21 @@ def point_results_cryolayers():
 
 
 @pytest.fixture(scope='function')
-def single_point_results_multilayer(base_config_single_point_results):
-    return base_config_single_point_results
+def single_point_results_multilayer(multilayer_run):
+    return multilayer_run.point_output.data.sel(point='proviantdepot')
 
 
 @pytest.fixture(scope='function')
-def single_point_results_cryolayers(point_results_cryolayers):
-    return point_results_cryolayers.sel(point='proviantdepot')
+def single_point_results_cryolayers(cryolayer_run):
+    return cryolayer_run.point_output.data.sel(point='proviantdepot')
 
 
 def test_default_multilayer():
-    config = base_config()
+    config = base_config_snow()
     assert config.snow.model == 'multilayer'
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ds', single_point_results_all)
 def test_swe(ds):
     swe = ds.swe.values
@@ -55,6 +89,7 @@ def test_swe(ds):
     assert np.all(liquid_water_content >= 0.)
 
 
+@pytest.mark.slow
 def test_swe_max_mean(single_point_results_multilayer, single_point_results_cryolayers):
     swe = single_point_results_multilayer.swe.values
     assert_allclose(swe.max(), 123.95, atol=1)
@@ -65,6 +100,7 @@ def test_swe_max_mean(single_point_results_multilayer, single_point_results_cryo
     assert_allclose(swe.mean(), 56.29, atol=1)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ds', single_point_results_all)
 def test_density(ds):
     swe3d = (ds.ice_content + ds.liquid_water_content).values
@@ -75,6 +111,7 @@ def test_density(ds):
     assert not np.any(density > 1000.)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ds', single_point_results_all)
 def test_depth(ds):
     depth = ds.snow_depth.values
@@ -99,6 +136,7 @@ def test_depth(ds):
     assert_allclose(density_calc, density, atol=1.)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ds', single_point_results_all)
 def test_num_layers(ds):
     num_layers = ds.num_snow_layers.values
@@ -106,6 +144,7 @@ def test_num_layers(ds):
     assert_equal(num_layers, (thickness > 0).sum(axis=1))
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ds', single_point_results_all)
 def test_albedo(ds):
     config = base_config()
@@ -119,16 +158,19 @@ def test_albedo(ds):
     assert np.all(np.isnan(albedo[~pos_snow]))
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ds', single_point_results_all)
 def test_melt(ds):
     assert np.all(ds.melt >= 0)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ds', single_point_results_all)
 def test_runoff(ds):
     assert np.all(ds.runoff >= 0)
 
 
+@pytest.mark.slow
 def test_cryolayers_layer_albedo(single_point_results_cryolayers):
     config = base_config()
     ds = single_point_results_cryolayers
@@ -142,6 +184,7 @@ def test_cryolayers_layer_albedo(single_point_results_cryolayers):
     assert np.all(np.isnan(layer_albedo[~pos_snow]))
 
 
+@pytest.mark.slow
 def test_cryolayers_cold_content(single_point_results_cryolayers):
     config = base_config()
     ds = single_point_results_cryolayers

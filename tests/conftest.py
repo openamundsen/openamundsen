@@ -34,7 +34,7 @@ DATA_DIR = data_fetcher.abspath
 _BASE_CONFIG_YAML = textwrap.dedent(f'''
     domain: rofental
     start_date: 2020-01-15
-    end_date: 2020-04-30
+    end_date: 2020-01-15
     resolution: 1000
     timestep: 3H
     crs: "epsg:32632"
@@ -49,12 +49,6 @@ _BASE_CONFIG_YAML = textwrap.dedent(f'''
     output_data:
       timeseries:
         format: memory
-
-        variables:
-          - var: snow.num_layers
-            name: num_snow_layers
-          - var: snow.albedo
-            name: snow_albedo
 
       grids:
         format: memory
@@ -101,24 +95,6 @@ def pytest_sessionstart(session):
 def fetch_data_files():
     for file in data_fetcher.registry_files:
         data_fetcher.fetch(file)
-
-
-@pytest.fixture(scope='session')
-def base_config_point_results():
-    model = oa.OpenAmundsen(base_config())
-    model.initialize()
-    model.run()
-    return model.point_output.data
-
-
-@pytest.fixture(scope='function')
-def base_config_single_point_results(base_config_point_results):
-    return base_config_point_results.sel(point='proviantdepot')
-
-
-@pytest.fixture(scope='function')
-def single_point_results_multilayer(base_config_single_point_results):
-    return base_config_single_point_results
 
 
 @pytest.fixture(scope='session')
