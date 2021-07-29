@@ -26,7 +26,6 @@ def make_point_comparison_plot(
             variables.append(v)
         else:
             warnings.warn(f'Variable {v} not in both datasets, cannot compare')
-            variables.remove(v)
 
     num_rows = int(np.ceil(len(variables) / num_cols))
 
