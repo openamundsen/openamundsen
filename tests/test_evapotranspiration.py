@@ -1,11 +1,12 @@
+from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose
 import openamundsen as oa
 from pathlib import Path
 
 
-def test_evapotranspiration(base_config, tmp_path):
-    config = base_config.copy()
+def test_evapotranspiration(tmp_path):
+    config = base_config()
     config.start_date = '2020-07-01'
     config.end_date = '2020-07-15'
 

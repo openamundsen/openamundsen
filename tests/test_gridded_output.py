@@ -1,3 +1,4 @@
+from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose
 import openamundsen as oa
@@ -47,8 +48,8 @@ def test_freq_write_dates():
 
 
 @pytest.mark.parametrize('fmt', ['netcdf', 'ascii', 'geotiff', 'memory'])
-def test_formats(fmt, base_config, tmp_path):
-    config = base_config.copy()
+def test_formats(fmt, tmp_path):
+    config = base_config()
     config.end_date = '2020-01-16'
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
@@ -112,8 +113,8 @@ def test_formats(fmt, base_config, tmp_path):
             assert_allclose(model.state.base.dem, ds.read(1))
 
 
-def test_duplicate_output_names(base_config, tmp_path):
-    config = base_config.copy()
+def test_duplicate_output_names(tmp_path):
+    config = base_config()
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
     grid_cfg.variables = [
@@ -126,8 +127,8 @@ def test_duplicate_output_names(base_config, tmp_path):
         model.initialize()
 
 
-def test_values(base_config, tmp_path):
-    config = base_config.copy()
+def test_values(tmp_path):
+    config = base_config()
     config.start_date = '2020-01-17'
     config.end_date = '2020-01-19'
     config.results_dir = tmp_path
@@ -198,8 +199,8 @@ def test_values(base_config, tmp_path):
     )
 
 
-def test_data_type(base_config, tmp_path):
-    config = base_config.copy()
+def test_data_type(tmp_path):
+    config = base_config()
     config.start_date = '2020-01-17'
     config.end_date = '2020-01-17'
     config.results_dir = tmp_path
@@ -222,8 +223,8 @@ def test_data_type(base_config, tmp_path):
     assert np.issubdtype(ds.num_layers_mean.dtype, np.float32)
 
 
-def test_nothing_to_write(base_config, tmp_path):
-    config = base_config.copy()
+def test_nothing_to_write(tmp_path):
+    config = base_config()
     config.start_date = '2020-01-01'
     config.end_date = '2020-01-01 03:00'
     config.results_dir = tmp_path

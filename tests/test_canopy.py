@@ -1,11 +1,12 @@
+from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose
 import openamundsen as oa
 from pathlib import Path
 
 
-def test_canopy(base_config, tmp_path):
-    config = base_config.copy()
+def test_canopy(tmp_path):
+    config = base_config()
     config.start_date = '2020-02-01'
     config.end_date = '2020-02-28'
 

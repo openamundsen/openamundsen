@@ -1,3 +1,4 @@
+from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import openamundsen as oa
@@ -12,8 +13,8 @@ single_point_results_all = [
 
 
 @pytest.fixture(scope='module')
-def point_results_cryolayers(base_config):
-    config = base_config.copy()
+def point_results_cryolayers():
+    config = base_config()
     config.snow.model = 'cryolayers'
     config.output_data.timeseries.variables.append({'var': 'snow.cold_content'})
     config.output_data.timeseries.variables.append({'var': 'snow.layer_albedo'})
@@ -33,8 +34,9 @@ def single_point_results_cryolayers(point_results_cryolayers):
     return point_results_cryolayers.sel(point='proviantdepot')
 
 
-def test_default_multilayer(base_config):
-    assert base_config.snow.model == 'multilayer'
+def test_default_multilayer():
+    config = base_config()
+    assert config.snow.model == 'multilayer'
 
 
 @pytest.mark.parametrize('ds', single_point_results_all)
@@ -105,11 +107,12 @@ def test_num_layers(ds):
 
 
 @pytest.mark.parametrize('ds', single_point_results_all)
-def test_albedo(ds, base_config):
+def test_albedo(ds):
+    config = base_config()
     albedo = ds.snow_albedo.values
     swe = ds.swe.values
-    min_albedo = base_config.snow.albedo.min
-    max_albedo = base_config.snow.albedo.max
+    min_albedo = config.snow.albedo.min
+    max_albedo = config.snow.albedo.max
     pos_snow = swe > 0.
     assert np.all(albedo[pos_snow] >= min_albedo)
     assert np.all(albedo[pos_snow] <= max_albedo)
@@ -126,19 +129,21 @@ def test_runoff(ds):
     assert np.all(ds.runoff >= 0)
 
 
-def test_cryolayers_layer_albedo(single_point_results_cryolayers, base_config):
+def test_cryolayers_layer_albedo(single_point_results_cryolayers):
+    config = base_config()
     ds = single_point_results_cryolayers
     layer_albedo = ds.layer_albedo.values
     swe3d = (ds.ice_content + ds.liquid_water_content).values
-    min_albedo = base_config.snow.albedo.min
-    max_albedo = base_config.snow.albedo.max
+    min_albedo = config.snow.albedo.min
+    max_albedo = config.snow.albedo.max
     pos_snow = swe3d > 0.
     assert np.all(layer_albedo[pos_snow] >= min_albedo)
     assert np.all(layer_albedo[pos_snow] <= max_albedo)
     assert np.all(np.isnan(layer_albedo[~pos_snow]))
 
 
-def test_cryolayers_cold_content(single_point_results_cryolayers, base_config):
+def test_cryolayers_cold_content(single_point_results_cryolayers):
+    config = base_config()
     ds = single_point_results_cryolayers
     cc = ds.cold_content.values
     ic = ds.ice_content.values
@@ -146,7 +151,7 @@ def test_cryolayers_cold_content(single_point_results_cryolayers, base_config):
     melt = ds.melt.values
     sublimation = ds.sublimation.values
     swe3d = (ds.ice_content + ds.liquid_water_content).values
-    cold_holding_capacity = base_config.snow.cryolayers.cold_holding_capacity
+    cold_holding_capacity = config.snow.cryolayers.cold_holding_capacity
     pos_snow = swe3d > 0
     assert np.all(cc >= 0.)
     assert cc.max() > 0.

@@ -1,5 +1,4 @@
 import openamundsen as oa
-import copy
 import pooch
 import pytest
 import textwrap
@@ -30,6 +29,36 @@ data_fetcher = pooch.create(
     },
 )
 DATA_DIR = data_fetcher.abspath
+
+_BASE_CONFIG_YAML = textwrap.dedent(f'''
+    domain: rofental
+    start_date: 2020-01-15
+    end_date: 2020-04-30
+    resolution: 1000
+    timestep: 3H
+    crs: "epsg:32632"
+    timezone: 1
+
+    input_data:
+      grids:
+        dir: {DATA_DIR}/grids/rofental
+      meteo:
+        dir: {DATA_DIR}/meteo/rofental/netcdf
+
+    output_data:
+      timeseries:
+        format: memory
+
+        variables:
+          - var: snow.num_layers
+            name: num_snow_layers
+          - var: snow.albedo
+            name: snow_albedo
+
+      grids:
+        format: memory
+''')
+_BASE_CONFIG = oa.parse_config(oa.Configuration.from_yaml(_BASE_CONFIG_YAML))
 
 
 def pytest_addoption(parser):
@@ -62,45 +91,8 @@ def fetch_data_files():
 
 
 @pytest.fixture(scope='session')
-def base_config():
-    config_yaml = textwrap.dedent(f'''
-        domain: rofental
-        start_date: 2020-01-15
-        end_date: 2020-04-30
-        resolution: 1000
-        timestep: 3H
-        crs: "epsg:32632"
-        timezone: 1
-
-        input_data:
-          grids:
-            dir: {DATA_DIR}/grids/rofental
-          meteo:
-            dir: {DATA_DIR}/meteo/rofental/netcdf
-
-        output_data:
-          timeseries:
-            format: memory
-
-            variables:
-              - var: snow.num_layers
-                name: num_snow_layers
-              - var: snow.albedo
-                name: snow_albedo
-
-          grids:
-            format: memory
-    ''')
-
-    config = oa.Configuration.from_yaml(config_yaml)
-    full_config = oa.parse_config(config)
-
-    return full_config
-
-
-@pytest.fixture(scope='session')
-def base_config_point_results(base_config):
-    model = oa.OpenAmundsen(base_config)
+def base_config_point_results():
+    model = oa.OpenAmundsen(base_config())
     model.initialize()
     model.run()
     return model.point_output.data
@@ -114,3 +106,7 @@ def base_config_single_point_results(base_config_point_results):
 @pytest.fixture(scope='function')
 def single_point_results_multilayer(base_config_single_point_results):
     return base_config_single_point_results
+
+
+def base_config():
+    return _BASE_CONFIG.copy()

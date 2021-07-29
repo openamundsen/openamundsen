@@ -1,3 +1,4 @@
+from .conftest import base_config
 from openamundsen.util import to_yaml
 import os
 import pytest
@@ -6,8 +7,8 @@ import textwrap
 import xarray as xr
 
 
-def test_numba(base_config, tmp_path):
-    config = base_config.copy()
+def test_numba(tmp_path):
+    config = base_config()
     config.start_date = '2020-01-18'
     config.end_date = '2020-01-18'
     config.results_dir = tmp_path
@@ -38,8 +39,8 @@ def test_numba(base_config, tmp_path):
 
 
 @pytest.mark.slow
-def test_floating_errors(base_config, tmp_path):
-    config = base_config.copy()
+def test_floating_errors(tmp_path):
+    config = base_config()
     config.results_dir = tmp_path
 
     config_file = tmp_path / 'config.yml'
