@@ -584,10 +584,6 @@ class OpenAmundsen:
             m.snowfall[roi] *= self.state.base.srf[roi]
             m.precip[roi] = m.snowfall[roi] + m.rainfall[roi]
 
-        m.snowfall_rate[roi] = m.snowfall[roi] / self.timestep
-        m.rainfall_rate[roi] = m.rainfall[roi] / self.timestep
-        m.precip_rate[roi] = m.precip[roi] / self.timestep
-
     @property
     def is_first_timestep_of_model_run(self):
         return self.date_idx == 0
