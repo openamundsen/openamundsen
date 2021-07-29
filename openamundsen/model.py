@@ -53,13 +53,13 @@ class OpenAmundsen:
         """
         config = self.config
 
-        self.require_soil = config.snow.model == 'multilayer'
-        self.require_energy_balance = config.snow.melt.method == 'energy_balance'
-        self.require_temperature_index = not self.require_energy_balance
-        self.require_canopy = config.canopy.enabled
-        self.require_evapotranspiration = config.evapotranspiration.enabled
-        self.require_land_cover = self.require_canopy or self.require_evapotranspiration
-        self.require_soil_texture = self.require_evapotranspiration
+        self._require_soil = config.snow.model == 'multilayer'
+        self._require_energy_balance = config.snow.melt.method == 'energy_balance'
+        self._require_temperature_index = not self._require_energy_balance
+        self._require_canopy = config.canopy.enabled
+        self._require_evapotranspiration = config.evapotranspiration.enabled
+        self._require_land_cover = self._require_canopy or self._require_evapotranspiration
+        self._require_soil_texture = self._require_evapotranspiration
 
         self._initialize_logger()
 
@@ -74,13 +74,13 @@ class OpenAmundsen:
         else:
             raise NotImplementedError
 
-        if self.require_land_cover:
+        if self._require_land_cover:
             self.land_cover = LandCover(self)
 
-        if self.require_canopy:
+        if self._require_canopy:
             self.canopy = modules.canopy.CanopyModel(self)
 
-        if self.require_evapotranspiration:
+        if self._require_evapotranspiration:
             self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
 
         # Create snow redistribution factor state variables
@@ -205,13 +205,13 @@ class OpenAmundsen:
         """
         modules.radiation.irradiance(self)
 
-        if self.require_land_cover:
+        if self._require_land_cover:
             self.land_cover.lai()
 
-        if self.require_evapotranspiration or self.require_canopy:
+        if self._require_evapotranspiration or self._require_canopy:
             modules.canopy.above_canopy_meteorology(self)
 
-        if self.require_canopy:
+        if self._require_canopy:
             self.canopy.meteorology()
             self.canopy.snow()
 
@@ -225,14 +225,14 @@ class OpenAmundsen:
 
         self.snow.update_properties()
 
-        if self.require_soil:
+        if self._require_soil:
             modules.soil.soil_properties(self)
 
         surface.surface_properties(self)
 
-        if self.require_energy_balance:
+        if self._require_energy_balance:
             surface.energy_balance(self)
-        elif self.require_temperature_index:
+        elif self._require_temperature_index:
             self.snow.temperature_index()
 
         self.snow.heat_conduction()
@@ -242,11 +242,11 @@ class OpenAmundsen:
         self.snow.update_properties()
         self.snow.update_layers()
 
-        if self.require_soil:
+        if self._require_soil:
             modules.soil.soil_heat_flux(self)
             modules.soil.soil_temperature(self)
 
-        if self.require_evapotranspiration:
+        if self._require_evapotranspiration:
             self.evapotranspiration.evapotranspiration()
 
     def _initialize_logger(self):
@@ -362,19 +362,19 @@ class OpenAmundsen:
         modules.soil.initialize(self)
         self.state.surface.temp[self.grid.roi] = self.state.soil.temp[0, self.grid.roi]
 
-        if self.require_land_cover:
+        if self._require_land_cover:
             self.land_cover.initialize()
 
-        if self.require_canopy:
+        if self._require_canopy:
             self.canopy.initialize()
 
-        if self.require_evapotranspiration:
+        if self._require_evapotranspiration:
             self.evapotranspiration.initialize()
 
         if self.config.snow_management.enabled:
             self.snow_management.initialize()
 
-        if self.require_evapotranspiration:
+        if self._require_evapotranspiration:
             self.evapotranspiration.initialize()
 
     def _initialize_point_outputs(self):
@@ -443,7 +443,7 @@ class OpenAmundsen:
                 break
 
         # Read land cover file
-        if self.require_land_cover:
+        if self._require_land_cover:
             land_cover_file = util.raster_filename('lc', self.config)
 
             if land_cover_file.exists():
@@ -456,7 +456,7 @@ class OpenAmundsen:
                 raise FileNotFoundError(f'Land cover file not found: {land_cover_file}')
 
         # Read soil texture file
-        if self.require_soil_texture:
+        if self._require_soil_texture:
             soil_texture_file = util.raster_filename('soil', self.config)
 
             if soil_texture_file.exists():
@@ -583,10 +583,6 @@ class OpenAmundsen:
         if 'srf' in self.state.base:
             m.snowfall[roi] *= self.state.base.srf[roi]
             m.precip[roi] = m.snowfall[roi] + m.rainfall[roi]
-
-        m.snowfall_rate[roi] = m.snowfall[roi] / self.timestep
-        m.rainfall_rate[roi] = m.rainfall[roi] / self.timestep
-        m.precip_rate[roi] = m.precip[roi] / self.timestep
 
     @property
     def is_first_timestep_of_model_run(self):

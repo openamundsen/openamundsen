@@ -243,9 +243,6 @@ def add_default_state_variables(model):
     meteo.add_variable('precip', 'kg m-2', 'Precipitation amount', 'precipitation_amount')
     meteo.add_variable('snowfall', 'kg m-2', 'Snowfall amount', 'snowfall_amount')
     meteo.add_variable('rainfall', 'kg m-2', 'Rainfall amount', 'rainfall_amount')
-    meteo.add_variable('precip_rate', 'kg m-2 s-1', 'Precipitation rate', 'precipitation_flux')
-    meteo.add_variable('snowfall_rate', 'kg m-2 s-1', 'Snowfall rate', 'snowfall_flux')
-    meteo.add_variable('rainfall_rate', 'kg m-2 s-1', 'Rainfall rate', 'rainfall_flux')
     meteo.add_variable('rel_hum', '%', 'Relative humidity', 'relative_humidity')
     meteo.add_variable('wind_speed', 'm s-1', 'Wind speed', 'wind_speed')
     meteo.add_variable('sw_in', 'W m-2', 'Incoming shortwave radiation', 'surface_downwelling_shortwave_flux_in_air')
@@ -269,7 +266,7 @@ def add_default_state_variables(model):
     meteo.add_variable('lat_heat_vap', 'J kg-1', 'Latent heat of vaporization')
     meteo.add_variable('precipitable_water', 'kg m-2', 'Precipitable water')
     meteo.add_variable('dry_air_density', 'kg m-3', 'Dry air density')
-    if model.require_evapotranspiration or model.require_canopy:
+    if model._require_evapotranspiration or model._require_canopy:
         meteo.add_variable('top_canopy_temp', 'K', 'Above-canopy air temperature')
         meteo.add_variable('top_canopy_rel_hum', '%', 'Above-canopy relative humidity')
         meteo.add_variable('top_canopy_wind_speed', 'm s-1', 'Above-canopy wind speed')
