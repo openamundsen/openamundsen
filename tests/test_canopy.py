@@ -100,7 +100,7 @@ def test_canopy(canopy_run):
 
 @pytest.mark.slow
 @pytest.mark.report
-def test_plot_canopy(
+def test_compare_canopy(
         canopy_run,
         comparison_data_dir,
         prepare_comparison_data,

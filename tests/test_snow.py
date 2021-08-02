@@ -202,7 +202,7 @@ def test_cryolayers_cold_content(single_point_results_cryolayers):
 
 @pytest.mark.slow
 @pytest.mark.report
-def test_plot_multilayer(
+def test_compare_multilayer(
         multilayer_run,
         comparison_data_dir,
         prepare_comparison_data,
@@ -220,7 +220,7 @@ def test_plot_multilayer(
 
 @pytest.mark.slow
 @pytest.mark.report
-def test_plot_cryolayers(
+def test_compare_cryolayers(
         cryolayer_run,
         comparison_data_dir,
         prepare_comparison_data,
