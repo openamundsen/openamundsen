@@ -1,5 +1,4 @@
 import numpy as np
-from .plot import plot_point_comparison, plot_gridded_comparison, fig_to_html
 import pytest
 import xarray as xr
 import warnings
@@ -88,6 +87,9 @@ def compare_datasets(
                         changed_vars[v].append(date_num)
 
     if plot:
+        from .plot import plot_point_comparison, plot_gridded_comparison, fig_to_html
+        # (import here because plotly is only required for report generation)
+
         if is_time_series:
             fig = plot_point_comparison(
                 ds_base,
