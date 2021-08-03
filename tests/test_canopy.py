@@ -1,7 +1,6 @@
 from .compare import compare_datasets
 from .conftest import base_config
 import numpy as np
-from numpy.testing import assert_allclose
 import openamundsen as oa
 from pathlib import Path
 import pytest

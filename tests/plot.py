@@ -1,8 +1,6 @@
 import numpy as np
-from pathlib import Path
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
-import warnings
 
 
 def plot_point_comparison(
