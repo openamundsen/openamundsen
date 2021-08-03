@@ -71,36 +71,38 @@ def pytest_addoption(parser):
         help='baseline model results directory',
     )
     parser.addoption(
-        '--prepare-reports',
+        '--skip-comparisons',
         action='store_true',
         default=False,
-        help='prepare test reports',
+        help='skip comparisons',
     )
     parser.addoption(
         '--reports-dir',
         type=str,
-        default='.',
-        help='test reports directory',
+        default=None,
+        help='directory for writing comparison reports',
     )
 
 
 def pytest_configure(config):
     pytest.DATA_DIR = DATA_DIR
     config.addinivalue_line('markers', 'slow: marks test as slow')
-    config.addinivalue_line('markers', 'report: marks test as report-producing')
+    config.addinivalue_line('markers', 'comparison: marks test as comparing with baseline data')
 
 
 def pytest_collection_modifyitems(config, items):
     run_slow = config.getoption('--run-slow')
-    prepare_reports = config.getoption('--prepare-reports')
     skip_slow = pytest.mark.skip(reason='need --run-slow option to run')
-    skip_reports = pytest.mark.skip(reason='need --prepare-reports option to run')
+    skip_comparisons = pytest.mark.skipif(
+        config.getoption('--skip-comparisons'),
+        reason='skipping comparisons',
+    )
 
     for item in items:
         if 'slow' in item.keywords and not run_slow:
             item.add_marker(skip_slow)
-        elif 'report' in item.keywords and not prepare_reports:
-            item.add_marker(skip_reports)
+        elif 'comparison' in item.keywords:
+            item.add_marker(skip_comparisons)
 
 
 def pytest_sessionstart(session):
@@ -133,14 +135,13 @@ def comparison_data_dir(request, prepare_comparison_data):
 
 
 @pytest.fixture(scope='session')
-def prepare_reports(request):
-    return request.config.getoption('--prepare-reports')
-
-
-@pytest.fixture(scope='session')
 def reports_dir(request):
     d = request.config.getoption('--reports-dir')
-    return Path(d)
+
+    if d is not None:
+        d = Path(d)
+
+    return d
 
 
 def base_config():

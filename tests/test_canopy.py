@@ -99,7 +99,7 @@ def test_canopy(canopy_run):
 
 
 @pytest.mark.slow
-@pytest.mark.report
+@pytest.mark.comparison
 def test_compare_canopy(
         canopy_run,
         comparison_data_dir,
