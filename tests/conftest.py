@@ -106,6 +106,11 @@ def pytest_configure(config):
     if reports_dir is not None:
         reports_dir = Path(reports_dir)
 
+        try:
+            import plotly
+        except ImportError:
+            raise ImportError('plotly is required for report creation')
+
     pytest.DATA_DIR = DATA_DIR
     pytest.COMPARISON_DATA_DIR = comp_data_dir
     pytest.REPORTS_DIR = reports_dir
