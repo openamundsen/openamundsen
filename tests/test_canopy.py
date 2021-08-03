@@ -1,4 +1,4 @@
-from .compare import point_comparison
+from .compare import compare_datasets
 from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose
@@ -100,17 +100,9 @@ def test_canopy(canopy_run):
 
 @pytest.mark.slow
 @pytest.mark.comparison
-def test_compare_canopy(
-        canopy_run,
-        comparison_data_dir,
-        prepare_comparison_data,
-        reports_dir,
-):
-    point_comparison(
+def test_compare_canopy(canopy_run):
+    compare_datasets(
         'canopy_point',
         canopy_run.point_output.data,
-        'point5',  # coniferous forest
-        comparison_data_dir,
-        prepare_comparison_data,
-        reports_dir,
+        point='point5',  # coniferous forest
     )

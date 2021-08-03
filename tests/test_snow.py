@@ -1,4 +1,4 @@
-from .compare import point_comparison
+from .compare import compare_datasets
 from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -202,35 +202,19 @@ def test_cryolayers_cold_content(single_point_results_cryolayers):
 
 @pytest.mark.slow
 @pytest.mark.comparison
-def test_compare_multilayer(
-        multilayer_run,
-        comparison_data_dir,
-        prepare_comparison_data,
-        reports_dir,
-):
-    point_comparison(
+def test_compare_multilayer(multilayer_run):
+    compare_datasets(
         'snow_multilayer_point',
         multilayer_run.point_output.data,
-        'proviantdepot',
-        comparison_data_dir,
-        prepare_comparison_data,
-        reports_dir,
+        point='proviantdepot',
     )
 
 
 @pytest.mark.slow
 @pytest.mark.comparison
-def test_compare_cryolayers(
-        cryolayer_run,
-        comparison_data_dir,
-        prepare_comparison_data,
-        reports_dir,
-):
-    point_comparison(
+def test_compare_cryolayers(cryolayer_run):
+    compare_datasets(
         'snow_cryolayers_point',
         cryolayer_run.point_output.data,
-        'proviantdepot',
-        comparison_data_dir,
-        prepare_comparison_data,
-        reports_dir,
+        point='proviantdepot',
     )

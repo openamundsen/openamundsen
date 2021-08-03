@@ -5,52 +5,35 @@ from plotly.subplots import make_subplots
 import warnings
 
 
-def make_point_comparison_plot(
+def plot_point_comparison(
     ds_base,
     ds_dev,
-    variables=None,
+    plot_vars,
+    changed_vars,
     num_cols=3,
     plot_height=400,
     base_color='#1f77b4',
     dev_color='#d62728',
 ):
-    if variables is None:
-        base_vars = [v for v in ds_base.variables if v not in ds_base.coords]
-        dev_vars = [v for v in ds_dev.variables if v not in ds_dev.coords]
-        variables = [v for v in base_vars if v in dev_vars]
-
-    prelim_vars = variables
-    variables = []
-    for v in prelim_vars:
-        if v in ds_base.variables and v in ds_dev.variables:
-            variables.append(v)
-        else:
-            warnings.warn(f'Variable {v} not in both datasets, cannot compare')
-
-    num_rows = int(np.ceil(len(variables) / num_cols))
+    num_rows = int(np.ceil(len(plot_vars) / num_cols))
 
     fig = make_subplots(
         rows=num_rows,
         cols=num_cols,
-        subplot_titles=variables,
+        subplot_titles=plot_vars,
         shared_xaxes=True,
     )
 
     highlight_subplots = []
 
-    for plot_num, nc_var in enumerate(variables):
-        data_base = ds_base[nc_var].to_pandas()
-        data_dev = ds_dev[nc_var].to_pandas()
-
-        if data_base.shape != data_dev.shape:
-            warnings.warn(f'Differing shapes for variable {nc_var}: '
-                          f'{data_base.shape} vs. {data_dev.shape}')
-            continue
+    for plot_num, v in enumerate(plot_vars):
+        data_base = ds_base[v].to_pandas()
+        data_dev = ds_dev[v].to_pandas()
 
         row = plot_num // num_cols + 1
         col = plot_num % num_cols + 1
 
-        num_dims = len(ds_base[nc_var].dims)
+        num_dims = len(ds_base[v].dims)
 
         if num_dims == 1:
             data_base = data_base.to_frame()
@@ -70,8 +53,7 @@ def make_point_comparison_plot(
                 col=col,
             )
 
-        if not np.allclose(data_base, data_dev, equal_nan=True):
-            warnings.warn(f'Differing values for variable {nc_var}')
+        if v in changed_vars:
             highlight_subplots.append(plot_num)
 
             for dim in range(num_dims):
@@ -91,6 +73,86 @@ def make_point_comparison_plot(
     for plot_num in highlight_subplots:
         fig['layout']['annotations'][plot_num]['font']['color'] = 'red'
 
+    fig.update_layout(height=plot_height * num_rows)
+
+    return fig
+
+
+def plot_gridded_comparison(
+    ds_base,
+    ds_dev,
+    plot_vars,
+    changed_vars,
+    plot_height=400,
+):
+    titles = []
+    num_rows = 0
+    for v in plot_vars:
+        time_dim = ds_base[v].dims[0]
+        dates = ds_base[v].coords[time_dim].to_index()
+        num_rows += len(dates)
+        for d in dates:
+            titles.append(f'{v} ({d})')
+            titles.append('')  # right column
+
+    fig = make_subplots(
+        rows=num_rows,
+        cols=2,
+        subplot_titles=titles,
+        shared_xaxes=True,
+        # shared_yaxes=True,
+    )
+
+    row = 1
+    for v in plot_vars:
+        data_base = ds_base[v].values
+        data_dev = ds_dev[v].values
+
+        for var_plot_num in range(data_base.shape[0]):
+            data_base_cur = data_base[var_plot_num, :, :]
+            data_dev_cur = data_dev[var_plot_num, :, :]
+
+            min_val = min(
+                np.nanmin(data_base_cur),
+                np.nanmin(data_dev_cur),
+            )
+            max_val = max(
+                np.nanmax(data_base_cur),
+                np.nanmax(data_dev_cur),
+            )
+
+            fig.add_trace(
+                go.Heatmap(
+                    z=data_base_cur,
+                    zmin=min_val,
+                    zmax=max_val,
+                    x=ds_base.x,
+                    y=ds_base.y,
+                    colorscale='viridis',
+                    showscale=False,
+                ),
+                row=row,
+                col=1,
+            )
+
+            if v in changed_vars and var_plot_num in changed_vars[v]:
+                fig.add_trace(
+                    go.Heatmap(
+                        z=data_dev_cur,
+                        zmin=min_val,
+                        zmax=max_val,
+                        x=ds_base.x,
+                        y=ds_base.y,
+                        colorscale='viridis',
+                        showscale=False,
+                    ),
+                    row=row,
+                    col=2,
+                )
+
+            row += 1
+
+    fig.for_each_yaxis(lambda ax: ax.update(scaleanchor=ax.anchor))
     fig.update_layout(height=plot_height * num_rows)
 
     return fig

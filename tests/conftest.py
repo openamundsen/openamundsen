@@ -59,6 +59,12 @@ _BASE_CONFIG = oa.parse_config(oa.Configuration.from_yaml(_BASE_CONFIG_YAML))
 def pytest_addoption(parser):
     parser.addoption('--run-slow', action='store_true', default=False, help='run slow tests')
     parser.addoption(
+        '--skip-comparisons',
+        action='store_true',
+        default=False,
+        help='skip comparisons',
+    )
+    parser.addoption(
         '--prepare-comparison-data',
         action='store_true',
         default=False,
@@ -67,27 +73,40 @@ def pytest_addoption(parser):
     parser.addoption(
         '--comparison-data-dir',
         type=str,
-        default=None,
         help='baseline model results directory',
-    )
-    parser.addoption(
-        '--skip-comparisons',
-        action='store_true',
-        default=False,
-        help='skip comparisons',
     )
     parser.addoption(
         '--reports-dir',
         type=str,
-        default=None,
         help='directory for writing comparison reports',
     )
 
 
 def pytest_configure(config):
-    pytest.DATA_DIR = DATA_DIR
     config.addinivalue_line('markers', 'slow: marks test as slow')
     config.addinivalue_line('markers', 'comparison: marks test as comparing with baseline data')
+
+    prepare_comparison_data = config.getoption('--prepare-comparison-data')
+
+    comp_data_dir = config.getoption('--comparison-data-dir')
+    if comp_data_dir is None:
+        if prepare_comparison_data:
+            raise Exception('--comparison-data-dir must be specified when '
+                            '--prepare-comparison-data is set')
+        else:
+            comp_data_dir = DATA_DIR / 'results'
+    if comp_data_dir is not None:
+        comp_data_dir = Path(comp_data_dir)
+        comp_data_dir.mkdir(parents=True, exist_ok=True)
+
+    reports_dir = config.getoption('--reports-dir')
+    if reports_dir is not None:
+        reports_dir = Path(reports_dir)
+
+    pytest.DATA_DIR = DATA_DIR
+    pytest.COMPARISON_DATA_DIR = comp_data_dir
+    pytest.REPORTS_DIR = reports_dir
+    pytest.PREPARE_COMPARISON_DATA = prepare_comparison_data
 
 
 def pytest_collection_modifyitems(config, items):
@@ -112,36 +131,6 @@ def pytest_sessionstart(session):
 def fetch_data_files():
     for file in data_fetcher.registry_files:
         data_fetcher.fetch(file)
-
-
-@pytest.fixture(scope='session')
-def prepare_comparison_data(request):
-    return request.config.getoption('--prepare-comparison-data')
-
-
-@pytest.fixture(scope='session')
-def comparison_data_dir(request, prepare_comparison_data):
-    d = request.config.getoption('--comparison-data-dir')
-
-    if d is None and prepare_comparison_data:
-        raise Exception('--comparison-data-dir must be specified when '
-                        '--prepare-comparison-data is set')
-
-    if d is not None:
-        d = Path(d)
-        d.mkdir(parents=True, exist_ok=True)
-
-    return d
-
-
-@pytest.fixture(scope='session')
-def reports_dir(request):
-    d = request.config.getoption('--reports-dir')
-
-    if d is not None:
-        d = Path(d)
-
-    return d
 
 
 def base_config():
