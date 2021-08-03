@@ -1,3 +1,4 @@
+from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
 import openamundsen as oa
@@ -50,8 +51,8 @@ def meteo_to_netcdf(ds, out_dir):
         ds_cur.to_netcdf(f'{out_dir}/{station_id}.nc')
 
 
-def test_formats(base_config):
-    config = base_config.copy()
+def test_formats():
+    config = base_config()
     config.start_date = '2015-07-28'
     config.end_date = '2020-12-31'
     config.timestep = 'H'
@@ -74,8 +75,8 @@ def test_formats(base_config):
     xr.testing.assert_allclose(meteo['netcdf'], meteo['csv'])
 
 
-def test_no_files_found(base_config, tmp_path):
-    config = base_config.copy()
+def test_no_files_found(tmp_path):
+    config = base_config()
     config.input_data.meteo.dir = str(tmp_path)
 
     for fmt in ('netcdf', 'csv'):
@@ -85,8 +86,8 @@ def test_no_files_found(base_config, tmp_path):
             model.initialize()
 
 
-def test_missing_csv_metadata_columns(base_config, tmp_path):
-    config = base_config.copy()
+def test_missing_csv_metadata_columns(tmp_path):
+    config = base_config()
     config.input_data.meteo.format = 'csv'
     config.input_data.meteo.dir = str(tmp_path)
 
@@ -100,8 +101,9 @@ def test_missing_csv_metadata_columns(base_config, tmp_path):
         model.initialize()
 
 
-def test_missing_records_inbetween(base_config, tmp_path):
-    config = base_config.copy()
+def test_missing_records_inbetween(tmp_path):
+    config = base_config()
+    config.end_date = '2020-04-30'
     config.timestep = 'H'
     config.input_data.meteo.format = 'csv'
     config.input_data.meteo.dir = str(tmp_path)
@@ -121,8 +123,8 @@ def test_missing_records_inbetween(base_config, tmp_path):
         model.initialize()
 
 
-def test_missing_records_start_end(base_config):
-    config = base_config.copy()
+def test_missing_records_start_end():
+    config = base_config()
     config.start_date = '1900-01-01'
     config.end_date = '2100-12-31'
 
@@ -131,8 +133,8 @@ def test_missing_records_start_end(base_config):
         model.initialize()
 
 
-def test_station_selection(base_config, tmp_path):
-    config = base_config.copy()
+def test_station_selection(tmp_path):
+    config = base_config()
     model = oa.OpenAmundsen(config)
     model.initialize()
 
@@ -221,12 +223,12 @@ def test_station_selection(base_config, tmp_path):
         model.initialize()
 
 
-def test_missing_variables(base_config, tmp_path):
+def test_missing_variables(tmp_path):
     ds = xr.load_dataset(f'{pytest.DATA_DIR}/meteo/rofental/netcdf/proviantdepot.nc')
     ds = ds.drop_vars(['hurs', 'rsds', 'wss'])
     ds.to_netcdf(tmp_path / 'proviantdepot.nc')
 
-    config = base_config.copy()
+    config = base_config()
     config.input_data.meteo.dir = str(tmp_path)
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -236,8 +238,8 @@ def test_missing_variables(base_config, tmp_path):
     assert 'wind_speed' in model.meteo
 
 
-def test_netcdf_precip_units(base_config, tmp_path):
-    config = base_config.copy()
+def test_netcdf_precip_units(tmp_path):
+    config = base_config()
     config.input_data.meteo.dir = str(tmp_path)
 
     ds = xr.load_dataset(f'{pytest.DATA_DIR}/meteo/rofental/netcdf/proviantdepot.nc')
@@ -263,8 +265,8 @@ def test_netcdf_precip_units(base_config, tmp_path):
         model.initialize()
 
 
-def test_crs(base_config, tmp_path):
-    config = base_config.copy()
+def test_crs(tmp_path):
+    config = base_config()
 
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -291,8 +293,8 @@ def test_crs(base_config, tmp_path):
     xr.testing.assert_allclose(ds1, ds2)
 
 
-def test_grid_cell_assignment(base_config, tmp_path):
-    config = base_config.copy()
+def test_grid_cell_assignment(tmp_path):
+    config = base_config()
     config.start_date = '2020-01-01'
     config.end_date = '2020-01-01'
 
@@ -340,7 +342,7 @@ def test_grid_cell_assignment(base_config, tmp_path):
         assert int(ds_s.row) == expected_row
 
 
-def test_resample(base_config, tmp_path):
+def test_resample(tmp_path):
     def meteo_to_df(model):
         return (
             model.meteo
@@ -356,7 +358,7 @@ def test_resample(base_config, tmp_path):
     agg_funcs_res = {p: pd.Series.mean for p in params}
     agg_funcs_res['precip'] = pd.Series.sum
 
-    config = base_config.copy()
+    config = base_config()
     config.start_date = '2015-11-20'
     config.end_date = '2015-11-30'
     config.timestep = 'H'
@@ -439,8 +441,8 @@ def test_resample(base_config, tmp_path):
         model.initialize()
 
 
-def test_non_hourly_input(base_config, tmp_path):
-    config = base_config.copy()
+def test_non_hourly_input(tmp_path):
+    config = base_config()
     config.start_date = '2015-11-20'
     config.end_date = '2015-11-30'
     config.timestep = '3H'

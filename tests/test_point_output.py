@@ -1,3 +1,4 @@
+from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
 import openamundsen as oa
@@ -8,8 +9,8 @@ import xarray as xr
 
 
 @pytest.mark.parametrize('fmt', ['netcdf', 'csv', 'memory'])
-def test_formats(fmt, base_config, tmp_path):
-    config = base_config.copy()
+def test_formats(fmt, tmp_path):
+    config = base_config()
     config.end_date = '2020-01-16'
     config.results_dir = tmp_path
     point_cfg = config.output_data.timeseries
@@ -49,8 +50,8 @@ def test_formats(fmt, base_config, tmp_path):
         assert np.all(df.temp > 250.)
 
 
-def test_values(base_config):
-    config = base_config.copy()
+def test_values():
+    config = base_config()
     config.end_date = '2020-01-15'
 
     model = oa.OpenAmundsen(config)
@@ -74,8 +75,8 @@ def test_values(base_config):
 
 
 @pytest.mark.parametrize('write_freq', ['M', '7H', '3H', '10min'])
-def test_write_freq(write_freq, base_config, tmp_path):
-    config = base_config.copy()
+def test_write_freq(write_freq, tmp_path):
+    config = base_config()
     config.end_date = '2020-01-15'
     config.results_dir = tmp_path
     config.output_data.timeseries.format = 'netcdf'
@@ -89,18 +90,18 @@ def test_write_freq(write_freq, base_config, tmp_path):
     assert ds.time.to_index().equals(model.dates)
 
 
-def test_points(base_config):
-    base_config = base_config.copy()
-    base_config.end_date = '2020-01-15 00:00'
+def test_points():
+    bc = base_config()
+    bc.end_date = '2020-01-15 00:00'
 
-    config = base_config.copy()
+    config = bc.copy()
     model = oa.OpenAmundsen(config)
     model.initialize()
     model.run()
     ds = model.point_output.data
     assert_array_equal(ds.point, ['bellavista', 'latschbloder', 'proviantdepot'])
 
-    config = base_config.copy()
+    config = bc.copy()
     config.output_data.timeseries.add_default_points = False
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -108,7 +109,7 @@ def test_points(base_config):
     ds = model.point_output.data
     assert ds.point.size == 0
 
-    config = base_config.copy()
+    config = bc.copy()
     config.output_data.timeseries.add_default_points = False
     config.output_data.timeseries.points.append({
         'x': 640367,
@@ -127,7 +128,7 @@ def test_points(base_config):
     assert_allclose(ds.alt, [3181.89, 1948.97])
 
     # Duplicate point name
-    config = base_config.copy()
+    config = bc.copy()
     config.output_data.timeseries.points.append({
         'x': 640367,
         'y': 5182896,
@@ -138,7 +139,7 @@ def test_points(base_config):
         model.initialize()
 
     # Duplicate point name
-    config = base_config.copy()
+    config = bc.copy()
     config.output_data.timeseries.points.append({
         'x': 640367,
         'y': 5182896,
@@ -149,7 +150,7 @@ def test_points(base_config):
         model.initialize()
 
     # Point not within grid
-    config = base_config.copy()
+    config = bc.copy()
     config.output_data.timeseries.points.append({
         'x': 637152,
         'y': 5196427,
@@ -159,12 +160,12 @@ def test_points(base_config):
         model.initialize()
 
 
-def test_variables(base_config):
-    base_config = base_config.copy()
-    base_config.end_date = '2020-01-15 00:00'
-    base_config.output_data.timeseries.variables = []
+def test_variables():
+    bc = base_config()
+    bc.end_date = '2020-01-15 00:00'
+    bc.output_data.timeseries.variables = []
 
-    config = base_config.copy()
+    config = bc.copy()
     config.output_data.timeseries.add_default_variables = False
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -172,7 +173,7 @@ def test_variables(base_config):
     ds = model.point_output.data
     assert len(ds.data_vars) == 0
 
-    config = base_config.copy()
+    config = bc.copy()
     config.output_data.timeseries.add_default_variables = False
     config.output_data.timeseries.variables.append({'var': 'meteo.spec_heat_cap_moist_air'})
     config.output_data.timeseries.variables.append({
@@ -186,14 +187,14 @@ def test_variables(base_config):
     assert_array_equal(ds.data_vars, ['spec_heat_cap_moist_air', 'myvar'])
 
     # Invalid variable name
-    config = base_config.copy()
+    config = bc.copy()
     config.output_data.timeseries.variables.append({'var': 'meteo.asdf'})
     model = oa.OpenAmundsen(config)
     with pytest.raises(errors.ConfigurationError):
         model.initialize()
 
     # Output name already in use
-    config = base_config.copy()
+    config = bc.copy()
     config.output_data.timeseries.variables.append({'var': 'meteo.temp'})
     model = oa.OpenAmundsen(config)
     with pytest.raises(errors.ConfigurationError):
