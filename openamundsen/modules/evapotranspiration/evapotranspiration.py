@@ -340,12 +340,16 @@ class EvapotranspirationModel:
 
     def _single_coeff_crop_et(self, pos):
         s_et = self.model.state.evapotranspiration
-        s_et.evapotranspiration[pos] = s_et.crop_coeff[pos] * s_et.et_ref[pos]
+        et_ref = s_et.et_ref[pos].copy()
+        et_ref[np.isnan(et_ref)] = 0.
+        s_et.evapotranspiration[pos] = s_et.crop_coeff[pos] * et_ref
 
     def _dual_coeff_crop_et(self, pos, lcc):
         model = self.model
         s = model.state
         s_et = s.evapotranspiration
+        et_ref = s_et.et_ref[pos].copy()
+        et_ref[np.isnan(et_ref)] = 0.
 
         plant_height = s.land_cover.plant_height[pos]
         min_crop_coeff = model.config.evapotranspiration.min_crop_coefficient
@@ -390,12 +394,12 @@ class EvapotranspirationModel:
         )
 
         s_et.crop_coeff[pos] = s_et.basal_crop_coeff[pos] + s_et.evaporation_coeff[pos]
-        s_et.evaporation[pos] = s_et.evaporation_coeff[pos] * s_et.et_ref[pos]
-        s_et.transpiration[pos] = s_et.basal_crop_coeff[pos] * s_et.et_ref[pos]
+        s_et.evaporation[pos] = s_et.evaporation_coeff[pos] * et_ref
+        s_et.transpiration[pos] = s_et.basal_crop_coeff[pos] * et_ref
         s_et.evapotranspiration[pos] = s_et.evaporation[pos] + s_et.transpiration[pos]
 
         # Initialize water balance variables
-        precip = s.meteo.rainfall[pos]
+        precip = np.nan_to_num(s.meteo.rainfall[pos])
         precip_runoff = 0.  # as suggested by [1]
         irrigation = 0.
         soil_transpiration = 0.  # as suggested by [1]
@@ -437,7 +441,7 @@ class EvapotranspirationModel:
         s = model.state
         s_et = s.evapotranspiration
 
-        precip = s.meteo.rainfall[pos]
+        precip = np.nan_to_num(s.meteo.rainfall[pos])
         precip_runoff = 0.  # as suggested by [1]
         irrigation = 0.
         capillary_rise = 0.  # assumed to be zero when the water table is more than about 1 m below the bottom of the root zone [1]
@@ -473,7 +477,7 @@ class EvapotranspirationModel:
         lcc_params = model.config.land_cover.classes[lcc]
         max_interception = lcc_params.max_sealed_interception
 
-        s_et.sealed_interception[pos] += s.meteo.rainfall[pos]
+        s_et.sealed_interception[pos] += np.nan_to_num(s.meteo.rainfall[pos])
         runoff = (s_et.sealed_interception[pos] - max_interception).clip(min=0)
         s_et.sealed_interception[pos] -= runoff
         s_et.deep_percolation[pos] = runoff  # runoff is currently treated as deep percolation for sealed surfaces (should be improved)
@@ -508,6 +512,7 @@ class EvapotranspirationModel:
             (D * (Rn - G) + rhoa * cp * (es - ea) / ra)
             / (D + gamma * (1 + rs / ra))
         ).clip(min=0)
+        evaporation_Wm2[np.isnan(evaporation_Wm2)] = 0.
         s_et.evaporation[pos] = np.minimum(  # (kg m-2)
             evaporation_Wm2 / c.LATENT_HEAT_OF_VAPORIZATION * model.timestep,
             s_et.sealed_interception[pos],
@@ -552,10 +557,10 @@ def climate_correction(mean_wind_speed, mean_min_rel_hum, plant_height):
     mean_min_rel_hum = np.clip(mean_min_rel_hum, 20, 80)
     plant_height = np.clip(plant_height, 0.1, 10)
 
-    return (
+    return np.nan_to_num((
         0.04 * (mean_wind_speed - 2)
         - 0.004 * (mean_min_rel_hum - 45)
-    ) * (plant_height / 3)**0.3
+    ) * (plant_height / 3)**0.3)
 
 
 def crop_coefficient(

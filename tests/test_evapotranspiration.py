@@ -15,6 +15,9 @@ def test_evapotranspiration(tmp_path):
     model = oa.OpenAmundsen(config)
     model.initialize()
 
+    meteo = model.meteo.copy()
+    meteo.temp.values[:, 30] = np.nan  # nan values should not propagate to evapotranspiration variables
+
     roi_xs = model.grid.X.flat[model.grid.roi_idxs_flat]
     roi_ys = model.grid.Y.flat[model.grid.roi_idxs_flat]
 
@@ -60,6 +63,7 @@ def test_evapotranspiration(tmp_path):
 
     model = oa.OpenAmundsen(config)
     model.initialize()
+    model.meteo = meteo
     model.run()
     ds = model.point_output.data
 
@@ -113,6 +117,7 @@ def test_evapotranspiration(tmp_path):
 
     model = oa.OpenAmundsen(config)
     model.initialize()
+    model.meteo = meteo
     model.run()
     ds = model.point_output.data
 
