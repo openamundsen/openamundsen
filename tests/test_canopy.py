@@ -60,6 +60,7 @@ def canopy_run():
             {'var': 'snow.canopy_intercepted_snowfall'},
             {'var': 'snow.canopy_sublimation'},
             {'var': 'snow.canopy_melt'},
+            {'var': 'meteo.top_canopy_temp'},
         ]
 
         model = oa.OpenAmundsen(config)
@@ -70,7 +71,7 @@ def canopy_run():
 
 
 @pytest.mark.slow
-def test_canopy(canopy_run):
+def test_canopy_snow(canopy_run):
     model = canopy_run
     ds = model.point_output.data
     lccs = model.config.land_cover.classes.keys()
@@ -95,6 +96,26 @@ def test_canopy(canopy_run):
             assert np.all(np.isnan(ds_lcc.canopy_intercepted_snowfall))
             assert np.all(np.isnan(ds_lcc.canopy_sublimation))
             assert np.all(np.isnan(ds_lcc.canopy_melt))
+
+
+@pytest.mark.slow
+def test_canopy_meteorology(canopy_run):
+    model = canopy_run
+    ds = model.point_output.data
+    lccs = model.config.land_cover.classes.keys()
+
+    for lcc_num, lcc in enumerate(lccs):
+        lcc_params = model.config.land_cover.classes[lcc]
+        is_forest = lcc_params.get('is_forest', False)
+
+        if is_forest:
+            ds_lcc = ds.isel(point=lcc_num)
+            assert np.all(ds_lcc.rel_hum >= 0.)
+            assert np.all(ds_lcc.rel_hum <= 100.)
+            assert np.all(ds_lcc.wind_speed >= 0.)
+            assert np.all(ds_lcc.sw_in >= 0.)
+            assert np.all(ds_lcc.lw_in >= 0.)
+            assert np.all(np.abs(ds_lcc.temp - ds_lcc.top_canopy_temp) <= 10.)
 
 
 @pytest.mark.slow

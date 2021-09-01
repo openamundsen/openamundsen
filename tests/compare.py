@@ -47,7 +47,7 @@ def compare_datasets(
     if plot:
         plot_vars = []
 
-        for v in variables:
+        for v in compare_vars:
             if len(ds_base[v].dims) > 3:
                 warnings.warn(f'Variable {v} is 3-dimensional, plotting not supported')
             else:
