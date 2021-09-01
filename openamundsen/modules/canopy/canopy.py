@@ -96,7 +96,9 @@ class CanopyModel:
             + canopy_frac * c.STEFAN_BOLTZMANN * s.meteo.temp[pos]**4
         )
 
-        s.meteo.rel_hum[pos] *= (1 + 0.1 * canopy_frac)  # eq. (6)
+        s.meteo.rel_hum[pos] = (  # eq. (6)
+            s.meteo.rel_hum[pos] * (1 + 0.1 * canopy_frac)
+        ).clip(0, 100)
 
         # Wind speed is modified assuming a reference level of z = 0.6h, i.e., the term (1 - z/h)
         # from Liston & Elder (2006, eq. (16)) becomes 0.4
