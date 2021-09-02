@@ -980,3 +980,27 @@ liveview:
           max:
             type: number
             required: true
+
+glaciers:
+  type: dict
+  default: {}
+  schema:
+    enabled:
+      type: boolean
+      default: false
+
+    model:
+      type: string
+      allowed:
+        - delta_h
+      default: delta_h
+
+    delta_h:
+      type: dict
+      default: {}
+      schema:
+        mass_balance_year_start_month:
+          type: integer
+          default: 10
+          min: 1
+          max: 12
