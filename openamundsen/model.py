@@ -585,14 +585,83 @@ class OpenAmundsen:
             m.precip[roi] = m.snowfall[roi] + m.rainfall[roi]
 
     @property
-    def is_first_timestep_of_model_run(self):
-        return self.date_idx == 0
+    def timestep_props(self):
+        """
+        Get the properties of the current timestep.
 
-    @property
-    def is_first_timestep_of_day(self):
-        return (
-            self.is_first_timestep_of_model_run
-            or self.date.day != self.dates[self.date_idx - 1].day
+        The return value is a dataclass with the following fields:
+
+            - `first_of_run`: Whether this is the first timestep of the model
+              run.
+            - `strict_first_of_year`: Whether this is the first possible
+              timestep of the current year.
+            - `strict_first_of_month`: Whether this is the first possible
+              timestep of the current month.
+            - `strict_first_of_day`: Whether this is the first possible timestep
+              of the current day.
+            - `first_of_year`: Whether this is the first actually processed
+              timestep of the current year.
+            - `first_of_month`: Whether this is the first actually processed
+              timestep of the current month.
+            - `first_of_day`: Whether this is the first actually processed
+              timestep of the current day.
+            - `last_of_run`: Whether this is the last timestep of the model run.
+            - `strict_last_of_year`: Whether this is the last possible timestep
+              of the current year.
+            - `strict_last_of_month`: Whether this is the last possible timestep
+              of the current month.
+            - `strict_last_of_day`: Whether this is the last possible timestep
+              of the current day.
+            - `last_of_year`: Whether this is the last actually processed
+              timestep of the current year.
+            - `last_of_month`: Whether this is the last actually processed
+              timestep of the current month.
+            - `last_of_day`: Whether this is the last actually processed
+              timestep of the current day.
+
+        The difference between the "strict" and the "non-strict" fields is that
+        the latter take the model run start/end date into account. For example,
+        if the start date is 2020-12-31 23:00, at the first timestep
+        `first_of_year`, `first_of_month` and `first_of_day` will all be True
+        (since these are the first _processed_ timesteps of the current year,
+        month and day), whereas `strict_first_of_year`, `strict_first_of_month`
+        and `strict_first_of_day` will only be True for the first time on
+        2021-01-01 00:00.
+        """
+        pot_prev_date = self.date - pd.Timedelta(seconds=self.timestep)
+        pot_next_date = self.date + pd.Timedelta(seconds=self.timestep)
+
+        first_of_run = self.date_idx == 0
+        strict_first_of_year = pot_prev_date.year != self.date.year
+        strict_first_of_month = pot_prev_date.month != self.date.month
+        strict_first_of_day = pot_prev_date.day != self.date.day
+        first_of_year = strict_first_of_year or first_of_run
+        first_of_month = strict_first_of_month or first_of_run
+        first_of_day = strict_first_of_day or first_of_run
+
+        last_of_run = self.date_idx == len(self.dates) - 1
+        strict_last_of_year = pot_next_date.year != self.date.year
+        strict_last_of_month = pot_next_date.month != self.date.month
+        strict_last_of_day = pot_next_date.day != self.date.day
+        last_of_year = strict_last_of_year or last_of_run
+        last_of_month = strict_last_of_month or last_of_run
+        last_of_day = strict_last_of_day or last_of_run
+
+        return util.TimestepProperties(
+            first_of_run=first_of_run,
+            strict_first_of_year=strict_first_of_year,
+            strict_first_of_month=strict_first_of_month,
+            strict_first_of_day=strict_first_of_day,
+            first_of_year=first_of_year,
+            first_of_month=first_of_month,
+            first_of_day=first_of_day,
+            last_of_run=last_of_run,
+            strict_last_of_year=strict_last_of_year,
+            strict_last_of_month=strict_last_of_month,
+            strict_last_of_day=strict_last_of_day,
+            last_of_year=last_of_year,
+            last_of_month=last_of_month,
+            last_of_day=last_of_day,
         )
 
 

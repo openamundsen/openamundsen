@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from munch import Munch
 import numpy as np
 from openamundsen import constants
@@ -220,3 +221,21 @@ def offset_to_timedelta(offset):
     Convert a pandas-compatible offset (e.g. '3H') to a Timedelta object.
     """
     return pd.to_timedelta(pandas.tseries.frequencies.to_offset(offset))
+
+
+@dataclass(frozen=True)
+class TimestepProperties:
+    first_of_run: bool
+    strict_first_of_year: bool
+    strict_first_of_month: bool
+    strict_first_of_day: bool
+    first_of_year: bool
+    first_of_month: bool
+    first_of_day: bool
+    last_of_run: bool
+    strict_last_of_year: bool
+    strict_last_of_month: bool
+    strict_last_of_day: bool
+    last_of_year: bool
+    last_of_month: bool
+    last_of_day: bool
