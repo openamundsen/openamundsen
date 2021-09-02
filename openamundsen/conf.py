@@ -277,5 +277,13 @@ def validate_config(config):
         ac.decay_timescale_determination_temperature = 'surface'
         ac.refresh_method = 'continuous'
 
+    if (
+        config.glaciers.enabled
+        and config.glaciers.model == 'delta_h'
+        and config.snow.model != 'cryolayers'
+    ):
+        raise ConfigurationError('Glacier model "delta_h" can currently only be used with '
+                                 'snow model "cryolayers"')
+
     if SNOW_MANAGEMENT_AVAILABLE:
         openamundsen_snowmanagement.validate_config(config)
