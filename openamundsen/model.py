@@ -65,6 +65,7 @@ class OpenAmundsen:
         self._require_snow_management = (
             conf.SNOW_MANAGEMENT_AVAILABLE and config.snow_management.enabled
         )
+        self._require_glaciers = config.glaciers.enabled
 
         self._initialize_logger()
 
@@ -87,6 +88,9 @@ class OpenAmundsen:
 
         if self._require_evapotranspiration:
             self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
+
+        if self._require_glaciers:
+            self.glaciers = modules.glacier.GlacierModel(self)
 
         if config.meteo.interpolation.wind.method == 'liston':
             self.state.base.add_variable(
@@ -328,6 +332,9 @@ class OpenAmundsen:
         if self._require_evapotranspiration:
             self.evapotranspiration.evapotranspiration()
 
+        if self._require_glaciers:
+            self.glaciers.update()
+
     def _initialize_logger(self):
         """
         Initialize the logger for the model instance.
@@ -388,6 +395,9 @@ class OpenAmundsen:
 
         if self._require_snow_management:
             self.snow_management.initialize()
+
+        if self._require_glaciers:
+            self.glaciers.initialize()
 
     def _initialize_point_outputs(self):
         self.point_output = fileio.PointOutputManager(self)
@@ -533,6 +543,19 @@ class OpenAmundsen:
                 )
             else:
                 raise FileNotFoundError(f'Soil texture file not found: {soil_texture_file}')
+
+        # Read glaciers file
+        if self._require_glaciers:
+            glaciers_file = util.raster_filename('glaciers', self.config)
+
+            if glaciers_file.exists():
+                self.logger.info(f'Reading glaciers ({glaciers_file})')
+                self.state.glaciers.glacier[:] = fileio.read_raster_file(
+                    glaciers_file,
+                    check_meta=self.grid,
+                )
+            else:
+                raise FileNotFoundError(f'Glaciers file not found: {glaciers_file}')
 
         self.grid.prepare_roi_coordinates()
 
