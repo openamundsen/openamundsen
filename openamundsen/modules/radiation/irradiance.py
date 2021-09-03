@@ -32,6 +32,9 @@ def clear_sky_shortwave_irradiance(model):
     roi_plus_stations[station_rows, station_cols] = True
 
     mean_surface_albedo = model.state.surface.albedo[roi].mean()
+    if np.isnan(mean_surface_albedo):
+        # E.g. in the first timestep no albedo has yet been calculated; assume a default value here
+        mean_surface_albedo = model.config.soil.albedo
 
     if model.sun_params['sun_over_horizon']:
         model.logger.debug('Calculating shadows')
