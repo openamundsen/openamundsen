@@ -8,6 +8,17 @@ import pyproj
 import xarray as xr
 
 
+_ALLOWED_OFFSETS = [
+    pd.tseries.offsets.YearEnd,
+    pd.tseries.offsets.YearBegin,
+    pd.tseries.offsets.MonthEnd,
+    pd.tseries.offsets.MonthBegin,
+    pd.tseries.offsets.Day,
+    pd.tseries.offsets.Hour,
+    pd.tseries.offsets.Minute,
+]
+
+
 @dataclass
 class OutputField:
     """
@@ -413,10 +424,10 @@ def _freq_write_dates(dates, out_freq, agg):
     Calculate output dates for gridded outputs when a frequency string is set.
 
     For non-aggregated fields the write dates are assigned to the start of the
-    respective intervals (e.g. if the model timestep is 1 hour and the write
-    frequency is 'D', the write dates are 00:00 of each day). For aggregated
-    fields, the write dates are assigned to the end of the intervals (e.g., in
-    this case the write dates would be 23:00 of each day).
+    respective intervals for non-anchored and begin-anchored offsets (e.g. 'D',
+    'MS', 'AS'), and to the end of the intervals for end-anchored offsets (e.g.
+    'M', 'A'). For aggregated fields, the write dates are always assigned to the
+    end of the intervals.
 
     Parameters
     ----------
@@ -433,10 +444,55 @@ def _freq_write_dates(dates, out_freq, agg):
     Returns
     -------
     write_dates : pd.DatetimeIndex
+
+    Examples
+    --------
+    >>> dates = pd.date_range(
+    ...     start='2021-01-01 00:00',
+    ...     end='2021-12-31 23:00',
+    ...     freq='H',
+    ... )
+    ... _freq_write_dates(dates, 'A', False)
+    DatetimeIndex(['2021-12-31 23:00:00'], dtype='datetime64[ns]', freq=None)
+
+    >>> _freq_write_dates(dates, 'AS', False)
+    DatetimeIndex(['2021-01-01'], dtype='datetime64[ns]', freq='AS-JAN')
+
+    >>> _freq_write_dates(dates, 'D', False)
+    DatetimeIndex(['2021-01-01', '2021-01-02', '2021-01-03', '2021-01-04',
+                   '2021-01-05', '2021-01-06', '2021-01-07', '2021-01-08',
+                   '2021-01-09', '2021-01-10',
+                   ...
+                   '2021-12-22', '2021-12-23', '2021-12-24', '2021-12-25',
+                   '2021-12-26', '2021-12-27', '2021-12-28', '2021-12-29',
+                   '2021-12-30', '2021-12-31'],
+                  dtype='datetime64[ns]', length=365, freq='D')
+
+    >>> _freq_write_dates(dates, 'D', True)
+    DatetimeIndex(['2021-01-01 23:00:00', '2021-01-02 23:00:00',
+                   '2021-01-03 23:00:00', '2021-01-04 23:00:00',
+                   '2021-01-05 23:00:00', '2021-01-06 23:00:00',
+                   '2021-01-07 23:00:00', '2021-01-08 23:00:00',
+                   '2021-01-09 23:00:00', '2021-01-10 23:00:00',
+                   ...
+                   '2021-12-22 23:00:00', '2021-12-23 23:00:00',
+                   '2021-12-24 23:00:00', '2021-12-25 23:00:00',
+                   '2021-12-26 23:00:00', '2021-12-27 23:00:00',
+                   '2021-12-28 23:00:00', '2021-12-29 23:00:00',
+                   '2021-12-30 23:00:00', '2021-12-31 23:00:00'],
+                  dtype='datetime64[ns]', length=365, freq='D')
     """
     model_freq = dates.freqstr
     model_freq_td = util.offset_to_timedelta(model_freq)
-    out_offset = pandas.tseries.frequencies.to_offset(out_freq)
+
+    try:
+        out_offset = pandas.tseries.frequencies.to_offset(out_freq)
+        if not any([isinstance(out_offset, o) for o in _ALLOWED_OFFSETS]):
+            raise ValueError
+    except ValueError:
+        allowed_offsets_str = ", ".join([o().__class__.__name__ for o in _ALLOWED_OFFSETS])
+        raise errors.ConfigurationError(f'Unsupported output frequency: {out_freq}. '
+                                        f'Supported offsets: {allowed_offsets_str}')
 
     if not out_offset.is_anchored():
         # For non-anchored offsets (e.g., '3H', 'D'), the output frequency must be a multiple of
@@ -486,5 +542,11 @@ def _freq_write_dates(dates, out_freq, agg):
             end=dates[-1],
             freq=out_freq,
         )
+
+        if any([isinstance(out_offset, o) for o in (
+                pd.tseries.offsets.YearEnd,
+                pd.tseries.offsets.MonthEnd,
+        )]) and model_freq_td < pd.Timedelta(days=1):
+            write_dates += pd.Timedelta(days=1) - model_freq_td
 
     return write_dates

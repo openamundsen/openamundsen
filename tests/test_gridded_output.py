@@ -12,31 +12,51 @@ import xarray as xr
 
 def test_freq_write_dates():
     dates = pd.date_range(start='2021-01-01 00:00', end='2021-12-31 23:00', freq='H')
-    assert dates.equals(_freq_write_dates(dates, 'H', False))
+
+    assert _freq_write_dates(dates, 'H', False).equals(dates)
+
     wd = _freq_write_dates(dates, '3H', False)
     assert np.all(wd.hour.isin([0, 3, 6, 9, 12, 15, 18, 21]))
+
     wd = _freq_write_dates(dates, 'D', False)
     assert np.all(wd.hour == 0)
     assert dates.normalize().unique().equals(wd.normalize())
+
     wd = _freq_write_dates(dates, 'D', True)
     assert np.all(wd.hour == 23)
+
     wd = _freq_write_dates(dates, 'M', True)
     assert np.all(wd.day.isin([28, 30, 31]))
     assert np.all(wd.hour == 23)
 
+    assert _freq_write_dates(dates, 'A', False).equals(pd.to_datetime(['2021-12-31 23:00']))
+    assert _freq_write_dates(dates, 'AS', False).equals(pd.to_datetime(['2021-01-01 00:00']))
+
+    wd = _freq_write_dates(dates, 'M', False)
+    assert np.all(wd.day.isin([28, 30, 31]))
+    assert np.all(wd.hour == 23)
+
+    wd = _freq_write_dates(dates, 'MS', False)
+    assert np.all(wd.day == 1)
+    assert np.all(wd.hour == 0)
+
     dates = pd.date_range(start='2021-01-01 06:00', end='2021-12-31 21:00', freq='3H')
     wd = _freq_write_dates(dates, 'D', False)
     assert np.all(wd.hour == 6)
+
     wd = _freq_write_dates(dates, 'D', True)
     assert np.all(wd.hour == 3)
+
     with pytest.raises(ValueError):
         wd = _freq_write_dates(dates, 'H', False)
+
     with pytest.raises(ValueError):
         wd = _freq_write_dates(dates, 'H', True)
 
     dates = pd.date_range(start='2021-01-01 02:00', end='2021-12-31 04:00', freq='3H')
     wd = _freq_write_dates(dates, 'D', False)
     assert np.all(wd.hour == 2)
+    # assert _freq_write_dates(dates, 'A', False).size == 0
 
     dates = pd.date_range(start='2021-01-01 02:00', end='2021-01-01 07:00', freq='H')
     assert len(_freq_write_dates(dates, 'D', False)) == 1
@@ -45,6 +65,14 @@ def test_freq_write_dates():
     dates = pd.date_range(start='2021-01-15 00:00', end='2021-03-15 21:00', freq='3H')
     wd = _freq_write_dates(dates, 'M', True)
     assert len(wd) == 2
+
+    dates = pd.date_range(start='2021-01-01 01:00', end='2021-12-31 22:00', freq='3H')
+    assert _freq_write_dates(dates, 'A', False).equals(pd.to_datetime(['2021-12-31 22:00']))
+    assert _freq_write_dates(dates, 'AS', False).equals(pd.to_datetime(['2021-01-01 01:00']))
+
+    for freq in ('BM', 'Q', 'ms', 'us', 'N', 'foo'):
+        with pytest.raises(errors.ConfigurationError):
+            _freq_write_dates(dates, freq, False)
 
 
 @pytest.mark.parametrize('fmt', ['netcdf', 'ascii', 'geotiff', 'memory'])
