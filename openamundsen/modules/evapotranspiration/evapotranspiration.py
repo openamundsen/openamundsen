@@ -76,6 +76,9 @@ class EvapotranspirationModel:
         s_et.add_variable('transpiration', 'kg m-2', 'Transpiration')
         s_et.add_variable('evapotranspiration', 'kg m-2', 'Evapotranspiration')
         s_et.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
+        s_et.add_variable('ref_albedo', '1', 'Reference surface albedo')
+        s_et.add_variable('ref_emissivity', '1', 'Reference emissivity')
+        s_et.add_variable('ref_net_radiation', 'W m-2', 'Reference net radiation')
         s_et.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
         s_et.add_variable('crop_coeff', '1', 'Crop coefficient')
         s_et.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
@@ -168,10 +171,15 @@ class EvapotranspirationModel:
 
         s_et.deep_percolation_evaporation_layer[roi] = 0.
 
-        # Initialize sealed interception for sealed surfaces
+        # Initialize reference albedo, reference emissivity and sealed interception
         for lcc, pos in self.land_cover_class_pixels.items():
             if model.config['land_cover']['classes'][lcc].get('is_sealed', False):
+                s_et.ref_albedo[pos] = model.config.evapotranspiration.sealed_albedo
+                s_et.ref_emissivity[pos] = model.config.evapotranspiration.sealed_emissivity
                 s_et.sealed_interception[pos] = 0.
+            else:
+                s_et.ref_albedo[pos] = model.config.evapotranspiration.grass_albedo
+                s_et.ref_emissivity[pos] = model.config.evapotranspiration.grass_emissivity
 
     def _climate_correction(self):
         """
@@ -301,6 +309,28 @@ class EvapotranspirationModel:
                     )
                 self._root_zone_water_balance(pos_snowfree)
 
+    def _reference_net_radiation(self):
+        """
+        Calculate the reference net radiation, i.e. assuming grass albedo and
+        emissivity for non-sealed surfaces and sealed surface albedo and
+        emissivity for sealed surfaces.
+        """
+        model = self.model
+        roi = model.grid.roi
+        s = model.state
+        s_et = s.evapotranspiration
+
+        sw_bal = (1 - s_et.ref_albedo[roi]) * s.meteo.top_canopy_sw_in[roi]
+        lw_bal = (
+            s.meteo.top_canopy_lw_in[roi]
+            - (
+                c.STEFAN_BOLTZMANN
+                * s_et.ref_emissivity[roi]
+                * s.meteo.top_canopy_temp[roi]**4
+            )
+        )
+        s_et.ref_net_radiation[roi] = sw_bal + lw_bal
+
     def _reference_evapotranspiration(self):
         """
         Calculate reference evapotranspiration (ETo).
@@ -310,12 +340,14 @@ class EvapotranspirationModel:
         s = model.state
         s_et = s.evapotranspiration
 
+        self._reference_net_radiation()
+
         soil_heat_flux_factor = 0.1 if model.sun_params['sun_over_horizon'] else 0.5
         s_et.soil_heat_flux[roi] = soil_heat_flux_factor * s.meteo.net_radiation[roi]  # eq. (45-46)
 
         Wm2_to_MJm2h = 1e-6 * c.SECONDS_PER_HOUR  # conversion factor from W m-2 (= J m-2 s-1) to MJ m-2 h-1
 
-        Rn = s.meteo.net_radiation[roi] * Wm2_to_MJm2h  # net radiation at the grass surface (MJ m-2 h-1)
+        Rn = s_et.ref_net_radiation[roi] * Wm2_to_MJm2h  # net radiation at the grass surface (MJ m-2 h-1)
         G = s_et.soil_heat_flux[roi] * Wm2_to_MJm2h  # soil heat flux density (MJ m-2 h-1)
         T = s.meteo.top_canopy_temp[roi] - c.T0  # air temperature (°C)
         D = 4098 * (0.6108 * np.exp(17.27 * T / (T + 273.3))) / (T + 273.3)**2  # slope of the relationship between saturation vapor pressure and temperature (kPa °C-1) (eq. (13))
