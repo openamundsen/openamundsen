@@ -58,7 +58,7 @@ def parse_end_date(end_date, timestep):
     # to 0 if not explicitly specified)
     timedelta = util.offset_to_timedelta(timestep)
     if infer_end_hour and timedelta < pd.Timedelta(days=1):
-        end_date += pd.Timedelta(hours=24) - util.offset_to_timedelta(timestep)
+        end_date += pd.Timedelta(hours=24) - timedelta
 
     return end_date
 
