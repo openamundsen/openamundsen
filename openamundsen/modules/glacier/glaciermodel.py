@@ -3,12 +3,22 @@ from openamundsen import constants as c
 from openamundsen.modules.snow import CryoLayerID
 
 
-MIN_ICE_THICKNESS = 10.  # (m)
+MIN_ICE_THICKNESS = 10.  # minimum required ice thickness for applying the delta h function (m)
 TERMINUS_MASS_BALANCE_ELEVATION_PERCENTAGE = 10.  # (%)
 TERMINUS_ELEVATION_BUFFER = 50.  # (m)
 
 
 class GlacierModel:
+    """
+    Glacier geometry update model following [1].
+
+    References
+    ----------
+    .. [1] Huss, M., Jouvet, G., Farinotti, D., & Bauder, A. (2010). Future
+       high-mountain hydrology: A new parameterization of glacier retreat.
+       Hydrology and Earth System Sciences, 14(5), 815–829.
+       https://doi.org/10.5194/hess-14-815-2010
+    """
     def __init__(self, model):
         self.model = model
         s = model.state
@@ -100,7 +110,7 @@ class GlacierModel:
             terminus_mb = mb[pos].min()
 
             max_allowed_change = min(terminus_mb, 0.)  # MB must be negative
-            we_change = _ice_we_change(
+            mass_change = _ice_mass_change(
                 glacier_elevs[update_pos_local],
                 total_mb,
                 glacier_area,
@@ -108,7 +118,7 @@ class GlacierModel:
             )
 
             new_ice_thickness[update_pos] = (
-                old_ice_thickness[update_pos] + (we_change - firn_mb[update_pos]) / c.ICE_DENSITY
+                old_ice_thickness[update_pos] + (mass_change - firn_mb[update_pos]) / c.ICE_DENSITY
             ).clip(min=0.)
 
         s.snow.thickness[CryoLayerID.ICE, :] = new_ice_thickness
@@ -120,26 +130,60 @@ class GlacierModel:
             pass
 
 
-def _ice_we_change(elevs, total_mb, glacier_area, max_allowed_change):
+def _ice_mass_change(elevs, total_mb, glacier_area, max_allowed_change):
+    """
+    Calculate the distributed ice mass change for a single glacier.
+
+    Parameters
+    ----------
+    elevs : ndarray(float)
+        Glacier elevations (m).
+
+    total_mb : float
+        Total glacier surface mass balance (kg m-2).
+
+    glacier_area : float
+        Glacier area (m2).
+
+    max_allowed_change : float
+        Maximum allowed surface lowering (kg m-2).
+
+    Returns
+    -------
+    mass_change : ndarray(float)
+        Ice mass changes for the glacier pixels (kg m-2).
+
+    References
+    ----------
+    .. [1] Huss, M., Jouvet, G., Farinotti, D., & Bauder, A. (2010). Future
+       high-mountain hydrology: A new parameterization of glacier retreat.
+       Hydrology and Earth System Sciences, 14(5), 815–829.
+       https://doi.org/10.5194/hess-14-815-2010
+    """
     if total_mb < 0:
         min_elev = elevs.min()
         max_elev = elevs.max()
         normalized_elevs = (max_elev - elevs) / (max_elev - min_elev)
         delta_h = _delta_h(normalized_elevs, glacier_area)
         fs = total_mb / delta_h.sum()
-        we_change = fs * delta_h
+        mass_change = fs * delta_h
 
+        # Restrict the surface lowering to max_allowed_change
         if max_allowed_change < 0:
-            clippies = we_change < max_allowed_change
+            clippies = mass_change < max_allowed_change
             if clippies.any() and (~clippies).sum() > 1:
-                total_we_change = we_change.sum()
-                we_change[clippies] = max_allowed_change
-                we_change_diff = total_we_change - we_change.sum()
-                we_change[~clippies] += _mass_loss_distribution(we_change_diff, elevs[~clippies])
+                total_we_change = mass_change.sum()
+                mass_change[clippies] = max_allowed_change
+                we_change_diff = total_we_change - mass_change.sum()
+                mass_change[~clippies] += _mass_loss_surplus_distribution(
+                    we_change_diff,
+                    elevs[~clippies],
+                )
     else:
-        we_change = total_mb / elevs.size
+        # If the mass balance is positive, distribute the mass gain equally over all glacier pixels
+        mass_change = total_mb / elevs.size
 
-    return we_change
+    return mass_change
 
 
 def _delta_h(h, glacier_area):
@@ -153,21 +197,21 @@ def _delta_h(h, glacier_area):
     return delta_h.clip(-1, 0)
 
 
-def _mass_loss_distribution(mass_loss, elevs):
+def _mass_loss_surplus_distribution(mass_loss, elevs):
     min_elev = elevs.min()
     max_elev = elevs.max()
     min_mass = 0.
 
     x0 = 0.
     x1 = mass_loss / elevs.size * 1.5
-    y0 = np.sum(_mass_loss_distributor(mass_loss, elevs, min_elev, max_elev, min_mass, x0))
-    y1 = np.sum(_mass_loss_distributor(mass_loss, elevs, min_elev, max_elev, min_mass, x1))
+    y0 = np.sum(_scale_mass_loss_surplus(mass_loss, elevs, min_elev, max_elev, min_mass, x0))
+    y1 = np.sum(_scale_mass_loss_surplus(mass_loss, elevs, min_elev, max_elev, min_mass, x1))
 
     k = (y1 - y0) / (x1 - x0)
     d = (y0 - k * x0)
 
     max_mass = (mass_loss - d) / k
-    mass_loss_dist = _mass_loss_distributor(
+    mass_loss_dist = _scale_mass_loss_surplus(
         mass_loss,
         elevs,
         min_elev,
@@ -179,5 +223,5 @@ def _mass_loss_distribution(mass_loss, elevs):
     return mass_loss_dist
 
 
-def _mass_loss_distributor(mass_loss, elevs, min_elev, max_elev, min_mass, max_mass):
+def _scale_mass_loss_surplus(mass_loss, elevs, min_elev, max_elev, min_mass, max_mass):
     return (max_mass - min_mass) * (elevs - min_elev) / (max_elev - min_elev) + min_mass
