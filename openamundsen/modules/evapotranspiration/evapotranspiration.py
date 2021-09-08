@@ -217,9 +217,17 @@ class EvapotranspirationModel:
         for lcc, pos in self.land_cover_class_pixels.items():
             lcc_params = model.config['land_cover']['classes'][lcc]
 
+            # Derive global masks for pixels with the current land cover class which are
+            # snow-covered and snow-free
+            pos_snow = model.global_mask(pos[roi] & snowies_roi)
+            pos_snowfree = model.global_mask(pos[roi] & (~snowies_roi))
+
             if lcc_params.get('is_sealed', False):
                 # Sealed surfaces are treated separately
-                self._sealed_evaporation(pos, lcc)
+                s_et.evaporation[pos_snow] = 0.
+                s_et.transpiration[pos_snow] = 0.
+                s_et.evapotranspiration[pos_snow] = 0.
+                self._sealed_evaporation(pos_snowfree, lcc)
                 continue
 
             crop_coefficient_type = lcc_params['crop_coefficient_type']
@@ -271,11 +279,6 @@ class EvapotranspirationModel:
                 s.land_cover.plant_height[pos] = plant_height
             else:
                 s.land_cover.plant_height[pos] = lcc_params.max_height
-
-            # Derive global masks for pixels with the current land cover class which are
-            # snow-covered and snow-free
-            pos_snow = model.global_mask(pos[roi] & snowies_roi)
-            pos_snowfree = model.global_mask(pos[roi] & (~snowies_roi))
 
             # Ignore snow cover for water
             if is_water_body:
