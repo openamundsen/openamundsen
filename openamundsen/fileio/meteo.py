@@ -121,7 +121,7 @@ def read_meteo_data(
     if len(datasets) == 0:
         raise errors.MeteoDataError('No meteo data available for the specified period')
 
-    ds_combined = _combine_meteo_datasts(datasets)
+    ds_combined = _combine_meteo_datasets(datasets)
     dates_combined = ds_combined.time.to_index()
     if dates_combined[0] > start_date or dates_combined[-1] < end_date:
         raise errors.MeteoDataError('Insufficient meteo data available.\n'
@@ -277,7 +277,7 @@ def read_csv_meteo_file(filename, station_id, station_name, x, y, alt, crs):
     return ds
 
 
-def _combine_meteo_datasts(datasets):
+def _combine_meteo_datasets(datasets):
     """
     Combine a list of meteo datasets as read by read_netcdf_meteo_file.
     The datasets are merged by adding an additional "station" (= station id)
