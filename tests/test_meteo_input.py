@@ -342,7 +342,8 @@ def test_grid_cell_assignment(tmp_path):
         assert int(ds_s.row) == expected_row
 
 
-def test_resample(tmp_path):
+@pytest.mark.parametrize('fmt', ['netcdf', 'csv'])
+def test_slice_and_resample(fmt, tmp_path):
     def meteo_to_df(model):
         return (
             model.meteo
@@ -350,6 +351,13 @@ def test_resample(tmp_path):
             .to_dataframe()
             [params]
         ).astype(float)
+
+    def matches_start_and_end_date(model):
+        idx = model.meteo.indexes['time']
+        return (
+            idx[0] == model.config.start_date
+            and idx[-1] == model.config.end_date
+        )
 
     params = ['temp', 'precip', 'rel_hum', 'sw_in', 'wind_speed']
 
@@ -362,6 +370,8 @@ def test_resample(tmp_path):
     config.start_date = '2015-11-20'
     config.end_date = '2015-11-30'
     config.timestep = 'H'
+    config.input_data.meteo.format = fmt
+    config.input_data.meteo.dir = f'{pytest.DATA_DIR}/meteo/rofental/{fmt}'
     model = oa.OpenAmundsen(config)
     model.initialize()
     df_h = meteo_to_df(model)
@@ -369,6 +379,7 @@ def test_resample(tmp_path):
     config.timestep = '3H'
     model = oa.OpenAmundsen(config)
     model.initialize()
+    assert matches_start_and_end_date(model)
     df_res = meteo_to_df(model)
     pd.testing.assert_series_equal(
         df_h.loc['2015-11-30 13:00':'2015-11-30 15:00'].agg(agg_funcs_inst, skipna=False),
@@ -385,6 +396,7 @@ def test_resample(tmp_path):
     config.input_data.meteo.aggregate_when_downsampling = True
     model = oa.OpenAmundsen(config)
     model.initialize()
+    assert matches_start_and_end_date(model)
     df_res = meteo_to_df(model)
     pd.testing.assert_series_equal(
         df_h.loc['2015-11-30 13:00':'2015-11-30 15:00'].agg(agg_funcs_res, skipna=False),
@@ -394,9 +406,34 @@ def test_resample(tmp_path):
     )
     assert np.isnan(df_res.loc['2015-11-26 15:00'].precip)
 
+    config.start_date = '2015-11-25'
+    config.end_date = '2015-11-29'
     config.timestep = 'D'
     config.input_data.meteo.aggregate_when_downsampling = True
     model = oa.OpenAmundsen(config)
+    model.initialize()
+    assert matches_start_and_end_date(model)
+    df_res = meteo_to_df(model)
+    pd.testing.assert_series_equal(
+        df_h.loc['2015-11-25 01:00':'2015-11-26 00:00'].agg(agg_funcs_res, skipna=False),
+        df_res.loc['2015-11-25'],
+        check_exact=False,
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        df_h.loc['2015-11-29 01:00':'2015-11-30 00:00'].agg(agg_funcs_res, skipna=False),
+        df_res.loc['2015-11-29'],
+        check_exact=False,
+        check_names=False,
+    )
+
+    config.start_date = '2015-11-01'
+    config.end_date = '2015-11-09'
+    config.timestep = '2D'
+    wf = config.output_data.timeseries.write_freq
+    config.output_data.timeseries.write_freq = '10D'
+    model = oa.OpenAmundsen(config)
+    config.output_data.timeseries.write_freq = wf
     with pytest.raises(errors.MeteoDataError):
         model.initialize()
 
@@ -406,6 +443,7 @@ def test_resample(tmp_path):
     config.input_data.meteo.aggregate_when_downsampling = False
     model = oa.OpenAmundsen(config)
     model.initialize()
+    assert matches_start_and_end_date(model)
     df_res = meteo_to_df(model)
     pd.testing.assert_series_equal(
         df_h.loc['2015-11-30 14:00':'2015-11-30 16:00'].agg(agg_funcs_inst, skipna=False),
@@ -417,6 +455,7 @@ def test_resample(tmp_path):
     config.input_data.meteo.aggregate_when_downsampling = True
     model = oa.OpenAmundsen(config)
     model.initialize()
+    assert matches_start_and_end_date(model)
     df_res = meteo_to_df(model)
     pd.testing.assert_series_equal(
         df_h.loc['2015-11-30 14:00':'2015-11-30 16:00'].agg(agg_funcs_res, skipna=False),
