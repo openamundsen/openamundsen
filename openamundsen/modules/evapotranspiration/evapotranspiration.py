@@ -394,12 +394,7 @@ class EvapotranspirationModel:
         # TODO the climate correction term is intended to be calculated using mean values of wind
         # speed and daily-minimum relative humidity over the period of interest - maybe better use
         # 24-hour moving averages than instantaneous values?
-        clim_corr = climate_correction(
-            s.meteo.top_canopy_wind_speed[pos],
-            s.meteo.top_canopy_rel_hum[pos],
-            plant_height,
-        )
-        max_crop_coeff = np.maximum(1.2 + clim_corr, s_et.basal_crop_coeff[pos] + 0.05)
+        max_crop_coeff = np.maximum(1.2 + s_et.clim_corr[pos], s_et.basal_crop_coeff[pos] + 0.05)
 
         # Calculate fraction of the soil surface covered by vegetation. For the special case of
         # sparse vegetation use the fixed defined value, otherwise calculate the vegetation
