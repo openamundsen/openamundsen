@@ -241,14 +241,6 @@ class EvapotranspirationModel:
                 length_late,
             ) = model.land_cover.growth_stage_lengths(lcc)
 
-            # Apply climate correction for Kcb_mid and Kcb_end values >= 0.45 (eq. (70))
-            # (convert crop_coeff_mid and crop_coeff_end into fields to allow for possibly
-            # non-uniform climate correction values)
-            if crop_coeff_mid >= 0.45:
-                crop_coeff_mid = np.full(pos.sum(), crop_coeff_mid) + s_et.clim_corr[pos]
-            if crop_coeff_end >= 0.45:
-                crop_coeff_end = np.full(pos.sum(), crop_coeff_end) + s_et.clim_corr[pos]
-
             # Adjust Kcb_mid for sparse vegetation
             if lcc_params.get('is_sparse', False):
                 crop_coeff_mid = sparse_vegetation_adjustment(
@@ -259,6 +251,14 @@ class EvapotranspirationModel:
                     np.deg2rad(model.grid.center_lat),
                     np.deg2rad(model.sun_params['declination_angle']),
                 )
+
+            # Apply climate correction for Kcb_mid and Kcb_end values >= 0.45 (eq. (70))
+            # (convert crop_coeff_mid and crop_coeff_end into fields to allow for possibly
+            # non-uniform climate correction values)
+            if crop_coeff_mid >= 0.45:
+                crop_coeff_mid = np.full(pos.sum(), crop_coeff_mid) + s_et.clim_corr[pos]
+            if crop_coeff_end >= 0.45:
+                crop_coeff_end = np.full(pos.sum(), crop_coeff_end) + s_et.clim_corr[pos]
 
             (crop_coeff, plant_height) = crop_coefficient(
                 growing_period_day,
