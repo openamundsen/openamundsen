@@ -512,10 +512,15 @@ class EvapotranspirationModel:
         lcc_params = model.config.land_cover.classes[lcc]
         max_interception = lcc_params.max_sealed_interception
 
-        s_et.sealed_interception[pos] += np.nan_to_num(s.meteo.rainfall[pos])
-        runoff = (s_et.sealed_interception[pos] - max_interception).clip(min=0)
-        s_et.sealed_interception[pos] -= runoff
-        s_et.deep_percolation[pos] = runoff  # runoff is currently treated as deep percolation for sealed surfaces (should be improved)
+        pos_rain_local = s.meteo.rainfall[pos] > 0.
+        pos_rain = model.global_mask(pos_rain_local, pos)
+        pos_dry = model.global_mask(~pos_rain_local, pos)
+
+        s_et.sealed_interception[pos_rain] += np.nan_to_num(s.meteo.rainfall[pos_rain])
+        runoff = (s_et.sealed_interception[pos_rain] - max_interception).clip(min=0)
+        s_et.sealed_interception[pos_rain] -= runoff
+        s_et.deep_percolation[pos_rain] = runoff  # runoff is currently treated as deep percolation for sealed surfaces (should be improved)
+        s_et.evaporation[pos_rain] = 0.
 
         rs = 0.  # stomatal resistance (s m-1)
         zom = 0.123 * lcc_params.max_height  # roughness length governing momentum transfer (m)
@@ -524,23 +529,23 @@ class EvapotranspirationModel:
         ra = (  # aerodynamic resistance (s m-1) (eq. (4))
             np.log((model.config.meteo.measurement_height.wind - d) / zom)
             * np.log((model.config.meteo.measurement_height.temperature - d) / zoh)
-            / (c.VON_KARMAN**2 * s.meteo.top_canopy_wind_speed[pos])
+            / (c.VON_KARMAN**2 * s.meteo.top_canopy_wind_speed[pos_dry])
         )
 
-        Rn = s_et.ref_net_radiation[pos]  # net radiation (W m-2)
-        G = s_et.soil_heat_flux[pos]  # soil heat flux density (W m-2)
-        T = s.meteo.top_canopy_temp[pos] - c.T0  # air temperature (°C)
+        Rn = s_et.ref_net_radiation[pos_dry]  # net radiation (W m-2)
+        G = s_et.soil_heat_flux[pos_dry]  # soil heat flux density (W m-2)
+        T = s.meteo.top_canopy_temp[pos_dry] - c.T0  # air temperature (°C)
         D = 1e3 * 4098 * (0.6108 * np.exp(17.27 * T / (T + 237.3))) / (T + 237.3)**2  # slope of the relationship between saturation vapor pressure and temperature (Pa K-1) (eq. (13))
 
-        gamma = s.meteo.psych_const[pos]  # psychrometric constant (Pa K-1)
-        es = s.meteo.sat_vap_press[pos]  # saturation vapor pressure (Pa)
-        ea = s.meteo.vap_press[pos]  # actual vapor pressure (Pa)
+        gamma = s.meteo.psych_const[pos_dry]  # psychrometric constant (Pa K-1)
+        es = s.meteo.sat_vap_press[pos_dry]  # saturation vapor pressure (Pa)
+        ea = s.meteo.vap_press[pos_dry]  # actual vapor pressure (Pa)
 
-        Tv = 1.01 * s.meteo.top_canopy_temp[pos]  # virtual temperature (K)
-        rhoa = s.meteo.atmos_press[pos] / (c.GAS_CONSTANT_DRY_AIR * Tv)  # air density at constant pressure (kg m-3)
+        Tv = 1.01 * s.meteo.top_canopy_temp[pos_dry]  # virtual temperature (K)
+        rhoa = s.meteo.atmos_press[pos_dry] / (c.GAS_CONSTANT_DRY_AIR * Tv)  # air density at constant pressure (kg m-3)
         cp = (  # specific heat at constant pressure (J kg-1 K-1) (p. 26)
             gamma * 0.622 * c.LATENT_HEAT_OF_VAPORIZATION
-            / s.meteo.atmos_press[pos]
+            / s.meteo.atmos_press[pos_dry]
         )
 
         evaporation_Wm2 = (  # evaporation (W m-2) (eq. (3))
@@ -548,11 +553,11 @@ class EvapotranspirationModel:
             / (D + gamma * (1 + rs / ra))
         ).clip(min=0)
         evaporation_Wm2[np.isnan(evaporation_Wm2)] = 0.
-        s_et.evaporation[pos] = np.minimum(  # (kg m-2)
+        s_et.evaporation[pos_dry] = np.minimum(  # (kg m-2)
             evaporation_Wm2 / c.LATENT_HEAT_OF_VAPORIZATION * model.timestep,
-            s_et.sealed_interception[pos],
+            s_et.sealed_interception[pos_dry],
         )
-        s_et.sealed_interception[pos] -= s_et.evaporation[pos]
+        s_et.sealed_interception[pos_dry] -= s_et.evaporation[pos_dry]
 
         s_et.transpiration[pos] = 0.
         s_et.evapotranspiration[pos] = s_et.evaporation[pos] + s_et.transpiration[pos]
