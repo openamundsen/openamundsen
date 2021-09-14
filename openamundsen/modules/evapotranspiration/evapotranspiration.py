@@ -353,7 +353,7 @@ class EvapotranspirationModel:
         Rn = s_et.ref_net_radiation[roi] * Wm2_to_MJm2h  # net radiation at the grass surface (MJ m-2 h-1)
         G = s_et.soil_heat_flux[roi] * Wm2_to_MJm2h  # soil heat flux density (MJ m-2 h-1)
         T = s.meteo.top_canopy_temp[roi] - c.T0  # air temperature (°C)
-        D = 4098 * (0.6108 * np.exp(17.27 * T / (T + 273.3))) / (T + 273.3)**2  # slope of the relationship between saturation vapor pressure and temperature (kPa °C-1) (eq. (13))
+        D = 4098 * (0.6108 * np.exp(17.27 * T / (T + 237.3))) / (T + 237.3)**2  # slope of the relationship between saturation vapor pressure and temperature (kPa °C-1) (eq. (13))
         gamma = s.meteo.psych_const[roi] * 1e-3  # psychrometric constant (kPa °C-1)
         es = s.meteo.sat_vap_press[roi] * 1e-3  # saturation vapor pressure (kPa)
         ea = s.meteo.vap_press[roi] * 1e-3  # actual vapor pressure (kPa)
@@ -530,7 +530,7 @@ class EvapotranspirationModel:
         Rn = s_et.ref_net_radiation[pos]  # net radiation (W m-2)
         G = s_et.soil_heat_flux[pos]  # soil heat flux density (W m-2)
         T = s.meteo.top_canopy_temp[pos] - c.T0  # air temperature (°C)
-        D = 1e3 * 4098 * (0.6108 * np.exp(17.27 * T / (T + 273.3))) / (T + 273.3)**2  # slope of the relationship between saturation vapor pressure and temperature (Pa K-1) (eq. (13))
+        D = 1e3 * 4098 * (0.6108 * np.exp(17.27 * T / (T + 237.3))) / (T + 237.3)**2  # slope of the relationship between saturation vapor pressure and temperature (Pa K-1) (eq. (13))
 
         gamma = s.meteo.psych_const[pos]  # psychrometric constant (Pa K-1)
         es = s.meteo.sat_vap_press[pos]  # saturation vapor pressure (Pa)
