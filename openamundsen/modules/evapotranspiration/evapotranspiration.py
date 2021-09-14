@@ -346,7 +346,7 @@ class EvapotranspirationModel:
         self._reference_net_radiation()
 
         soil_heat_flux_factor = 0.1 if model.sun_params['sun_over_horizon'] else 0.5
-        s_et.soil_heat_flux[roi] = soil_heat_flux_factor * s.meteo.net_radiation[roi]  # eq. (45-46)
+        s_et.soil_heat_flux[roi] = soil_heat_flux_factor * s_et.ref_net_radiation[roi]  # eq. (45-46)
 
         Wm2_to_MJm2h = 1e-6 * c.SECONDS_PER_HOUR  # conversion factor from W m-2 (= J m-2 s-1) to MJ m-2 h-1
 
@@ -527,7 +527,7 @@ class EvapotranspirationModel:
             / (c.VON_KARMAN**2 * s.meteo.top_canopy_wind_speed[pos])
         )
 
-        Rn = s.meteo.net_radiation[pos]  # net radiation (W m-2)
+        Rn = s_et.ref_net_radiation[pos]  # net radiation (W m-2)
         G = s_et.soil_heat_flux[pos]  # soil heat flux density (W m-2)
         T = s.meteo.top_canopy_temp[pos] - c.T0  # air temperature (°C)
         D = 1e3 * 4098 * (0.6108 * np.exp(17.27 * T / (T + 273.3))) / (T + 273.3)**2  # slope of the relationship between saturation vapor pressure and temperature (Pa K-1) (eq. (13))
