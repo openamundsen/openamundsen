@@ -381,6 +381,7 @@ class EvapotranspirationModel:
 
     def _dual_coeff_crop_et(self, pos, lcc):
         model = self.model
+        lcc_params = model.config['land_cover']['classes'][lcc]
         s = model.state
         s_et = s.evapotranspiration
         et_ref = s_et.et_ref[pos].copy()
@@ -400,11 +401,16 @@ class EvapotranspirationModel:
         )
         max_crop_coeff = np.maximum(1.2 + clim_corr, s_et.basal_crop_coeff[pos] + 0.05)
 
-        # Calculate fraction of the soil surface covered by vegetation (eq. (76))
-        veg_frac = (
-            (s_et.basal_crop_coeff[pos] - min_crop_coeff).clip(min=0.01)
-            / (max_crop_coeff - min_crop_coeff)
-        )**(1 + 0.5 * plant_height)
+        # Calculate fraction of the soil surface covered by vegetation. For the special case of
+        # sparse vegetation use the fixed defined value, otherwise calculate the vegetation
+        # fraction using eq. (76).
+        if lcc_params.get('is_sparse', False):
+            veg_frac = lcc_params.sparse_vegetation_fraction
+        else:
+            veg_frac = (
+                (s_et.basal_crop_coeff[pos] - min_crop_coeff).clip(min=0.01)
+                / (max_crop_coeff - min_crop_coeff)
+            )**(1 + 0.5 * plant_height)
 
         # Fraction of soil surface wetted by irrigation or precipitation (use value for
         # precipitation (= 1.0) from Table 20)
