@@ -257,7 +257,7 @@ class EvapotranspirationModel:
                     lcc_params.sparse_vegetation_fraction,
                     lcc_params.max_height,
                     np.deg2rad(model.grid.center_lat),
-                    model.sun_params['declination_angle'],
+                    np.deg2rad(model.sun_params['declination_angle']),
                 )
 
             (crop_coeff, plant_height) = crop_coefficient(
