@@ -21,8 +21,6 @@ classes:
   # Bare rock (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-332.html)
   2:
     is_sealed: true
-    albedo: 0.4
-    emissivity: 0.92
     max_sealed_interception: 0.935
     max_height: 1.9
     depletion_fraction: .nan
@@ -31,8 +29,6 @@ classes:
   # Settlement (https://land.copernicus.eu/user-corner/technical-library/corine-land-cover-nomenclature-guidelines/html/index-clc-111.html)
   3:
     is_sealed: true
-    albedo: 0.4
-    emissivity: 0.92
     max_sealed_interception: 0.935
     max_height: 1.9
     depletion_fraction: .nan
