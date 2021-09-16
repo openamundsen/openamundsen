@@ -159,7 +159,7 @@ class CryoLayerSnowModel(SnowModel):
         degree_days = (s.meteo.temp[snowies] - melt_config.threshold_temp) * timestep_d
 
         if melt_config.method == 'temperature_index':
-            melt = melt_config.degree_day_factor * degree_days
+            melt = melt_config.degree_day_factor * degree_days.clip(min=0)
         elif melt_config.method == 'enhanced_temperature_index':
             melt = (
                 melt_config.degree_day_factor * degree_days
@@ -168,6 +168,7 @@ class CryoLayerSnowModel(SnowModel):
                 * s.meteo.sw_in[snowies]
                 * timestep_d
             )
+            melt[degree_days <= 0.] = 0.
         else:
             raise NotImplementedError
 
