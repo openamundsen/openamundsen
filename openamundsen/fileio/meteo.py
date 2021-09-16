@@ -97,11 +97,10 @@ def read_meteo_data(
         if meteo_format == 'netcdf':
             filename = meteo_data_dir / f'{station_id}.nc'
             logger.info(f'Reading meteo file: {filename}')
-            ds = read_netcdf_meteo_file(filename, start_date=start_date, end_date=end_date)
+            ds = read_netcdf_meteo_file(filename)
         elif meteo_format == 'csv':
             filename = meteo_data_dir / f'{station_id}.csv'
             logger.info(f'Reading meteo file: {filename}')
-
             ds = read_csv_meteo_file(
                 filename,
                 station_id,
@@ -111,16 +110,8 @@ def read_meteo_data(
                 meta.loc[station_id, 'alt'],
                 grid_crs,
             )
-            ds = ds.sel(time=slice(start_date, end_date))
 
-        if ds.time.to_index().inferred_freq is None:
-            if ds.dims['time'] > 2:
-                # ("> 2" because inferring the frequency requires at least 3 points, so for shorter
-                # time series inferred_freq is always None)
-                raise errors.MeteoDataError('Missing records or non-uniform timesteps in '
-                                            f'{filename}')
-        elif ds.time.to_index().inferred_freq != freq:
-            ds = _resample_dataset(ds, freq, aggregate=aggregate)
+        ds = _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=aggregate)
 
         if ds.dims['time'] == 0:
             logger.warning('File contains no meteo data for the specified period')
@@ -130,7 +121,7 @@ def read_meteo_data(
     if len(datasets) == 0:
         raise errors.MeteoDataError('No meteo data available for the specified period')
 
-    ds_combined = _combine_meteo_datasts(datasets)
+    ds_combined = _combine_meteo_datasets(datasets)
     dates_combined = ds_combined.time.to_index()
     if dates_combined[0] > start_date or dates_combined[-1] < end_date:
         raise errors.MeteoDataError('Insufficient meteo data available.\n'
@@ -140,7 +131,7 @@ def read_meteo_data(
     return ds_combined
 
 
-def read_netcdf_meteo_file(filename, start_date=None, end_date=None):
+def read_netcdf_meteo_file(filename):
     """
     Read a meteo data file in NetCDF format and
     - check if the time, lon, lat, and alt variables are included
@@ -160,9 +151,7 @@ def read_netcdf_meteo_file(filename, start_date=None, end_date=None):
     ds : Dataset
         Station data.
     """
-    with xr.open_dataset(filename) as ds:
-        ds = ds.sel(time=slice(start_date, end_date))
-        ds.load()
+    ds = xr.load_dataset(filename)
 
     # rename variables
     ds_vars = list(ds.variables.keys())
@@ -288,7 +277,7 @@ def read_csv_meteo_file(filename, station_id, station_name, x, y, alt, crs):
     return ds
 
 
-def _combine_meteo_datasts(datasets):
+def _combine_meteo_datasets(datasets):
     """
     Combine a list of meteo datasets as read by read_netcdf_meteo_file.
     The datasets are merged by adding an additional "station" (= station id)
@@ -322,6 +311,59 @@ def _combine_meteo_datasts(datasets):
     return xr.combine_nested(datasets_processed, concat_dim='station')
 
 
+def _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=False):
+    """
+    Slice a dataset to a given date range and optionally resample to a given
+    time frequency.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset.
+
+    start_date : datetime-like
+        Start date.
+
+    end_date : datetime-like
+        End date.
+
+    freq : str
+        Pandas-compatible frequency string (e.g. '3H'). Must be an exact subset
+        of the original frequency of the data.
+
+    aggregate : boolean, default False
+        Aggregate data when downsampling to a lower frequency or take
+        instantaneous values.
+
+    Returns
+    -------
+    ds : Dataset
+        Sliced and resampled dataset.
+    """
+    freq_td = util.offset_to_timedelta(freq)
+    inferred_freq = ds.time.to_index().inferred_freq
+    td_1d = pd.Timedelta('1d')
+
+    if inferred_freq is None and ds.dims['time'] > 2:
+        # ("> 2" because inferring the frequency requires at least 3 points, so for shorter
+        # time series inferred_freq is always None)
+        raise errors.MeteoDataError('File contains missing records or non-uniform timesteps')
+
+    if (
+        aggregate
+        and freq_td == td_1d
+        and util.offset_to_timedelta(inferred_freq) < td_1d
+    ):
+        end_date = (end_date + td_1d).normalize()
+
+    ds = ds.sel(time=slice(start_date, end_date))
+
+    if inferred_freq is not None and inferred_freq != freq:
+        ds = _resample_dataset(ds, freq, aggregate=aggregate)
+
+    return ds
+
+
 def _resample_dataset(ds, freq, aggregate=False):
     """
     Resample a dataset to a given time frequency.
@@ -344,13 +386,17 @@ def _resample_dataset(ds, freq, aggregate=False):
     ds_res : Dataset
         Resampled dataset.
     """
-    if util.offset_to_timedelta(freq) >= pd.Timedelta('1d'):
-        raise errors.MeteoDataError('Resampling to frequencies >= 1 day is not supported')
+    td = util.offset_to_timedelta(freq)
+    td_1d = pd.Timedelta('1d')
+    if td < td_1d:
+        resample_kwargs = dict(label='right', closed='right', origin='start')
+    elif td == td_1d:
+        resample_kwargs = dict(label='left', closed='right', origin='start')
+    else:
+        raise errors.MeteoDataError('Resampling to frequencies > 1 day is not supported')
 
     # ds.resample() is extremely slow for some reason, so we resample using pandas
     df = ds.to_dataframe().drop(columns=['lon', 'lat', 'alt'])
-
-    resample_kwargs = dict(label='right', closed='right', origin='start')
 
     if aggregate:
         # Calculate averages
@@ -359,6 +405,10 @@ def _resample_dataset(ds, freq, aggregate=False):
         # We might end up with an extra bin after resampling; take only the dates which we would
         # have taken when using instantaneous values
         dates = df.asfreq(freq).index
+        if td == td_1d:
+            # When resampling from sub-daily to daily timesteps, df also includes the first timestep
+            # of the day after the end date
+            dates = dates[:-1]
         df_res = df_res.loc[dates]
     else:
         # Take the instantaneous values
