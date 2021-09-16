@@ -172,7 +172,11 @@ class CryoLayerSnowModel(SnowModel):
         else:
             raise NotImplementedError
 
-        s.snow.melt[snowies] = melt.clip(min=0)
+        s.snow.melt[model.grid.roi] = 0.
+        s.snow.melt[snowies] = np.minimum(
+            melt.clip(min=0),
+            s.snow.ice_content[:, snowies].sum(axis=0),
+        )
 
     def melt(self):
         model = self.model
