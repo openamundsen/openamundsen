@@ -201,6 +201,37 @@ def test_cryolayers_cold_content(single_point_results_cryolayers):
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize('method', ['temperature_index', 'enhanced_temperature_index'])
+def test_temperature_index(method):
+    config = base_config_snow()
+    config.snow.model = 'cryolayers'
+    config.timestep = 'D'
+    config.output_data.timeseries.variables = [{'var': 'snow.cold_content'}]
+    config.snow.melt.method = method
+
+    if method == 'temperature_index':
+        config.snow.melt.degree_day_factor = 5.
+    elif method == 'enhanced_temperature_index':
+        config.snow.melt.degree_day_factor = 3.
+        config.snow.melt.albedo_factor = 0.1
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+
+    ds = model.point_output.data.sel(point='proviantdepot')
+    assert np.all(ds.melt >= 0)
+    assert np.any(ds.melt > 0)
+    assert np.all(ds.melt[ds.temp <= config.snow.melt.degree_day_factor] == 0.)
+    melt_potential = (
+        ds.ice_content.sum('snow_layer').shift(time=1)
+        + ds.cold_content.sum('snow_layer').shift(time=1)
+        + ds.snowfall
+    )
+    assert np.all(ds.melt <= melt_potential.fillna(np.inf))
+
+
+@pytest.mark.slow
 @pytest.mark.comparison
 def test_compare_multilayer(multilayer_run):
     compare_datasets(
