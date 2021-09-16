@@ -13,8 +13,8 @@ def test_formats(fmt, tmp_path):
     config = base_config()
     config.end_date = '2020-01-16'
     config.results_dir = tmp_path
-    point_cfg = config.output_data.timeseries
-    point_cfg.format = fmt
+    config.output_data.timeseries.format = fmt
+    config.output_data.timeseries.variables = [{'var': 'snow.num_layers'}]
 
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -38,6 +38,7 @@ def test_formats(fmt, tmp_path):
         assert ds.snow_thickness.dims == ('time', 'snow_layer', 'point')
         assert ds.soil_temp.dims == ('time', 'soil_layer', 'point')
         assert ds.temp.dtype == np.float32
+        assert np.issubdtype(ds.num_layers.dtype, np.integer)
         assert np.all(ds.temp > 250.)
     elif fmt == 'csv':
         for point_id in point_ids:
@@ -46,6 +47,7 @@ def test_formats(fmt, tmp_path):
         df = pd.read_csv(tmp_path / 'point_bellavista.csv', index_col='time', parse_dates=True)
         assert df.index.equals(model.dates)
         assert df.temp.dtype == np.float64
+        assert np.issubdtype(df.num_layers.dtype, np.integer)
         assert 'snow_thickness0' in df
         assert np.all(df.temp > 250.)
 

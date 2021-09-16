@@ -261,6 +261,11 @@ class PointOutputManager:
             meta = self.model.state.meta(var.var_name)
             attrs = {}
 
+            if np.issubdtype(meta.dtype, np.integer):
+                dtype = np.int32
+            else:
+                dtype = np.float32
+
             for attr in ('standard_name', 'long_name', 'units'):
                 attr_val = getattr(meta, attr)
                 if attr_val is not None:
@@ -269,7 +274,7 @@ class PointOutputManager:
             if meta.dim3 == 0:  # 2-dimensional variable
                 var_def = (
                     ['time', 'point'],
-                    np.full((len(dates), len(self.points)), np.nan, dtype=np.float32),
+                    np.full((len(dates), len(self.points)), np.nan, dtype=dtype),
                     attrs,
                 )
             else:  # 3-dimensional variable
