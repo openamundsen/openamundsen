@@ -247,9 +247,9 @@ def cryo_layer_energy_balance(model):
     frosties = model.roi_mask_to_global(frosties_roi)
     snow_freeies = model.roi_mask_to_global(~snowies_roi)
 
-    calc_saturation_specific_humidity(model, snowies)
-    calc_moisture_availability(model, snowies)
-    calc_latent_heat(model, snowies)
+    calc_saturation_specific_humidity(model, roi)
+    calc_moisture_availability(model, roi)
+    calc_latent_heat(model, roi)
 
     s.snow.melt[roi] = 0
 
