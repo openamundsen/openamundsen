@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from munch import Munch
+import numpy as np
 from openamundsen import errors
-from openamundsen.util import create_empty_array
 
 
 class StateVariableManager:
@@ -323,3 +323,30 @@ def add_default_state_variables(model):
     soil.add_variable('therm_cond', 'W m-1 K-1', 'Thermal conductivity of soil', dim3=num_soil_layers)
     soil.add_variable('therm_cond_minerals', 'W m-1 K-1', 'Thermal conductivity of soil minerals')
     soil.add_variable('therm_cond_dry', 'W m-1 K-1', 'Thermal conductivity of dry soil')
+
+
+def create_empty_array(shape, dtype):
+    """
+    Create an empty array with a given shape and dtype initialized to "no
+    data". The value of "no data" depends on the dtype and is e.g. NaN for
+    float, 0 for int and False for float.
+
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the new array, e.g. (2, 3).
+
+    dtype : type
+        The desired data type for the array.
+
+    Returns
+    -------
+    out : ndarray
+    """
+    dtype_init_vals = {
+        float: np.nan,
+        int: 0,
+        bool: False,
+    }
+
+    return np.full(shape, dtype_init_vals[dtype], dtype=dtype)
