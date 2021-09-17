@@ -3,6 +3,12 @@ from munch import Munch
 import numpy as np
 from openamundsen import errors
 
+_DTYPE_INIT_VALS = {
+    float: np.nan,
+    int: 0,
+    bool: False,
+}
+
 
 class StateVariableManager:
     """
@@ -343,10 +349,4 @@ def create_empty_array(shape, dtype):
     -------
     out : ndarray
     """
-    dtype_init_vals = {
-        float: np.nan,
-        int: 0,
-        bool: False,
-    }
-
-    return np.full(shape, dtype_init_vals[dtype], dtype=dtype)
+    return np.full(shape, _DTYPE_INIT_VALS[dtype], dtype=dtype)
