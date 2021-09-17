@@ -25,6 +25,8 @@ def canopy_run():
         for p in Path(config.input_data.grids.dir).glob('*.asc'):
             (tmp_path / p.name).symlink_to(p)
 
+        config.input_data.grids.dir = str(temp_dir)
+
         shape = (model.grid.rows, model.grid.cols)
         soil = np.zeros(shape, dtype=int)
         lc = np.zeros(shape, dtype=int)
