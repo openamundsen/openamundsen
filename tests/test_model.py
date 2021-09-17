@@ -33,7 +33,6 @@ def compare_tsp(tsp, **kwargs):
 
 
 def test_timestep_properties():
-
     config = base_config()
     config.start_date = '2015-07-28 00:00'
     config.end_date = '2015-12-31'
@@ -146,3 +145,51 @@ def test_timestep_properties():
         last_of_month=True,
         last_of_day=True,
     )
+
+
+@pytest.mark.slow
+def test_state_variable_reset():
+    config = base_config()
+    config.start_date = '2019-10-01'
+    config.end_date = '2020-05-31'
+    config.timestep = '3H'
+    config.evapotranspiration.enabled = True
+    config.canopy.enabled = True
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+
+    for category in model.state.categories:
+        for var_name in model.state[category]._meta.keys():
+            full_var_name = f'{category}.{var_name}'
+            config.output_data.grids.variables.append({
+                'var': full_var_name,
+                'name': full_var_name,
+            })
+
+    config.reset_state_variables = False
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    ds0 = model.gridded_output.data
+
+    config.reset_state_variables = True
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    ds1 = model.gridded_output.data
+
+    compare_vars = [v['name'] for v in config.output_data.grids.variables]
+    success = True
+
+    for v in compare_vars:
+        arr0 = ds0[v].values
+        arr1 = ds1[v].values
+
+        if not np.allclose(arr0, arr1, equal_nan=True):
+            print(f'Mismatch in variable {v}\n'
+                  f'Without reset:\n{arr0}\n'
+                  f'With reset:\n{arr1}')
+            success = False
+
+    assert success
