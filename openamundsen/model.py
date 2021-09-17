@@ -146,6 +146,9 @@ class OpenAmundsen:
 
         self.logger.info(f'Processing time step {self.date:%Y-%m-%d %H:%M}')
 
+        if self.config.reset_state_variables:
+            self.state.reset()
+
         meteo.interpolate_station_data(self)
         self._process_meteo_data()
         self._model_interface()

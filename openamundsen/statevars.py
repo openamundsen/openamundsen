@@ -8,6 +8,8 @@ _DTYPE_INIT_VALS = {
     int: 0,
     bool: False,
 }
+_DTYPE_INIT_VALS[np.dtype('float64')] = _DTYPE_INIT_VALS[float]
+_DTYPE_INIT_VALS[np.dtype('int64')] = _DTYPE_INIT_VALS[int]
 
 
 class StateVariableManager:
@@ -111,6 +113,19 @@ class StateVariableManager:
 
                 svc[var_name] = arr
 
+    def reset(self):
+        """
+        Fill all state variables with their default "no data" value, except
+        those for which the `retain` keyword is set.
+        """
+        for category in self.categories:
+            svc = self[category]
+
+            for var_name, var_def in svc._meta.items():
+                if not var_def.retain:
+                    arr = svc[var_name]
+                    arr.fill(_DTYPE_INIT_VALS[arr.dtype])
+
     def meta(self, var):
         """
         Return metadata of a state variable.
@@ -151,6 +166,7 @@ class StateVariableContainer(Munch):
             standard_name=None,
             dtype=float,
             dim3=0,
+            retain=False,
     ):
         """
         Add a variable along with optional metadata.
@@ -178,6 +194,10 @@ class StateVariableContainer(Munch):
 
         dim3 : int, default 0
             Size of an optional third dimension of the field.
+
+        retain : bool, default False
+            Whether the variable contents should be retained or it is safe to
+            reset the variable in every timestep.
         """
         definition = StateVariableDefinition(
             units=units,
@@ -185,6 +205,7 @@ class StateVariableContainer(Munch):
             standard_name=standard_name,
             dtype=dtype,
             dim3=dim3,
+            retain=retain,
         )
 
         self._meta[name] = definition
@@ -213,6 +234,10 @@ class StateVariableDefinition:
     dim3 : int, default 0
         Size of an optional third dimension of the field.
 
+    retain : bool, default False
+        Whether the variable contents should be retained or it is safe to reset
+        the variable in every timestep.
+
     Examples
     --------
     >>> StateVariableDefinition(
@@ -225,6 +250,7 @@ class StateVariableDefinition:
     standard_name: str = None
     dtype: type = float
     dim3: int = 0
+    retain: bool = False
 
 
 def add_default_state_variables(model):
