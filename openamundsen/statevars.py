@@ -263,11 +263,11 @@ def add_default_state_variables(model):
 
     # Base variables
     base = state.add_category('base')
-    base.add_variable('dem', 'm', 'Surface altitude', 'surface_altitude')
-    base.add_variable('slope', 'degree', 'Terrain slope')
-    base.add_variable('aspect', 'degree', 'Terrain aspect')
-    base.add_variable('normal_vec', long_name='Vector normal to the surface', dim3=3)
-    base.add_variable('svf', long_name='Sky-view factor')
+    base.add_variable('dem', 'm', 'Surface altitude', 'surface_altitude', retain=True)
+    base.add_variable('slope', 'degree', 'Terrain slope', retain=True)
+    base.add_variable('aspect', 'degree', 'Terrain aspect', retain=True)
+    base.add_variable('normal_vec', long_name='Vector normal to the surface', dim3=3, retain=True)
+    base.add_variable('svf', long_name='Sky-view factor', retain=True)
 
     # Meteorological variables
     meteo = state.add_category('meteo')
@@ -285,7 +285,7 @@ def add_default_state_variables(model):
     meteo.add_variable('sw_in_clearsky', 'W m-2', 'Clear-sky incoming shortwave radiation', 'surface_downwelling_shortwave_flux_in_air_assuming_clear_sky')
     meteo.add_variable('dir_in_clearsky', 'W m-2', 'Clear-sky direct incoming shortwave radiation')
     meteo.add_variable('diff_in_clearsky', 'W m-2', 'Clear-sky diffuse incoming shortwave radiation', 'surface_diffuse_downwelling_shortwave_flux_in_air_assuming_clear_sky')
-    meteo.add_variable('cloud_factor', '1', 'Cloud factor')
+    meteo.add_variable('cloud_factor', '1', 'Cloud factor', retain=True)
     meteo.add_variable('cloud_fraction', '1', 'Cloud fraction', 'cloud_area_fraction')
     meteo.add_variable('wet_bulb_temp', 'K', 'Wet-bulb temperature', 'wet_bulb_temperature')
     meteo.add_variable('dew_point_temp', 'K', 'Dew point temperature', 'dew_point_temperature')
@@ -307,8 +307,8 @@ def add_default_state_variables(model):
 
     # Surface variables
     surf = state.add_category('surface')
-    surf.add_variable('temp', 'K', 'Surface temperature', 'surface_temperature')
-    surf.add_variable('albedo', '1', 'Surface albedo', 'surface_albedo')
+    surf.add_variable('temp', 'K', 'Surface temperature', 'surface_temperature', retain=True)
+    surf.add_variable('albedo', '1', 'Surface albedo', 'surface_albedo', retain=True)
     surf.add_variable('heat_flux', 'W m-2', 'Surface heat flux')
     surf.add_variable('sens_heat_flux', 'W m-2', 'Sensible heat flux', 'surface_downward_sensible_heat_flux')
     surf.add_variable('lat_heat_flux', 'W m-2', 'Latent heat flux', 'surface_downward_latent_heat_flux')
@@ -321,40 +321,40 @@ def add_default_state_variables(model):
     surf.add_variable('turbulent_exchange_coeff', '1', 'Transfer coefficient for heat and moisture')
     surf.add_variable('conductance', 'm s-1', 'Surface conductance')
     if model.config.snow.model == 'multilayer':
-        surf.add_variable('layer_temp', 'K', 'Surface layer temperature')
-        surf.add_variable('thickness', 'm', 'Surface layer thickness')
+        surf.add_variable('layer_temp', 'K', 'Surface layer temperature', retain=True)
+        surf.add_variable('thickness', 'm', 'Surface layer thickness', retain=True)
         surf.add_variable('therm_cond', 'W m-1 K-1', 'Surface thermal conductivity')
     elif model.config.snow.model == 'cryolayers':
         surf.add_variable('layer_type', '1', 'Surface layer type', dtype=int)
 
     # Snow variables (shared by all snow models, additional ones might be added from the individual models)
     snow = state.add_category('snow')
-    snow.add_variable('swe', 'kg m-2', 'Snow water equivalent', 'surface_snow_amount')
+    snow.add_variable('swe', 'kg m-2', 'Snow water equivalent', 'surface_snow_amount', retain=True)
     snow.add_variable('depth', 'm', 'Snow depth', 'surface_snow_thickness')
     snow.add_variable('melt', 'kg m-2', 'Snow melt', 'surface_snow_melt_amount')
     snow.add_variable('sublimation', 'kg m-2', 'Snow sublimation', 'surface_snow_sublimation_amount')
     snow.add_variable('runoff', 'kg m-2', 'Snow runoff')
-    snow.add_variable('albedo', '1', 'Snow albedo')
+    snow.add_variable('albedo', '1', 'Snow albedo', retain=True)
     snow.add_variable('area_fraction', '1', 'Snow cover fraction', 'surface_snow_area_fraction')
 
     # Soil variables
     soil = state.add_category('soil')
     num_soil_layers = len(model.config.soil.thickness)
     soil.add_variable('heat_flux', 'W m-2', 'Soil heat flux', 'downward_heat_flux_in_soil')
-    soil.add_variable('vol_heat_cap_dry', 'J K-1 m-3', 'Volumetric heat capacity of dry soil')
-    soil.add_variable('sat_water_pressure', 'm', 'Saturated soil water pressure')
-    soil.add_variable('vol_moisture_content_sat', 'm3 m-3', 'Volumetric soil moisture content at saturation')
-    soil.add_variable('vol_moisture_content_crit', 'm3 m-3', 'Volumetric soil moisture content at critical point')
-    soil.add_variable('frac_frozen_moisture_content', '1', 'Fractional frozen soil moisture content', dim3=num_soil_layers)
-    soil.add_variable('frac_unfrozen_moisture_content', '1', 'Fractional unfrozen soil moisture content', dim3=num_soil_layers)
-    soil.add_variable('clapp_hornberger', '1', 'Clapp-Hornberger exponent')
-    soil.add_variable('vol_moisture_content', 'm3 m-3', 'Volumetric soil moisture content', dim3=num_soil_layers)
-    soil.add_variable('temp', 'K', 'Soil temperature', dim3=num_soil_layers)
-    soil.add_variable('thickness', 'm', 'Soil thickness', dim3=num_soil_layers)
+    soil.add_variable('vol_heat_cap_dry', 'J K-1 m-3', 'Volumetric heat capacity of dry soil', retain=True)
+    soil.add_variable('sat_water_pressure', 'm', 'Saturated soil water pressure', retain=True)
+    soil.add_variable('vol_moisture_content_sat', 'm3 m-3', 'Volumetric soil moisture content at saturation', retain=True)
+    soil.add_variable('vol_moisture_content_crit', 'm3 m-3', 'Volumetric soil moisture content at critical point', retain=True)
+    soil.add_variable('frac_frozen_moisture_content', '1', 'Fractional frozen soil moisture content', dim3=num_soil_layers, retain=True)
+    soil.add_variable('frac_unfrozen_moisture_content', '1', 'Fractional unfrozen soil moisture content', dim3=num_soil_layers, retain=True)
+    soil.add_variable('clapp_hornberger', '1', 'Clapp-Hornberger exponent', retain=True)
+    soil.add_variable('vol_moisture_content', 'm3 m-3', 'Volumetric soil moisture content', dim3=num_soil_layers, retain=True)
+    soil.add_variable('temp', 'K', 'Soil temperature', dim3=num_soil_layers, retain=True)
+    soil.add_variable('thickness', 'm', 'Soil thickness', dim3=num_soil_layers, retain=True)
     soil.add_variable('heat_cap', 'J K-1 m-2', 'Areal heat capacity of soil', dim3=num_soil_layers)
     soil.add_variable('therm_cond', 'W m-1 K-1', 'Thermal conductivity of soil', dim3=num_soil_layers)
-    soil.add_variable('therm_cond_minerals', 'W m-1 K-1', 'Thermal conductivity of soil minerals')
-    soil.add_variable('therm_cond_dry', 'W m-1 K-1', 'Thermal conductivity of dry soil')
+    soil.add_variable('therm_cond_minerals', 'W m-1 K-1', 'Thermal conductivity of soil minerals', retain=True)
+    soil.add_variable('therm_cond_dry', 'W m-1 K-1', 'Thermal conductivity of dry soil', retain=True)
 
 
 def create_empty_array(shape, dtype):

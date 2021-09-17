@@ -86,7 +86,7 @@ class OpenAmundsen:
         # Create snow redistribution factor state variables
         for precip_corr in config.meteo.precipitation_correction:
             if precip_corr['method'] == 'srf':
-                self.state.base.add_variable('srf', '1', 'Snow redistribution factor')
+                self.state.base.add_variable('srf', '1', 'Snow redistribution factor', retain=True)
                 break  # multiple SRFs are not allowed
 
         if config.snow_management.enabled:

@@ -23,6 +23,7 @@ class CanopyModel:
             'K',
             'Air temperatures of the previous 24 hours',
             dim3=max(num_timesteps_per_day, 1),
+            retain=True,
         )
         self._temp_idx = 0  # current index within the last_24h_temps array
 
@@ -30,6 +31,7 @@ class CanopyModel:
             'canopy_intercepted_load',
             'kg m-2',
             'Canopy snow interception storage',
+            retain=True,
         )
         model.state.snow.add_variable(
             'canopy_intercepted_snowfall',

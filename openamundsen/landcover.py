@@ -7,7 +7,7 @@ class LandCover:
         self.model = model
 
         s_lc = model.state.add_category('land_cover')
-        s_lc.add_variable('land_cover', long_name='Land cover class', dtype=int)
+        s_lc.add_variable('land_cover', long_name='Land cover class', dtype=int, retain=True)
         s_lc.add_variable('plant_height', 'm', 'Plant height')
         s_lc.add_variable('lai', 'm2 m-2', 'Leaf area index')
         s_lc.add_variable('lai_eff', 'm2 m-2', 'Effective leaf area index')
