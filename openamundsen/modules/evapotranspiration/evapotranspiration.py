@@ -310,7 +310,7 @@ class EvapotranspirationModel:
                         s_et.evaporation[pos_snowfree]
                         + s_et.transpiration[pos_snowfree]
                     )
-                self._root_zone_water_balance(pos_snowfree)
+                self._root_zone_water_balance(pos)
 
     def _reference_net_radiation(self):
         """
