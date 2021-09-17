@@ -49,9 +49,14 @@ class CanopyModel:
 
     def initialize(self):
         model = self.model
-        self.forest_pos = np.logical_or.reduce(
-            [model.land_cover.class_pixels[lcc] for lcc in model.land_cover.forest_classes]
-        )
+
+        if len(model.land_cover.forest_classes) > 0:
+            self.forest_pos = np.logical_or.reduce(
+                [model.land_cover.class_pixels[lcc] for lcc in model.land_cover.forest_classes]
+            )
+        else:
+            self.forest_pos = np.full((model.grid.rows, model.grid.cols), False)
+
         model.state.snow.canopy_intercepted_load[self.forest_pos] = 0.
 
     def meteorology(self):

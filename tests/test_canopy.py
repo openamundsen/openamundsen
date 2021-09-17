@@ -118,6 +118,37 @@ def test_canopy_meteorology(canopy_run):
             assert np.all(np.abs(ds_lcc.temp - ds_lcc.top_canopy_temp) <= 10.)
 
 
+def test_no_forest():
+    config = base_config()
+    config.start_date = '2019-10-01'
+    config.end_date = '2019-10-01'
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tmp_path = Path(temp_dir)
+
+        for p in Path(config.input_data.grids.dir).glob('*.asc'):
+            (tmp_path / p.name).symlink_to(p)
+
+        config.input_data.grids.dir = str(temp_dir)
+
+        lc = np.zeros((model.grid.rows, model.grid.cols), dtype=int)
+        rio_meta = {'driver': 'AAIGrid'}
+        oa.fileio.write_raster_file(
+            oa.util.raster_filename('lc', config),
+            lc.astype(np.int32),
+            model.grid.transform,
+            **rio_meta,
+        )
+
+        config.canopy.enabled = True
+        model = oa.OpenAmundsen(config)
+        model.initialize()
+        model.run()
+
+
 @pytest.mark.slow
 @pytest.mark.comparison
 def test_compare_canopy(canopy_run):
