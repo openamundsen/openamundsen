@@ -209,6 +209,7 @@ class EvapotranspirationModel:
         s_et.basal_crop_coeff[roi] = np.nan
         s_et.evaporation_coeff[roi] = np.nan
         s_et.water_stress_coeff[roi] = np.nan
+        s_et.deep_percolation[roi] = 0.
 
         model.logger.debug('Calculating evapotranspiration')
 
