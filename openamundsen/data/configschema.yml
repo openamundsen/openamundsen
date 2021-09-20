@@ -40,6 +40,10 @@ log_level:  # python logging-compatible log level (e.g. DEBUG or INFO)
   type: string
   default: INFO
 
+reset_state_variables: # reset all not to be retained state variables in every timestep
+  type: boolean
+  default: false
+
 input_data:
   type: dict
   default: {}

@@ -71,29 +71,29 @@ class EvapotranspirationModel:
         s = model.state
 
         s_et = s.add_category('evapotranspiration')
-        s_et.add_variable('soil_texture', long_name='Soil texture class', dtype=int)  # TODO move to base or soil group eventually
+        s_et.add_variable('soil_texture', long_name='Soil texture class', dtype=int, retain=True)  # TODO move to base or soil group eventually
         s_et.add_variable('evaporation', 'kg m-2', 'Evaporation')
         s_et.add_variable('transpiration', 'kg m-2', 'Transpiration')
         s_et.add_variable('evapotranspiration', 'kg m-2', 'Evapotranspiration')
         s_et.add_variable('et_ref', 'kg m-2', 'Reference evapotranspiration')
-        s_et.add_variable('ref_albedo', '1', 'Reference surface albedo')
-        s_et.add_variable('ref_emissivity', '1', 'Reference emissivity')
+        s_et.add_variable('ref_albedo', '1', 'Reference surface albedo', retain=True)
+        s_et.add_variable('ref_emissivity', '1', 'Reference emissivity', retain=True)
         s_et.add_variable('ref_net_radiation', 'W m-2', 'Reference net radiation')
         s_et.add_variable('soil_heat_flux', 'W m-2', 'Soil heat flux beneath the grass reference surface')
         s_et.add_variable('crop_coeff', '1', 'Crop coefficient')
         s_et.add_variable('basal_crop_coeff', '1', 'Basal crop coefficient')
         s_et.add_variable('evaporation_coeff', '1', 'Evaporation coefficient')
         s_et.add_variable('water_stress_coeff', '1', 'Water stress coefficient')
-        s_et.add_variable('clim_corr', '1', 'Climate correction term')
-        s_et.add_variable('cum_soil_surface_depletion', 'kg m-2', 'Cumulative evaporation from the soil surface layer')
-        s_et.add_variable('cum_root_zone_depletion', 'kg m-2', 'Cumulative evapotranspiration from the root zone')
-        s_et.add_variable('total_evaporable_water', 'kg m-2', 'Total evaporable water')
-        s_et.add_variable('total_available_water', 'kg m-2', 'Total available water')
-        s_et.add_variable('readily_evaporable_water', 'kg m-2', 'Readily evaporable water')
-        s_et.add_variable('readily_available_water', 'kg m-2', 'Readily available water')
+        s_et.add_variable('clim_corr', '1', 'Climate correction term', retain=True)
+        s_et.add_variable('cum_soil_surface_depletion', 'kg m-2', 'Cumulative evaporation from the soil surface layer', retain=True)
+        s_et.add_variable('cum_root_zone_depletion', 'kg m-2', 'Cumulative evapotranspiration from the root zone', retain=True)
+        s_et.add_variable('total_evaporable_water', 'kg m-2', 'Total evaporable water', retain=True)
+        s_et.add_variable('total_available_water', 'kg m-2', 'Total available water', retain=True)
+        s_et.add_variable('readily_evaporable_water', 'kg m-2', 'Readily evaporable water', retain=True)
+        s_et.add_variable('readily_available_water', 'kg m-2', 'Readily available water', retain=True)
         s_et.add_variable('deep_percolation', 'kg m-2', 'Deep percolation')
-        s_et.add_variable('deep_percolation_evaporation_layer', 'kg m-2', 'Deep percolation from the evaporation layer')
-        s_et.add_variable('sealed_interception', 'kg m-2', 'Interception for sealed surfaces')
+        s_et.add_variable('deep_percolation_evaporation_layer', 'kg m-2', 'Deep percolation from the evaporation layer', retain=True)
+        s_et.add_variable('sealed_interception', 'kg m-2', 'Interception for sealed surfaces', retain=True)
 
     def initialize(self):
         model = self.model

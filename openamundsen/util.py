@@ -45,33 +45,6 @@ class ConfigurationYAML(ruamel.yaml.YAML):
 yaml = ConfigurationYAML()
 
 
-def create_empty_array(shape, dtype):
-    """
-    Create an empty array with a given shape and dtype initialized to "no
-    data". The value of "no data" depends on the dtype and is e.g. NaN for
-    float, 0 for int and False for float.
-
-    Parameters
-    ----------
-    shape : int or sequence of ints
-        Shape of the new array, e.g. (2, 3).
-
-    dtype : type
-        The desired data type for the array.
-
-    Returns
-    -------
-    out : ndarray
-    """
-    dtype_init_vals = {
-        float: np.nan,
-        int: 0,
-        bool: False,
-    }
-
-    return np.full(shape, dtype_init_vals[dtype], dtype=dtype)
-
-
 def read_yaml_file(filename):
     """
     Read a YAML file.

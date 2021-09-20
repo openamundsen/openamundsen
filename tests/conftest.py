@@ -17,7 +17,9 @@ data_fetcher = pooch.create(
     version_dev='main',
     registry={  # hashes generated with generate_hashes.py
         'grids/rofental/dem_rofental_1000.asc': '368ee374bfbb927bae5408a38dbafbbeab4ff59dc94ae30956b617bf28c114ec',
+        'grids/rofental/lc_rofental_1000.asc': '5bde204bf9e79acdc47f9d9c70f21f20f669cfb7cbe65418ef42dd0a52676b98',
         'grids/rofental/roi_rofental_1000.asc': '5c495833e8465931d7aedc982ef093332572034d9cf7da5fc8b98b72111e3d25',
+        'grids/rofental/soil_rofental_1000.asc': '48b46a8b3216a012393f36e34561473b3c1fd8dccef86d9a7e34aab9e3deb89b',
         'grids/rofental/srf_rofental_1000.asc': '431f0ed2181abc2a79c6ffd79b804e5c983c9c47003bce57b853db2b41abf62d',
         'grids/rofental/svf_rofental_1000.asc': 'a4b7704fad6f7c63445a76c64207ff881b73023ec7d958d4581cd7fb42d06966',
         'meteo/rofental/csv/bellavista.csv': 'fab913929aa84e04a5c47c9c4ea89ed613b8ecc14cf54194a090600de4ce9d98',

@@ -23,14 +23,14 @@ class CryoLayerSnowModel(SnowModel):
         s = model.state.snow
         num_cryo_layers = 4
 
-        s.add_variable('num_layers', '1', 'Number of snow layers', dtype=int)
-        s.add_variable('thickness', 'm', 'Snow thickness', dim3=num_cryo_layers)
-        s.add_variable('density', 'kg m-3', 'Snow density', 'snow_density', dim3=num_cryo_layers)
-        s.add_variable('ice_content', 'kg m-2', 'Ice content of snow', dim3=num_cryo_layers)
-        s.add_variable('liquid_water_content', 'kg m-2', 'Liquid water content of snow', 'liquid_water_content_of_snow_layer', dim3=num_cryo_layers)
-        s.add_variable('cold_content', 'kg m-2', 'Cold content of snow', dim3=num_cryo_layers)
-        s.add_variable('temp', 'K', 'Snow temperature', dim3=num_cryo_layers)  # TODO remove this (only added because this is in the default point outputs)
-        s.add_variable('layer_albedo', '1', 'Snow layer albedo', dim3=num_cryo_layers)
+        s.add_variable('num_layers', '1', 'Number of snow layers', dtype=int, retain=True)
+        s.add_variable('thickness', 'm', 'Snow thickness', dim3=num_cryo_layers, retain=True)
+        s.add_variable('density', 'kg m-3', 'Snow density', 'snow_density', dim3=num_cryo_layers, retain=True)
+        s.add_variable('ice_content', 'kg m-2', 'Ice content of snow', dim3=num_cryo_layers, retain=True)
+        s.add_variable('liquid_water_content', 'kg m-2', 'Liquid water content of snow', 'liquid_water_content_of_snow_layer', dim3=num_cryo_layers, retain=True)
+        s.add_variable('cold_content', 'kg m-2', 'Cold content of snow', dim3=num_cryo_layers, retain=True)
+        s.add_variable('temp', 'K', 'Snow temperature', dim3=num_cryo_layers, retain=True)  # TODO remove this (only added because this is in the default point outputs)
+        s.add_variable('layer_albedo', '1', 'Snow layer albedo', dim3=num_cryo_layers, retain=True)
         s.add_variable('heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_cryo_layers)  # TODO remove this (only added because of snow.snow_properties())
 
         self.model = model
