@@ -157,10 +157,10 @@ class GriddedOutputManager:
                     meta = self.model.state.meta(field.var)
 
                     if meta.dim3 == 0:
-                        arr = np.full((self.model.grid.rows, self.model.grid.cols), np.nan)
+                        arr = np.full(self.model.grid.shape, np.nan)
                         arr[roi] = 0
                     else:
-                        arr = np.full((meta.dim3, self.model.grid.rows, self.model.grid.cols), np.nan)
+                        arr = np.full((meta.dim3, *self.model.grid.shape), np.nan)
                         arr[:, roi] = 0
 
                     field.data = arr

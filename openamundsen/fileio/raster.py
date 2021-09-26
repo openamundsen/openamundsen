@@ -21,6 +21,7 @@ def read_raster_metadata(filename, crs=None):
         Dictionary containing the following keys:
         - 'rows' (number of rows),
         - 'cols' (number of columns)
+        - 'shape' ((rows, cols) tuple)
         - 'resolution' (grid resolution)
         - 'crs': coordinate reference system
         - 'transform' (georeferencing transformation parameters)
@@ -33,6 +34,7 @@ def read_raster_metadata(filename, crs=None):
 
         meta['rows'] = ds.meta['height']
         meta['cols'] = ds.meta['width']
+        meta['shape'] = (meta['rows'], meta['cols'])
         meta['resolution'] = ds.res[0]
         meta['crs'] = ds.crs
         meta['transform'] = ds.meta['transform']

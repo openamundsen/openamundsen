@@ -57,7 +57,7 @@ class CanopyModel:
                 [model.land_cover.class_pixels[lcc] for lcc in model.land_cover.forest_classes]
             )
         else:
-            self.forest_pos = np.full((model.grid.rows, model.grid.cols), False)
+            self.forest_pos = np.full(model.grid.shape, False)
 
         model.state.snow.canopy_intercepted_load[self.forest_pos] = 0.
 

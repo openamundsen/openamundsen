@@ -27,9 +27,8 @@ def canopy_run():
 
         config.input_data.grids.dir = str(temp_dir)
 
-        shape = (model.grid.rows, model.grid.cols)
-        soil = np.zeros(shape, dtype=int)
-        lc = np.zeros(shape, dtype=int)
+        soil = np.zeros(model.grid.shape, dtype=int)
+        lc = np.zeros(model.grid.shape, dtype=int)
 
         soil[:] = 5
         lccs = model.config.land_cover.classes.keys()
@@ -136,7 +135,7 @@ def test_no_forest():
 
         config.input_data.grids.dir = str(temp_dir)
 
-        lc = np.zeros((model.grid.rows, model.grid.cols), dtype=int)
+        lc = np.zeros(model.grid.shape, dtype=int)
         rio_meta = {'driver': 'AAIGrid'}
         oa.fileio.write_raster_file(
             oa.util.raster_filename('lc', config),

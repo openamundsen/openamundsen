@@ -24,9 +24,8 @@ def test_evapotranspiration(tmp_path):
     for p in Path(config.input_data.grids.dir).glob('*.asc'):
         (tmp_path / p.name).symlink_to(p)
 
-    shape = (model.grid.rows, model.grid.cols)
-    soil = np.zeros(shape, dtype=int)
-    lc = np.zeros(shape, dtype=int)
+    soil = np.zeros(model.grid.shape, dtype=int)
+    lc = np.zeros(model.grid.shape, dtype=int)
 
     # Test with all land cover classes and fixed soil texture
     soil[:] = 5

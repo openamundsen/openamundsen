@@ -170,12 +170,12 @@ class OpenAmundsen:
             raise Exception('Local mask does not match global mask size')
 
         if mask.ndim == 1:
-            global_mask = np.zeros((self.grid.rows, self.grid.cols), dtype=bool)
+            global_mask = np.zeros(self.grid.shape, dtype=bool)
             idxs = global_idxs[mask]
             global_mask.flat[idxs] = True
         elif mask.ndim == 2:
             dim3 = mask.shape[0]
-            global_mask = np.zeros((dim3, self.grid.rows, self.grid.cols), dtype=bool)
+            global_mask = np.zeros((dim3, *self.grid.shape), dtype=bool)
 
             for i in range(dim3):
                 idxs = global_idxs[mask[i, :]]

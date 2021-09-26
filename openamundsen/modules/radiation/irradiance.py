@@ -63,8 +63,8 @@ def clear_sky_shortwave_irradiance(model):
             clear_sky_albedo=model.config.meteo.radiation.clear_sky_albedo,
         )
     else:
-        dir_irr = np.zeros((model.grid.rows, model.grid.cols))
-        diff_irr = np.zeros((model.grid.rows, model.grid.cols))
+        dir_irr = np.zeros(model.grid.shape)
+        diff_irr = np.zeros(model.grid.shape)
 
     pot_irr = dir_irr + diff_irr
     model.state.meteo.sw_in_clearsky[roi_plus_stations] = pot_irr[roi_plus_stations]
