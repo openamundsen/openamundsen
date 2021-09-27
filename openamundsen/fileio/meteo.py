@@ -626,7 +626,7 @@ def make_point_dataset(
             raise TypeError('Altitude neither in data nor passed as keyword argument')
         alt = float(data.alt)
 
-    ds = _make_empty_point_dataset(dates, point_id, name, lon, lat, alt)
+    ds = make_empty_point_dataset(dates, point_id, name, lon, lat, alt)
 
     # Copy values (and check if the units are as expected)
     for var, meta in constants.METEO_VAR_METADATA.items():
@@ -656,7 +656,7 @@ def make_point_dataset(
     return ds
 
 
-def _make_empty_point_dataset(dates, point_id, name, lon, lat, alt):
+def make_empty_point_dataset(dates, point_id, name, lon, lat, alt):
     """
     Create an empty dataset for the meteorological forcing data for a single
     point.
