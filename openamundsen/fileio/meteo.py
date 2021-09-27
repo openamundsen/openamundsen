@@ -657,6 +657,38 @@ def make_point_dataset(
 
 
 def _make_empty_point_dataset(dates, point_id, name, lon, lat, alt):
+    """
+    Create an empty dataset for the meteorological forcing data for a single
+    point.
+
+    The returned dataset contains the station metadata (point ID, name,
+    coordinates and altitude) and the meteorological variables, which are set to
+    all-nan values.
+
+    Parameters
+    ----------
+    dates : pd.DatetimeIndex
+        Dates.
+
+    point_id : str
+        Point ID.
+
+    name : str
+        Point name
+
+    lon : float
+        Longitude (degrees).
+
+    lat : float
+        Latitude (degrees).
+
+    alt : float
+        Altitude (m)
+
+    Returns
+    -------
+    ds : xr.Dataset
+    """
     data = {
         'lon': ([], float(lon)),
         'lat': ([], float(lat)),
