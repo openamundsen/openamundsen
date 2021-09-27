@@ -634,9 +634,8 @@ def make_point_dataset(
             continue
 
         if var == 'precip':
-            # Special case for precipitation - convert rates to sums first if required
-            # If units are not specified assume they are kg m-2 s-1.
-            if 'units' not in data['precip'].attrs or data['precip'].units == 'kg m-2 s-1':
+            # Convert precipitation rates to sums first if required
+            if 'units' in data['precip'].attrs and data['precip'].units == 'kg m-2 s-1':
                 try:
                     freq = pd.infer_freq(dates)
                     dt = util.offset_to_timedelta(freq).total_seconds()
