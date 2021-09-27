@@ -229,7 +229,7 @@ def read_csv_meteo_file(filename, station_id, station_name, x, y, alt, crs):
 
 def _combine_meteo_datasets(datasets):
     """
-    Combine a list of meteo datasets as read by read_netcdf_meteo_file.
+    Combine a list of meteo datasets as returned by `make_point_dataset`.
     The datasets are merged by adding an additional "station" (= station id)
     dimension.
     """
