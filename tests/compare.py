@@ -64,7 +64,9 @@ def compare_datasets(
 
         if is_time_series:
             if not np.allclose(data_base, data_dev, equal_nan=True):
-                warnings.warn(f'Non-matching values for variable {v}')
+                max_abs_diff, max_rel_diff = _max_diff(data_base, data_dev)
+                warnings.warn(f'Non-matching values for variable {v}. '
+                              f'Max abs/rel diff: {max_abs_diff:g} / {max_rel_diff:g}')
 
                 if plot:
                     changed_vars.append(v)
@@ -78,7 +80,9 @@ def compare_datasets(
                 date = time_vals[date_num]
 
                 if not np.allclose(data_base_cur, data_dev_cur, equal_nan=True):
-                    warnings.warn(f'Non-matching values for variable {v} ({date})')
+                    max_abs_diff, max_rel_diff = _max_diff(data_base_cur, data_dev_cur)
+                    warnings.warn(f'Non-matching values for variable {v} ({date}). '
+                                  f'Max abs/rel diff: {max_abs_diff:g} / {max_rel_diff:g}')
 
                     if plot:
                         if v not in changed_vars:
@@ -106,3 +110,14 @@ def compare_datasets(
             )
 
         fig_to_html(fig, reports_dir / f'{name}.html')
+
+
+def _max_diff(x, y):
+    pos = np.isfinite(x) & np.isfinite(y)
+    x = x[pos]
+    y = y[pos]
+    nonzero = (x != 0)
+    abs_diff = np.abs(x - y)
+    max_abs_diff = np.max(abs_diff)
+    max_rel_diff = np.max(abs_diff[nonzero] / np.abs(x[nonzero]))
+    return max_abs_diff, max_rel_diff
