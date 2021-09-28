@@ -6,7 +6,7 @@ from openamundsen import (
     errors,
     fileio,
     forcing,
-    meteo,
+    meteo as oameteo,
     modules,
     surface,
     statevars,
@@ -46,7 +46,7 @@ class OpenAmundsen:
         self.date = None
         self.date_idx = None
 
-    def initialize(self):
+    def initialize(self, meteo=None):
         """
         Initialize the model according to the given configuration, i.e. read
         the required input raster files and meteorological input data,
@@ -61,6 +61,15 @@ class OpenAmundsen:
         self._require_evapotranspiration = config.evapotranspiration.enabled
         self._require_land_cover = self._require_canopy or self._require_evapotranspiration
         self._require_soil_texture = self._require_evapotranspiration
+
+        if config.input_data.meteo.format == 'memory':
+            if meteo is None:
+                raise errors.MeteoDataError('A meteo dataset must be passed to '
+                                            'OpenAmundsen.initialize() if the meteo input format '
+                                            'is set to "memory"')
+
+            if not forcing.is_valid_point_dataset(meteo):
+                raise errors.MeteoDataError('Not a valid point forcing dataset')
 
         self._initialize_logger()
 
@@ -101,7 +110,15 @@ class OpenAmundsen:
         self._create_state_variables()
 
         self._read_input_data()
-        self._read_meteo_data()
+
+        if config.input_data.meteo.format == 'memory':
+            meteo = meteo.copy(deep=True)
+        else:
+            meteo = self._read_meteo_data()
+
+        self.meteo = forcing.prepare_point_coordinates(meteo, self.grid, self.config.crs)
+        oameteo.correct_station_precipitation(self)
+
         self._calculate_terrain_parameters()
 
         config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
@@ -150,7 +167,7 @@ class OpenAmundsen:
         if self.config.reset_state_variables:
             self.state.reset()
 
-        meteo.interpolate_station_data(self)
+        oameteo.interpolate_station_data(self)
         self._process_meteo_data()
         self._model_interface()
         self.point_output.update()
@@ -451,9 +468,8 @@ class OpenAmundsen:
             aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
             logger=self.logger,
         )
-        self.meteo = forcing.prepare_point_coordinates(ds, self.grid, self.config.crs)
 
-        meteo.correct_station_precipitation(self)
+        return ds
 
     def _process_meteo_data(self):
         """
@@ -464,25 +480,25 @@ class OpenAmundsen:
         m = self.state.meteo
         roi = self.grid.roi
 
-        m.atmos_press[roi] = meteo.atmospheric_pressure(self.state.base.dem[roi])
-        m.sat_vap_press[roi] = meteo.saturation_vapor_pressure(m.temp[roi])
-        m.vap_press[roi] = meteo.vapor_pressure(m.temp[roi], m.rel_hum[roi])
-        m.spec_hum[roi] = meteo.specific_humidity(m.atmos_press[roi], m.vap_press[roi])
-        m.spec_heat_cap_moist_air[roi] = meteo.specific_heat_capacity_moist_air(m.spec_hum[roi])
-        m.lat_heat_vap[roi] = meteo.latent_heat_of_vaporization(m.temp[roi])
-        m.psych_const[roi] = meteo.psychrometric_constant(
+        m.atmos_press[roi] = oameteo.atmospheric_pressure(self.state.base.dem[roi])
+        m.sat_vap_press[roi] = oameteo.saturation_vapor_pressure(m.temp[roi])
+        m.vap_press[roi] = oameteo.vapor_pressure(m.temp[roi], m.rel_hum[roi])
+        m.spec_hum[roi] = oameteo.specific_humidity(m.atmos_press[roi], m.vap_press[roi])
+        m.spec_heat_cap_moist_air[roi] = oameteo.specific_heat_capacity_moist_air(m.spec_hum[roi])
+        m.lat_heat_vap[roi] = oameteo.latent_heat_of_vaporization(m.temp[roi])
+        m.psych_const[roi] = oameteo.psychrometric_constant(
             m.atmos_press[roi],
             m.spec_heat_cap_moist_air[roi],
             m.lat_heat_vap[roi],
         )
-        m.wet_bulb_temp[roi] = meteo.wet_bulb_temperature(
+        m.wet_bulb_temp[roi] = oameteo.wet_bulb_temperature(
             m.temp[roi],
             m.rel_hum[roi],
             m.vap_press[roi],
             m.psych_const[roi],
         )
-        m.dew_point_temp[roi] = meteo.dew_point_temperature(m.temp[roi], m.rel_hum[roi])
-        m.precipitable_water[roi] = meteo.precipitable_water(
+        m.dew_point_temp[roi] = oameteo.dew_point_temperature(m.temp[roi], m.rel_hum[roi])
+        m.precipitable_water[roi] = oameteo.precipitable_water(
             m.temp[roi],
             m.vap_press[roi],
         )
@@ -495,7 +511,7 @@ class OpenAmundsen:
         elif precip_phase_method == 'wet_bulb_temp':
             pp_temp = m.wet_bulb_temp
 
-        snowfall_frac = meteo.precipitation_phase(
+        snowfall_frac = oameteo.precipitation_phase(
             pp_temp[roi],
             threshold_temp=self.config.meteo.precipitation_phase.threshold_temp,
             temp_range=self.config.meteo.precipitation_phase.temp_range,
