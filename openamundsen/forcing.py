@@ -5,6 +5,24 @@ import rasterio
 import xarray as xr
 
 
+_POINT_DATASET_META_VARS = [
+    'station_name',
+    'lon',
+    'lat',
+    'alt',
+]
+_POINT_DATASET_DATA_VARS = list(constants.METEO_VAR_METADATA.keys())
+_POINT_DATASET_GRID_VARS = [
+    'x',
+    'y',
+    'col',
+    'row',
+    'within_grid_extent',
+    'within_roi',
+]
+_POINT_DATASET_MINIMAL_VARS = _POINT_DATASET_META_VARS + _POINT_DATASET_DATA_VARS
+
+
 def make_point_dataset(
         data=None,
         dates=None,
@@ -294,18 +312,28 @@ def prepare_point_coordinates(ds, grid, crs):
             within_roi_var.loc[station] = grid.roi[row, col]
 
     # reorder variables (only for aesthetic reasons)
-    var_order = [
-        'station_name',
-        'lon',
-        'lat',
-        'alt',
-        'x',
-        'y',
-        'col',
-        'row',
-        'within_grid_extent',
-        'within_roi',
-    ] + list(constants.METEO_VAR_METADATA.keys())
+    var_order = _POINT_DATASET_META_VARS + _POINT_DATASET_GRID_VARS + _POINT_DATASET_DATA_VARS
     ds = ds[var_order]
 
     return ds
+
+
+def strip_point_dataset(ds):
+    """
+    Remove the grid-specific variables from a point forcing dataset.
+    """
+    return ds[_POINT_DATASET_MINIMAL_VARS]
+
+
+def is_valid_point_dataset(ds):
+    """
+    Test if the passed variable is a valid point forcing dataset.
+    """
+    if tuple(ds.dims) != ('station', 'time'):
+        return False
+
+    for v in _POINT_DATASET_MINIMAL_VARS:
+        if v not in ds:
+            return False
+
+    return True
