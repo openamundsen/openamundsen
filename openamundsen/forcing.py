@@ -325,7 +325,7 @@ def strip_point_dataset(ds):
     return ds[_POINT_DATASET_MINIMAL_VARS]
 
 
-def is_valid_point_dataset(ds):
+def is_valid_point_dataset(ds, dates=None):
     """
     Test if the passed variable is a valid point forcing dataset.
     """
@@ -334,6 +334,10 @@ def is_valid_point_dataset(ds):
 
     for v in _POINT_DATASET_MINIMAL_VARS:
         if v not in ds:
+            return False
+
+    if dates is not None:
+        if not pd.DatetimeIndex(dates).equals(ds.indexes['time']):
             return False
 
     return True

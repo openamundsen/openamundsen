@@ -62,15 +62,6 @@ class OpenAmundsen:
         self._require_land_cover = self._require_canopy or self._require_evapotranspiration
         self._require_soil_texture = self._require_evapotranspiration
 
-        if config.input_data.meteo.format == 'memory':
-            if meteo is None:
-                raise errors.MeteoDataError('A meteo dataset must be passed to '
-                                            'OpenAmundsen.initialize() if the meteo input format '
-                                            'is set to "memory"')
-
-            if not forcing.is_valid_point_dataset(meteo):
-                raise errors.MeteoDataError('Not a valid point forcing dataset')
-
         self._initialize_logger()
 
         self._prepare_time_steps()
@@ -112,6 +103,14 @@ class OpenAmundsen:
         self._read_input_data()
 
         if config.input_data.meteo.format == 'memory':
+            if meteo is None:
+                raise errors.MeteoDataError('A meteo dataset must be passed to '
+                                            'OpenAmundsen.initialize() if the meteo input format '
+                                            'is set to "memory"')
+
+            if not forcing.is_valid_point_dataset(meteo, dates=self.dates):
+                raise errors.MeteoDataError('Not a valid point forcing dataset')
+
             meteo = meteo.copy(deep=True)
         else:
             meteo = self._read_meteo_data()
