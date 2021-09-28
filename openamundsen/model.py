@@ -5,6 +5,7 @@ from openamundsen import (
     constants,
     errors,
     fileio,
+    forcing,
     meteo,
     modules,
     surface,
@@ -279,70 +280,6 @@ class OpenAmundsen:
         grid.prepare_coordinates()
         self.grid = grid
 
-    def _prepare_station_coordinates(self):
-        """
-        Transform the lon/lat coordinates of the meteorological stations to the
-        coordinate system of the model grid. The transformed coordinates are
-        stored in the `x` and `y` variables of the meteo dataset.
-        Additionally, the row and column indices of the stations within the
-        model grid are stored in the `row` and `col` variables, and two boolean
-        variables `within_grid_extent` and `within_roi` indicate whether the
-        stations lie within the model grid extent and the ROI, respectively.
-        """
-        ds = self.meteo
-
-        x, y = util.transform_coords(ds.lon, ds.lat, constants.CRS_WGS84, self.config.crs)
-
-        x_var = ds.lon.copy()
-        x_var.values = x
-        x_var.attrs = {
-            'standard_name': 'projection_x_coordinate',
-            'units': 'm',
-        }
-
-        y_var = ds.lat.copy()
-        y_var.values = y
-        y_var.attrs = {
-            'standard_name': 'projection_y_coordinate',
-            'units': 'm',
-        }
-
-        ds['x'] = x_var
-        ds['y'] = y_var
-
-        bool_var = ds.x.copy().astype(bool)
-        bool_var[:] = False
-        bool_var.attrs = {}
-        int_var = bool_var.copy().astype(int)
-        int_var[:] = -1
-
-        rows, cols = rasterio.transform.rowcol(self.grid.transform, x, y)
-        row_var = int_var.copy()
-        col_var = int_var.copy()
-        row_var.values[:] = rows
-        col_var.values[:] = cols
-        ds['col'] = col_var
-        ds['row'] = row_var
-
-        grid = self.grid
-        ds['within_grid_extent'] = (
-            (col_var >= 0)
-            & (col_var < grid.cols)
-            & (row_var >= 0)
-            & (row_var < grid.rows)
-        )
-
-        within_roi_var = bool_var.copy()
-        ds['within_roi'] = within_roi_var
-
-        for station in ds.indexes['station']:
-            dss = ds.sel(station=station)
-
-            if dss.within_grid_extent:
-                row = int(dss.row)
-                col = int(dss.col)
-                within_roi_var.loc[station] = self.grid.roi[row, col]
-
     def _initialize_state_variable_management(self):
         """
         Initialize the state variable management and add default state variables.
@@ -500,7 +437,7 @@ class OpenAmundsen:
         elif self.config.input_data.meteo.format == 'netcdf':
             meteo_crs = None  # no CRS required for NetCDF input
 
-        self.meteo = fileio.read_meteo_data(
+        ds = fileio.read_meteo_data(
             self.config.input_data.meteo.format,
             self.config.input_data.meteo.dir,
             self.config.start_date,
@@ -514,23 +451,7 @@ class OpenAmundsen:
             aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
             logger=self.logger,
         )
-
-        self._prepare_station_coordinates()
-
-        # reorder variables (only for aesthetic reasons)
-        var_order = [
-            'station_name',
-            'lon',
-            'lat',
-            'alt',
-            'x',
-            'y',
-            'col',
-            'row',
-            'within_grid_extent',
-            'within_roi',
-        ] + list(constants.METEO_VAR_METADATA.keys())
-        self.meteo = self.meteo[var_order]
+        self.meteo = forcing.prepare_point_coordinates(ds, self.grid, self.config.crs)
 
         meteo.correct_station_precipitation(self)
 

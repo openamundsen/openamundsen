@@ -1,6 +1,7 @@
 import numpy as np
 from openamundsen import constants, errors, util
 import pandas as pd
+import rasterio
 import xarray as xr
 
 
@@ -212,3 +213,99 @@ def combine_point_datasets(datasets):
         datasets_processed.append(ds)
 
     return xr.combine_nested(datasets_processed, concat_dim='station')
+
+
+def prepare_point_coordinates(ds, grid, crs):
+    """
+    Transform the lon/lat coordinates of the meteorological stations to the
+    coordinate system of the model grid. The transformed coordinates are
+    stored in the `x` and `y` variables of the meteo dataset.
+    Additionally, the row and column indices of the stations within the
+    model grid are stored in the `row` and `col` variables, and two boolean
+    variables `within_grid_extent` and `within_roi` indicate whether the
+    stations lie within the model grid extent and the ROI, respectively.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Point forcing dataset as returned by `combine_point_datasets`.
+
+    grid : ModelGrid
+        Model grid.
+
+    crs : str
+        Coordinate reference system.
+
+    Returns
+    -------
+    ds : xr.Dataset
+    """
+    ds = ds.copy()
+
+    x, y = util.transform_coords(ds.lon, ds.lat, constants.CRS_WGS84, crs)
+
+    x_var = ds.lon.copy()
+    x_var.values = x
+    x_var.attrs = {
+        'standard_name': 'projection_x_coordinate',
+        'units': 'm',
+    }
+
+    y_var = ds.lat.copy()
+    y_var.values = y
+    y_var.attrs = {
+        'standard_name': 'projection_y_coordinate',
+        'units': 'm',
+    }
+
+    ds['x'] = x_var
+    ds['y'] = y_var
+
+    bool_var = ds.x.copy().astype(bool)
+    bool_var[:] = False
+    bool_var.attrs = {}
+    int_var = bool_var.copy().astype(int)
+    int_var[:] = -1
+
+    rows, cols = rasterio.transform.rowcol(grid.transform, x, y)
+    row_var = int_var.copy()
+    col_var = int_var.copy()
+    row_var.values[:] = rows
+    col_var.values[:] = cols
+    ds['col'] = col_var
+    ds['row'] = row_var
+
+    ds['within_grid_extent'] = (
+        (col_var >= 0)
+        & (col_var < grid.cols)
+        & (row_var >= 0)
+        & (row_var < grid.rows)
+    )
+
+    within_roi_var = bool_var.copy()
+    ds['within_roi'] = within_roi_var
+
+    for station in ds.indexes['station']:
+        dss = ds.sel(station=station)
+
+        if dss.within_grid_extent:
+            row = int(dss.row)
+            col = int(dss.col)
+            within_roi_var.loc[station] = grid.roi[row, col]
+
+    # reorder variables (only for aesthetic reasons)
+    var_order = [
+        'station_name',
+        'lon',
+        'lat',
+        'alt',
+        'x',
+        'y',
+        'col',
+        'row',
+        'within_grid_extent',
+        'within_roi',
+    ] + list(constants.METEO_VAR_METADATA.keys())
+    ds = ds[var_order]
+
+    return ds
