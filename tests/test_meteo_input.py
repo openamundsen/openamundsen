@@ -75,6 +75,24 @@ def test_formats():
     xr.testing.assert_allclose(meteo['netcdf'], meteo['csv'])
 
 
+def test_format_memory(tmp_path):
+    config = base_config()
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    meteo1 = model.meteo
+
+    config.input_data.meteo.format = 'memory'
+    model = oa.OpenAmundsen(config)
+    model.initialize(meteo=oa.forcing.strip_point_dataset(meteo1))
+    meteo2 = model.meteo
+    assert meteo1.identical(meteo2)
+
+    config.start_date = meteo1.indexes['time'][1]
+    model = oa.OpenAmundsen(config)
+    with pytest.raises(errors.MeteoDataError):
+        model.initialize(meteo=oa.forcing.strip_point_dataset(meteo1))
+
+
 def test_no_files_found(tmp_path):
     config = base_config()
     config.input_data.meteo.dir = str(tmp_path)
