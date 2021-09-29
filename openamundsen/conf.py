@@ -192,6 +192,15 @@ def validate_config(config):
         print('Warning: Ignoring CRS specification for meteo input data '
               '(CRS not required when using NetCDF format)')
 
+    if config.input_data.meteo.format == 'memory':
+        if (
+            config.input_data.meteo.bounds != 'grid'
+            or len(config.input_data.meteo.exclude) > 0
+            or len(config.input_data.meteo.include) > 0
+        ):
+            print('Warning: "bounds", "exclude" and "include" are currently ignored for '
+                  'format "memory"')
+
     if config.snow.model == 'multilayer' and config.snow.melt.method != 'energy_balance':
         raise ConfigurationError(f'Melt method "{config.snow.melt.method}" not supported for the '
                                  f'snow model "{config.snow.model}"')
