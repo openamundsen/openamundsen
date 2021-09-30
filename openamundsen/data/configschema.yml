@@ -74,6 +74,7 @@ input_data:
             - netcdf
             - csv
             - memory
+            - callback
           default: netcdf
 
         crs:  # coordinate reference system of the meteorological data
