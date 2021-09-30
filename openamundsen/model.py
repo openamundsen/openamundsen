@@ -223,7 +223,7 @@ class OpenAmundsen:
         Interface for calling the different submodules. This method is called
         in every time step after the meteorological fields have been prepared.
         """
-        modules.radiation.irradiance(self)
+        self._irradiance()
 
         if self._require_land_cover:
             self.land_cover.lai()
@@ -522,6 +522,18 @@ class OpenAmundsen:
         if 'srf' in self.state.base:
             m.snowfall[roi] *= self.state.base.srf[roi]
             m.precip[roi] = m.snowfall[roi] + m.rainfall[roi]
+
+    def _irradiance(self):
+        self.sun_params = modules.radiation.sun_parameters(
+            self.date,
+            self.grid.center_lon,
+            self.grid.center_lat,
+            self.config.timezone,
+        )
+
+        modules.radiation.clear_sky_shortwave_irradiance(self)
+        modules.radiation.shortwave_irradiance(self)
+        modules.radiation.longwave_irradiance(self)
 
     @property
     def timestep_props(self):

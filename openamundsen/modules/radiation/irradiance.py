@@ -1,23 +1,11 @@
 import numpy as np
+from .clearsky import _clear_sky_shortwave_irradiance
 from openamundsen import (
     constants,
     interpolation,
     meteo,
     modules,
 )
-
-
-def irradiance(model):
-    model.sun_params = modules.radiation.sun_parameters(
-        model.date,
-        model.grid.center_lon,
-        model.grid.center_lat,
-        model.config.timezone,
-    )
-
-    clear_sky_shortwave_irradiance(model)
-    shortwave_irradiance(model)
-    longwave_irradiance(model)
 
 
 def clear_sky_shortwave_irradiance(model):
@@ -46,7 +34,7 @@ def clear_sky_shortwave_irradiance(model):
         )
 
         model.logger.debug('Calculating clear-sky shortwave irradiance')
-        dir_irr, diff_irr = modules.radiation.clear_sky_shortwave_irradiance(
+        dir_irr, diff_irr = _clear_sky_shortwave_irradiance(
             model.sun_params['day_angle'],
             model.sun_params['sun_vector'],
             shadows,
