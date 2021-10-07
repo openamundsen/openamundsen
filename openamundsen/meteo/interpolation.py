@@ -288,7 +288,17 @@ def interpolate_param(
     -------
     data_interpol : ndarray
         Interpolated values for the target locations.
-   """
+    """
+    # If there are no points to be interpolated, return an all-zero array for precipitation, and an
+    # all-nan array for all other parameters
+    if data.size == 0:
+        if param == 'precip':
+            fill_value = 0.
+        else:
+            fill_value = np.nan
+
+        return np.full(target_xs.shape, fill_value)
+
     if param in ('temp', 'precip', 'rel_hum'):
         trend_method = param_config['trend_method']
         lapse_rate = param_config['lapse_rate'][date.month - 1]
