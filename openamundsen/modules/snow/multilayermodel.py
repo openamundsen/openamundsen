@@ -166,7 +166,8 @@ class MultilayerSnowModel(SnowModel):
         if albedo is None:
             albedo = s.snow.albedo[pos]
             albedo[pos_init] = model.config.snow.albedo.max
-            s.snow.albedo[pos] = albedo
+
+        s.snow.albedo[pos] = albedo
 
         # Initialize first snow layer where necessary
         s.snow.num_layers[pos_init_global] = 1
