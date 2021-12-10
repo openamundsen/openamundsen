@@ -8,6 +8,12 @@ import pandas as pd
 from pathlib import Path
 import re
 
+try:
+    import openamundsen_snowmanagement
+    SNOW_MANAGEMENT_AVAILABLE = True
+    SNOW_MANAGEMENT_DATA_DIR = Path(openamundsen_snowmanagement.__file__).parent / 'data'
+except ImportError:
+    SNOW_MANAGEMENT_AVAILABLE = False
 
 DATA_DIR = Path(__file__).parent / 'data'
 
@@ -118,6 +124,11 @@ def _init_schemas():
 
     if 'openamundsen_config' not in schemas:
         config_schema = util.read_yaml_file(f'{DATA_DIR}/configschema.yml')
+
+        if SNOW_MANAGEMENT_AVAILABLE:
+            sm_schema = util.read_yaml_file(f'{SNOW_MANAGEMENT_DATA_DIR}/configschema.yml')
+            config_schema.update(sm_schema)
+
         schema_reg.add('openamundsen_config', config_schema)
 
         lcc_schema = util.read_yaml_file(f'{DATA_DIR}/land_cover_class_schema.yml')

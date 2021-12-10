@@ -61,6 +61,9 @@ class OpenAmundsen:
         self._require_evapotranspiration = config.evapotranspiration.enabled
         self._require_land_cover = self._require_canopy or self._require_evapotranspiration
         self._require_soil_texture = self._require_evapotranspiration
+        self._require_snow_management = (
+            conf.SNOW_MANAGEMENT_AVAILABLE and config.snow_management.enabled
+        )
 
         self._initialize_logger()
 
@@ -90,12 +93,8 @@ class OpenAmundsen:
                 self.state.base.add_variable('srf', '1', 'Snow redistribution factor', retain=True)
                 break  # multiple SRFs are not allowed
 
-        if config.snow_management.enabled:
-            try:
-                import openamundsen_snowmanagement
-            except ImportError:
-                raise errors.ConfigurationError('The snow management module must be installed '
-                                                'for enabling snow management.')
+        if self._require_snow_management:
+            import openamundsen_snowmanagement
             self.snow_management = openamundsen_snowmanagement.SnowManagementModel(self)
 
         self._create_state_variables()
@@ -239,7 +238,7 @@ class OpenAmundsen:
         self.snow.accumulation()
         self.snow.albedo_aging()
 
-        if self.config.snow_management.enabled:
+        if self._require_snow_management:
             self.snow_management.produce()
             self.snow_management.groom()
 
@@ -327,7 +326,7 @@ class OpenAmundsen:
         if self._require_evapotranspiration:
             self.evapotranspiration.initialize()
 
-        if self.config.snow_management.enabled:
+        if self._require_snow_management:
             self.snow_management.initialize()
 
         if self._require_evapotranspiration:
