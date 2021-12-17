@@ -203,7 +203,8 @@ def _compaction_anderson(
 
         for k in range(num_layers[i, j]):
             if thickness[k, i, j] > 0:  # TODO is this necessary?
-                load += (ice_content[k, i, j] + liquid_water_content[k, i, j]) / 2.
+                cur_layer_mass = ice_content[k, i, j] + liquid_water_content[k, i, j]
+                load += cur_layer_mass / 2.
 
                 # TODO rather update density in update_layers()?
                 density[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / thickness[k, i, j]
@@ -233,7 +234,7 @@ def _compaction_anderson(
                 thickness[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / density[k, i, j]
 
                 # Update snow load for the next layer
-                load += (ice_content[k, i, j] + liquid_water_content[k, i, j])
+                load += cur_layer_mass / 2.
 
 
 @njit(cache=True, parallel=True)
