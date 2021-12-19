@@ -243,3 +243,6 @@ def validate_config(config):
         ac.method = 'snow_age'
         ac.decay_timescale_determination_temperature = 'surface'
         ac.refresh_method = 'continuous'
+
+    if SNOW_MANAGEMENT_AVAILABLE:
+        openamundsen_snowmanagement.validate_config(config)
