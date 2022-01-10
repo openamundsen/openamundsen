@@ -58,25 +58,13 @@ When using conda, the recommended steps to install openAMUNDSEN are:
    the installer for your operating system and architecture.
 2. From the terminal, create a conda environment for openAMUNDSEN by running
 
-   `conda create --name openamundsen pip`
+   `conda create --name openamundsen`
 3. Activate the environment by running
 
-   `source activate openamundsen`
+   `conda activate openamundsen`
 4. Install openAMUNDSEN by running
 
-   `pip install openamundsen`
-
-The above steps should work on Linux and macOS.
-On Windows, please follow these slightly different installation commands (since the required package
-[rasterio](https://github.com/mapbox/rasterio) currently cannot be installed on Windows using pip,
-this package must first be installed using conda):
-
-```
-conda create --name openamundsen pip
-conda activate openamundsen
-conda install --channel=conda-forge rasterio
-pip install openamundsen
-```
+   `conda install --channel=conda-forge openamundsen`
 
 #### Using virtualenv
 
