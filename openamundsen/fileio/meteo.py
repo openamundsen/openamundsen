@@ -494,7 +494,7 @@ def _apply_station_rules(meta, bounds, exclude, include):
     if include is not None:
         for station_id in include:
             try:
-                meta = meta.append(meta_all.loc[station_id])
+                meta = pd.concat([meta, meta_all.loc[[station_id]]])
             except KeyError:
                 raise errors.MeteoDataError(f'Station to be included not found: {station_id}')
 
