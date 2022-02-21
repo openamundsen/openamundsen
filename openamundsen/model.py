@@ -46,7 +46,7 @@ class OpenAmundsen:
         self.date = None
         self.date_idx = None
 
-    def initialize(self, meteo=None):
+    def initialize(self, meteo=None, meteo_callback=None):
         """
         Initialize the model according to the given configuration, i.e. read
         the required input raster files and meteorological input data,
@@ -61,6 +61,7 @@ class OpenAmundsen:
         self._require_evapotranspiration = config.evapotranspiration.enabled
         self._require_land_cover = self._require_canopy or self._require_evapotranspiration
         self._require_soil_texture = self._require_evapotranspiration
+        self._require_interpolation = config.input_data.meteo.format in ('csv', 'netcdf', 'memory')
         self._require_snow_management = (
             conf.SNOW_MANAGEMENT_AVAILABLE and config.snow_management.enabled
         )
@@ -101,7 +102,9 @@ class OpenAmundsen:
 
         self._read_input_data()
 
-        if config.input_data.meteo.format == 'memory':
+        if config.input_data.meteo.format in ('netcdf', 'csv'):
+            meteo = self._read_meteo_data()
+        elif config.input_data.meteo.format == 'memory':
             if meteo is None:
                 raise errors.MeteoDataError('A meteo dataset must be passed to '
                                             'OpenAmundsen.initialize() if the meteo input format '
@@ -111,8 +114,27 @@ class OpenAmundsen:
                 raise errors.MeteoDataError('Not a valid point forcing dataset')
 
             meteo = meteo.copy(deep=True)
-        else:
-            meteo = self._read_meteo_data()
+        elif config.input_data.meteo.format == 'callback':
+            if meteo_callback is None:
+                raise errors.MeteoDataError('meteo_callback must be passed to '
+                                            'OpenAmundsen.initialize() if the meteo input format '
+                                            'is set to "callback"')
+            elif not callable(meteo_callback):
+                raise errors.MeteoDataError('meteo_callback must be callable (i.e., a function '
+                                            ' or method)')
+
+            self._meteo_callback = meteo_callback
+
+            # Create a dummy point forcing dataset with 0 stations
+            dummyds = forcing.make_empty_point_dataset(
+                self.dates,
+                'dummy',
+                'dummy',
+                np.nan,
+                np.nan,
+                np.nan,
+            )
+            meteo = forcing.combine_point_datasets([dummyds]).drop_isel(station=0)
 
         self.meteo = forcing.prepare_point_coordinates(meteo, self.grid, self.config.crs)
         oameteo.correct_station_precipitation(self)
@@ -165,7 +187,12 @@ class OpenAmundsen:
         if self.config.reset_state_variables:
             self.state.reset()
 
-        oameteo.interpolate_station_data(self)
+        if self._require_interpolation:
+            oameteo.interpolate_station_data(self)
+
+        if self.config.input_data.meteo.format == 'callback':
+            self._meteo_callback(self)
+
         self._process_meteo_data()
         self._model_interface()
         self.point_output.update()
@@ -531,7 +558,14 @@ class OpenAmundsen:
         )
 
         modules.radiation.clear_sky_shortwave_irradiance(self)
-        modules.radiation.shortwave_irradiance(self)
+
+        if self._require_interpolation:
+            modules.radiation.shortwave_irradiance(self)
+        else:
+            m = self.state.meteo
+            roi = self.grid.roi
+            m.sw_in[roi] = m.sw_in_clearsky[roi] * m.cloud_factor[roi]
+
         modules.radiation.longwave_irradiance(self)
 
     @property

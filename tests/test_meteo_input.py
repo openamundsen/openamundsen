@@ -93,6 +93,62 @@ def test_format_memory(tmp_path):
         model.initialize(meteo=oa.forcing.strip_point_dataset(meteo1))
 
 
+def test_format_callback():
+    def callback(model):
+        model.state.meteo.temp[:] = meteo['temp'][model.date_idx]
+        model.state.meteo.precip[:] = meteo['precip'][model.date_idx]
+        model.state.meteo.wind_speed[:] = meteo['wind_speed'][model.date_idx]
+        model.state.meteo.rel_hum[:] = meteo['rel_hum'][model.date_idx]
+        model.state.meteo.cloud_factor[:] = meteo['cloud_factor'][model.date_idx]
+        model.state.meteo.cloud_fraction[:] = meteo['cloud_fraction'][model.date_idx]
+
+    config = base_config()
+    config.start_date = '2019-12-01'
+    config.end_date = '2019-12-15'
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+
+    for category in model.state.categories:
+        for var_name in model.state[category]._meta.keys():
+            full_var_name = f'{category}.{var_name}'
+            config.output_data.grids.variables.append({
+                'var': full_var_name,
+                'name': full_var_name,
+            })
+
+    meteo = {
+        'temp': [],
+        'precip': [],
+        'wind_speed': [],
+        'rel_hum': [],
+        'cloud_factor': [],
+        'cloud_fraction': [],
+    }
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    for date in model.dates:
+        model.run_single()
+        meteo['temp'].append(model.state.meteo.temp.copy())
+        meteo['precip'].append(model.state.meteo.precip.copy())
+        meteo['wind_speed'].append(model.state.meteo.wind_speed.copy())
+        meteo['rel_hum'].append(model.state.meteo.rel_hum.copy())
+        meteo['cloud_factor'].append(model.state.meteo.cloud_factor.copy())
+        meteo['cloud_fraction'].append(model.state.meteo.cloud_fraction.copy())
+    data_ref = model.gridded_output.data.copy()
+
+    config.input_data.meteo = {'format': 'callback'}
+    model = oa.OpenAmundsen(config)
+    with pytest.raises(errors.MeteoDataError):
+        model.initialize()
+    model.initialize(meteo_callback=callback)
+    model.run()
+    data_cb = model.gridded_output.data.copy()
+
+    assert data_ref.identical(data_cb)
+
+
 def test_no_files_found(tmp_path):
     config = base_config()
     config.input_data.meteo.dir = str(tmp_path)
