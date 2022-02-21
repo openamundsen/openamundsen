@@ -285,7 +285,12 @@ def prepare_point_coordinates(ds, grid, crs):
     int_var = bool_var.copy().astype(int)
     int_var[:] = -1
 
-    rows, cols = rasterio.transform.rowcol(grid.transform, x, y)
+    if len(x) > 0:
+        rows, cols = rasterio.transform.rowcol(grid.transform, x, y)
+    else:
+        rows = []
+        cols = []
+
     row_var = int_var.copy()
     col_var = int_var.copy()
     row_var.values[:] = rows
