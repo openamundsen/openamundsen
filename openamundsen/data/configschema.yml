@@ -36,6 +36,11 @@ timezone:  # timezone (difference of local time to UTC in hours)
   type: integer
   required: true
 
+simulation_timezone: # timezone of the input/output data
+  type: integer
+  nullable: true
+  default:
+
 log_level:  # python logging-compatible log level (e.g. DEBUG or INFO)
   type: string
   default: INFO
