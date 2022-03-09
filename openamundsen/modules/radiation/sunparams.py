@@ -101,6 +101,9 @@ def hour_angle(date, timezone, lon, eot):
 
     Parameters
     ----------
+    date : datetime-like
+        Local date and time.
+
     timezone : int
         Timezone, e.g. 1 for CET.
 
@@ -172,7 +175,7 @@ def sun_parameters(date, lon, lat, timezone):
     Parameters
     ----------
     date : datetime-like
-        Date and time.
+        Local date and time.
 
     lon : float
         Longitude (degrees).
