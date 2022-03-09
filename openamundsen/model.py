@@ -244,6 +244,12 @@ class OpenAmundsen:
         # Store timestep in seconds in the `timestep` attribute
         self.timestep = util.offset_to_timedelta(self.config['timestep']).total_seconds()
 
+        if self.config.simulation_timezone is None:
+            hour_shift = 0
+        else:
+            hour_shift = self.config.timezone - self.config.simulation_timezone
+        self._simulation_timezone_shift = pd.Timedelta(hours=hour_shift)
+
     def _model_interface(self):
         """
         Interface for calling the different submodules. This method is called
@@ -551,7 +557,7 @@ class OpenAmundsen:
 
     def _irradiance(self):
         self.sun_params = modules.radiation.sun_parameters(
-            self.date,
+            self.date + self._simulation_timezone_shift,
             self.grid.center_lon,
             self.grid.center_lat,
             self.config.timezone,

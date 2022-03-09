@@ -193,3 +193,33 @@ def test_state_variable_reset():
             success = False
 
     assert success
+
+
+def test_simulation_timezone(tmp_path):
+    ds = xr.load_dataset(f'{pytest.DATA_DIR}/meteo/rofental/netcdf/proviantdepot.nc')
+    ds.to_netcdf(tmp_path / 'proviantdepot.nc')
+
+    config = base_config()
+    config.timestep = 'H'
+    config.input_data.meteo.dir = str(tmp_path)
+
+    config.start_date = '2020-01-15 00:00'
+    config.end_date = '2020-01-15 23:00'
+    config.simulation_timezone = None
+    model1 = oa.OpenAmundsen(config)
+    model1.initialize()
+    model1.run()
+
+    ds.shift(time=-1).to_netcdf(tmp_path / 'proviantdepot.nc')
+
+    config.start_date = '2020-01-14 23:00'
+    config.end_date = '2020-01-15 22:00'
+    config.simulation_timezone = 0
+    model2 = oa.OpenAmundsen(config)
+    model2.initialize()
+    model2.run()
+
+    ds1 = model1.point_output.data
+    ds2 = model2.point_output.data
+    ds2['time'] = ds2['time'] + pd.Timedelta(hours=1)
+    xr.testing.assert_identical(ds1, ds2)
