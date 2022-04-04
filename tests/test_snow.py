@@ -263,3 +263,29 @@ def test_compare_cryolayers(cryolayer_run):
         cryolayer_run.point_output.data,
         point='proviantdepot',
     )
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize('ds', single_point_results_all)
+def test_mass_balance(ds):
+    ds_prev = ds.shift(time=1)
+
+    ic1 = ds.ice_content.sum('snow_layer')
+    ic2 = (
+        ds_prev.ice_content.sum('snow_layer')
+        + ds.snowfall
+        - ds.melt
+        - ds.sublimation
+        + ds.refreezing
+    )
+    assert_allclose(ic1, ic2, atol=1e-4)
+
+    lwc1 = ds.liquid_water_content.sum('snow_layer')
+    lwc2 = (
+        ds_prev.liquid_water_content.sum('snow_layer')
+        + ds.rainfall
+        + ds.melt
+        - ds.runoff
+        - ds.refreezing
+    )
+    assert_allclose(lwc1, lwc2, atol=1e-4)
