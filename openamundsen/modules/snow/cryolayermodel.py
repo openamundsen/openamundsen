@@ -304,6 +304,9 @@ class CryoLayerSnowModel(SnowModel):
         for i in reversed(range(self.num_cryo_layers)):
             pos = s.snow.thickness[i, :] > 0
             s.snow.albedo[pos] = s.snow.layer_albedo[i, pos]
+            s.snow.density[i, pos] = (
+                s.snow.ice_content[i, pos] + s.snow.liquid_water_content[i, pos]
+            ) / s.snow.thickness[i, pos]
 
     def reset_layer(self, layer, pos=None):
         s = self.model.state.snow
