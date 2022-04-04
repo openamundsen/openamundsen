@@ -204,6 +204,7 @@ class CryoLayerSnowModel(SnowModel):
         # (resublimation)
         ice_content_change = s.snow.sublimation.copy()
 
+        # Sublimation: remove snow from the top layer
         for i in range(self.num_cryo_layers):
             pos = (ice_content_change > 0) & (s.snow.ice_content[i, :] > 0)
 
@@ -214,6 +215,14 @@ class CryoLayerSnowModel(SnowModel):
             s.snow.thickness[i, pos] *= (1 - cur_ice_content_change / s.snow.ice_content[i, pos])
             s.snow.ice_content[i, pos] -= cur_ice_content_change
             ice_content_change[pos] -= cur_ice_content_change
+
+        # Resublimation: add snow to the top layer
+        pos = (ice_content_change < 0)
+        self.add_snow(
+            pos,
+            -ice_content_change[pos],
+            density=fresh_snow_density(s.meteo.wet_bulb_temp[pos]),
+        )
 
     def runoff(self):
         model = self.model
