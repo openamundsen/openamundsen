@@ -161,6 +161,12 @@ def test_runoff(ds):
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize('ds', single_point_results_all)
+def test_refreezing(ds):
+    assert np.all(ds.refreezing >= 0)
+
+
+@pytest.mark.slow
 def test_cryolayers_layer_albedo(single_point_results_cryolayers):
     config = base_config()
     ds = single_point_results_cryolayers

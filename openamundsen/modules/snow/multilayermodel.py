@@ -118,6 +118,7 @@ class MultilayerSnowModel(SnowModel):
             s.snow.temp,
             s.snow.ice_content,
             s.snow.liquid_water_content,
+            s.snow.refreezing,
             s.snow.runoff,
             s.snow.heat_cap,
         )
@@ -322,6 +323,7 @@ def _runoff(
     temp,
     ice_content,
     liquid_water_content,
+    refreezing,
     runoff,
     heat_cap,
 ):
@@ -355,6 +357,9 @@ def _runoff(
     liquid_water_content : ndarray(float, ndim=3)
         Liquid water content of snow (kg m-2).
 
+    refreezing : ndarray(float, ndim=2)
+        Liquid water refreezing (kg m-2).
+
     runoff : ndarray(float, ndim=2)
         Snow runoff (kg m-2).
 
@@ -370,6 +375,8 @@ def _runoff(
     num_pixels = len(roi_idxs)
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
+
+        refreezing[i, j] = 0.
 
         runoff[i, j] = rainfall[i, j]
         if np.isnan(runoff[i, j]):
@@ -393,6 +400,7 @@ def _runoff(
                 )
                 liquid_water_content[k, i, j] -= ice_content_change
                 ice_content[k, i, j] += ice_content_change
+                refreezing[i, j] += ice_content_change
                 temp[k, i, j] += c.LATENT_HEAT_OF_FUSION * ice_content_change / heat_cap[k, i, j]
 
 

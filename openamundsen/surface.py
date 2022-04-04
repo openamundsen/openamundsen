@@ -251,7 +251,8 @@ def cryo_layer_energy_balance(model):
     calc_moisture_availability(model, roi)
     calc_latent_heat(model, roi)
 
-    s.snow.melt[roi] = 0
+    s.snow.melt[roi] = 0.
+    s.snow.refreezing[roi] = 0.
 
     s.surface.heat_flux[snowies] = model.config.snow.cryolayers.surface_heat_flux
     s.surface.heat_flux[snow_freeies] = np.nan
@@ -342,6 +343,7 @@ def cryo_layer_energy_balance(model):
             available_cc[cold_conties],
         )
         s.snow.liquid_water_content[layer_num, cold_conties] -= refreeze_amount
+        s.snow.refreezing[cold_conties] += refreeze_amount
         available_cc[cold_conties] -= refreeze_amount
 
         max_layer_cc = cold_holding_capacity * (

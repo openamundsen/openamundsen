@@ -333,6 +333,7 @@ def add_default_state_variables(model):
     snow.add_variable('depth', 'm', 'Snow depth', 'surface_snow_thickness')
     snow.add_variable('melt', 'kg m-2', 'Snow melt', 'surface_snow_melt_amount')
     snow.add_variable('sublimation', 'kg m-2', 'Snow sublimation', 'surface_snow_sublimation_amount')
+    snow.add_variable('refreezing', 'kg m-2', 'Liquid water refreezing')
     snow.add_variable('runoff', 'kg m-2', 'Snow runoff')
     snow.add_variable('albedo', '1', 'Snow albedo', retain=True)
     snow.add_variable('area_fraction', '1', 'Snow cover fraction', 'surface_snow_area_fraction')
