@@ -244,6 +244,7 @@ def _melt(
         i, j = roi_idxs[idx_num]
 
         ice_content_change = melt[i, j]
+        actual_melt = 0.  # actual melt without cold content reduction
 
         for k in range(num_layers[i, j]):
             cold_content = heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
@@ -256,12 +257,16 @@ def _melt(
                     ice_content_change -= ice_content[k, i, j]
                     thickness[k, i, j] = 0.
                     liquid_water_content[k, i, j] += ice_content[k, i, j]
+                    actual_melt += ice_content[k, i, j]
                     ice_content[k, i, j] = 0.
                 else:  # layer melts partially
                     thickness[k, i, j] *= (1 - ice_content_change / ice_content[k, i, j])
                     ice_content[k, i, j] -= ice_content_change
                     liquid_water_content[k, i, j] += ice_content_change
+                    actual_melt += ice_content_change
                     ice_content_change = 0.
+
+        melt[i, j] = actual_melt
 
 
 @njit(cache=True, parallel=True)
