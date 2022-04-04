@@ -204,14 +204,6 @@ def multilayer_energy_balance(model):
     calc_latent_heat(model, roi)
     calc_turbulent_fluxes(model, roi, sensible=False)
 
-    # Snow sublimation
-    s.snow.sublimation[roi] = 0.
-    pos_roi = (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0)
-    pos = model.roi_mask_to_global(pos_roi)
-    s.snow.sublimation[pos] = -1 * s.surface.moisture_flux[pos] * model.timestep
-    s.snow.sublimation[np.isnan(s.snow.sublimation)] = 0.
-    # soil_evaporation[model.roi_mask_to_global(~pos)] = -1 * surf_moisture_flux[~pos] * model.timestep
-
 
 def cryo_layer_energy_balance(model):
     """
@@ -363,11 +355,6 @@ def cryo_layer_energy_balance(model):
     calc_radiation_balance(model, roi)
     calc_turbulent_fluxes(model, roi)
     calc_advective_heat(model, roi)
-
-    # Snow sublimation
-    s.snow.sublimation[roi] = 0.
-    s.snow.sublimation[snowies] = -1 * s.surface.moisture_flux[snowies] * model.timestep
-    s.snow.sublimation[np.isnan(s.snow.sublimation)] = 0.
 
 
 def stability_factor(

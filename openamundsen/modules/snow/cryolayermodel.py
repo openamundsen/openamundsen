@@ -198,7 +198,15 @@ class CryoLayerSnowModel(SnowModel):
 
     def sublimation(self):
         model = self.model
+        roi = model.grid.roi
         s = model.state
+        snowies_roi = s.snow.swe[roi] > 0.
+        snowies = model.roi_mask_to_global(snowies_roi)
+
+        s.snow.sublimation[roi] = 0.
+        pot_sublim = -1 * s.surface.moisture_flux[snowies] * model.timestep
+        pot_sublim[np.isnan(pot_sublim)] = 0.
+        s.snow.sublimation[snowies] = np.minimum(pot_sublim, s.snow.ice_content[:, snowies].sum(axis=0))
 
         # Ice content change is positive for sublimation (mass loss) and negative for mass gain
         # (resublimation)

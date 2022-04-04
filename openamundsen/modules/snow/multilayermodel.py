@@ -86,6 +86,14 @@ class MultilayerSnowModel(SnowModel):
     def sublimation(self):
         model = self.model
         s = model.state
+        roi = model.grid.roi
+
+        s.snow.sublimation[roi] = 0.
+        pos_roi = (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0)
+        pos = model.roi_mask_to_global(pos_roi)
+        pot_sublim = -1 * s.surface.moisture_flux[pos] * model.timestep
+        pot_sublim[np.isnan(pot_sublim)] = 0.
+        s.snow.sublimation[pos] = np.minimum(pot_sublim, s.snow.ice_content[:, pos].sum(axis=0))
 
         # First resublimation
         frost = -np.minimum(s.snow.sublimation, 0)
