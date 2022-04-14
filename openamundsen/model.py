@@ -362,9 +362,6 @@ class OpenAmundsen:
         if self._require_snow_management:
             self.snow_management.initialize()
 
-        if self._require_evapotranspiration:
-            self.evapotranspiration.initialize()
-
     def _initialize_point_outputs(self):
         self.point_output = fileio.PointOutputManager(self)
 
