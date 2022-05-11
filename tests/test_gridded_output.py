@@ -275,3 +275,22 @@ def test_nothing_to_write(tmp_path):
     model.run()
     ds = model.gridded_output.data
     assert list(ds.data_vars.keys()) == ['temp']
+
+
+def test_dask(tmp_path):
+    config = base_config()
+    config.end_date = '2020-01-16'
+    config.results_dir = tmp_path
+    grid_cfg = config.output_data.grids
+    grid_cfg.format = 'netcdf'
+    grid_cfg.variables = [
+        {'var': 'meteo.temp', 'freq': 'D'},
+    ]
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+
+    ds_inmem = model.gridded_output._create_dataset(in_memory=True)
+    ds_dask = model.gridded_output._create_dataset(in_memory=False)
+    assert ds_inmem.temp.chunks is None
+    assert ds_dask.temp.chunks is not None
