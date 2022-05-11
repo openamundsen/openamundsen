@@ -7,6 +7,12 @@ import pandas.tseries.frequencies
 import pyproj
 import xarray as xr
 
+try:
+    import dask
+    _DASK_AVAILABLE = True
+except ImportError:
+    _DASK_AVAILABLE = False
+
 
 _ALLOWED_OFFSETS = [
     pd.tseries.offsets.YearEnd,
@@ -140,14 +146,14 @@ class GriddedOutputManager:
             nc_file = self.model.config.results_dir / 'output_grids.nc'
 
             if not self.nc_file_created:
-                ds = self._create_dataset()
+                ds = self._create_dataset(in_memory=(not _DASK_AVAILABLE))
                 ds.to_netcdf(nc_file)
                 self.nc_file_created = True
 
             ds = netCDF4.Dataset(nc_file, 'r+')
         elif self.format == 'memory':
             if self.data is None:
-                self.data = self._create_dataset()
+                self.data = self._create_dataset(in_memory=True)
 
         # Loop through all fields, update aggregations where necessary and write files at the
         # specified dates
@@ -251,10 +257,16 @@ class GriddedOutputManager:
         if self.format == 'netcdf':
             ds.close()
 
-    def _create_dataset(self):
+    def _create_dataset(self, in_memory=False):
         """
         Create a CF-compliant Dataset covering the specified output variables
         and dates.
+
+        Parameters
+        ----------
+        in_memory : bool, default False
+            If True use in-memory arrays for creating the dataset, if False use
+            Dask arrays.
 
         Returns
         -------
@@ -344,6 +356,11 @@ class GriddedOutputManager:
             pyproj.crs.CRS(self.model.grid.crs).to_cf(),
         )
 
+        if in_memory:
+            full = np.full
+        else:
+            full = dask.array.full
+
         # Define data variables
         data = {}
         three_dim_coords = {}
@@ -371,7 +388,7 @@ class GriddedOutputManager:
             if meta.dim3 == 0:  # 2-dimensional variable
                 data[field.output_name] = (
                     [field_time_var, 'y', 'x'],
-                    np.full((len(field.write_dates), len(y_coords), len(x_coords)), np.nan, dtype=dtype),
+                    full((len(field.write_dates), len(y_coords), len(x_coords)), np.nan, dtype=dtype),
                     attrs,
                 )
             else:  # 3-dimensional variable
@@ -389,7 +406,7 @@ class GriddedOutputManager:
 
                 data[field.output_name] = (
                     [field_time_var, coord_name, 'y', 'x'],
-                    np.full(
+                    full(
                         (len(field.write_dates), meta.dim3, len(y_coords), len(x_coords)),
                         np.nan,
                         dtype=dtype,
