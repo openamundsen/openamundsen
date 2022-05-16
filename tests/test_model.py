@@ -223,3 +223,48 @@ def test_simulation_timezone(tmp_path):
     ds2 = model2.point_output.data
     ds2['time'] = ds2['time'] + pd.Timedelta(hours=1)
     xr.testing.assert_identical(ds1, ds2)
+
+
+def test_roi(tmp_path):
+    config = base_config()
+    config.start_date = '2020-01-15 12:00'
+    config.end_date = '2020-01-15 12:00'
+
+    grid_cfg = config.output_data.grids
+    grid_cfg.variables = [
+        {'var': 'meteo.temp'},
+        {'var': 'snow.swe'},
+    ]
+
+    for p in Path(config.input_data.grids.dir).glob('*.asc'):
+        if not p.name.startswith('roi_'):
+            (tmp_path / p.name).symlink_to(p)
+
+    config.input_data.grids.dir = str(tmp_path)
+
+    # No ROI set
+    model1 = oa.OpenAmundsen(config)
+    model1.initialize()
+    assert np.all(model1.grid.roi)
+    model1.run()
+
+    # ROI manually set
+    roi = model1.grid.roi.copy()
+    roi[:10, :10] = False
+    oa.fileio.write_raster_file(
+        oa.util.raster_filename('roi', config),
+        roi,
+        model1.grid.transform,
+        driver='AAIGrid',
+        dtype='uint8',
+    )
+    model2 = oa.OpenAmundsen(config)
+    model2.initialize()
+    assert_array_equal(roi, model2.grid.roi)
+    model2.run()
+
+    for model in (model1, model2):
+        for var in ('meteo.temp', 'snow.swe'):
+            var_data = model.state[var]
+            assert np.all(np.isfinite(var_data[model.grid.roi]))
+            assert np.all(np.isnan(var_data[~model.grid.roi]))
