@@ -45,7 +45,7 @@ def read_raster_metadata(filename, crs=None):
     return meta
 
 
-def read_raster_file(filename, check_meta=None):
+def read_raster_file(filename, check_meta=None, fill_value=None):
     """
     Read a raster file.
 
@@ -58,6 +58,10 @@ def read_raster_file(filename, check_meta=None):
         the current raster metadata with. If the metadata of the two rasters
         does not match (e.g., if the number of rows or columns differs) a
         RasterFileError is raised.
+
+    fill_value : numeric, default None
+        Value to use for nodata pixels in the source file. If None, nodata
+        values are left unchanged.
 
     Returns
     -------
@@ -82,7 +86,10 @@ def read_raster_file(filename, check_meta=None):
             raise RasterFileError(f'Metadata mismatch for {filename}')
 
     with rasterio.open(filename) as ds:
-        data = ds.read(1)
+        if fill_value is None:
+            data = ds.read(1)
+        else:
+            data = ds.read(1, masked=True).filled(fill_value)
 
     return data
 
