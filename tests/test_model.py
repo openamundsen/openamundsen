@@ -247,7 +247,7 @@ def test_roi(tmp_path):
     roi[:10, :10] = False
     oa.fileio.write_raster_file(
         oa.util.raster_filename('roi', config),
-        roi,
+        roi.astype(np.uint8),
         model1.grid.transform,
         driver='AAIGrid',
         dtype='uint8',
@@ -303,7 +303,7 @@ def test_extend_roi_with_stations(tmp_path):
     roi[row, col] = False
     oa.fileio.write_raster_file(
         oa.util.raster_filename('roi', config),
-        roi,
+        roi.astype(np.uint8),
         model.grid.transform,
         driver='AAIGrid',
         dtype='uint8',
