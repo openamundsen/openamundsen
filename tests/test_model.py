@@ -278,3 +278,48 @@ def test_roi(tmp_path):
             var_data = model.state[var]
             assert np.all(np.isfinite(var_data[model.grid.roi]))
             assert np.all(np.isnan(var_data[~model.grid.roi]))
+
+
+def test_extend_roi_with_stations(tmp_path):
+    config = base_config()
+    config.start_date = '2020-07-15 12:00'
+    config.end_date = '2020-07-15 12:00'
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+
+    for p in Path(config.input_data.grids.dir).glob('*.asc'):
+        if not p.name.startswith('roi_'):
+            (tmp_path / p.name).symlink_to(p)
+
+    config.input_data.grids.dir = str(tmp_path)
+
+    station_id = 'proviantdepot'
+    meteo_station = model.meteo.sel(station=station_id)
+    row = meteo_station.row
+    col = meteo_station.col
+
+    roi = model.grid.roi
+    roi[row, col] = False
+    oa.fileio.write_raster_file(
+        oa.util.raster_filename('roi', config),
+        roi,
+        model.grid.transform,
+        driver='AAIGrid',
+        dtype='uint8',
+    )
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    assert not model.meteo.within_roi.loc[station_id]
+    assert np.isnan(model.state.meteo.temp[row, col])
+    assert np.isnan(model.state.meteo.sw_in[row, col])
+
+    config.extend_roi_with_stations = True
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    assert model.meteo.within_roi.loc[station_id]
+    assert np.isfinite(model.state.meteo.temp[row, col])
+    assert np.isfinite(model.state.meteo.sw_in[row, col])
