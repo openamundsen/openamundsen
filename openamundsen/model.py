@@ -403,6 +403,7 @@ class OpenAmundsen:
                 dem_file,
                 check_meta=self.grid,
                 fill_value=np.nan,
+                dtype=float,
             )
         else:
             raise FileNotFoundError(f'DEM file not found: {dem_file}')
@@ -412,7 +413,8 @@ class OpenAmundsen:
             self.grid.roi[:] = fileio.read_raster_file(
                 roi_file,
                 check_meta=self.grid,
-                fill_value=0,
+                fill_value=False,
+                dtype=bool,
             )
         else:
             self.logger.debug('No ROI file available, setting ROI to entire grid area')
@@ -430,6 +432,7 @@ class OpenAmundsen:
                 svf_file,
                 check_meta=self.grid,
                 fill_value=np.nan,
+                dtype=float,
             )
         else:
             self.logger.info('Calculating sky view factor')
@@ -457,6 +460,7 @@ class OpenAmundsen:
                     srf_file,
                     check_meta=self.grid,
                     fill_value=np.nan,
+                    dtype=float,
                 )
                 break
 
@@ -470,6 +474,7 @@ class OpenAmundsen:
                     land_cover_file,
                     check_meta=self.grid,
                     fill_value=0,
+                    dtype=int,
                 )
             else:
                 raise FileNotFoundError(f'Land cover file not found: {land_cover_file}')
@@ -484,6 +489,7 @@ class OpenAmundsen:
                     soil_texture_file,
                     check_meta=self.grid,
                     fill_value=0,
+                    dtype=int,
                 )
             else:
                 raise FileNotFoundError(f'Soil texture file not found: {soil_texture_file}')
