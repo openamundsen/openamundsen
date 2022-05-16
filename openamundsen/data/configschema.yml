@@ -49,6 +49,10 @@ reset_state_variables: # reset all not to be retained state variables in every t
   type: boolean
   default: false
 
+extend_roi_with_stations: # add the pixels that contain a station to the ROI
+  type: boolean
+  default: false
+
 input_data:
   type: dict
   default: {}

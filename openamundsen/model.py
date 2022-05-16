@@ -139,6 +139,17 @@ class OpenAmundsen:
         self.meteo = forcing.prepare_point_coordinates(meteo, self.grid, self.config.crs)
         oameteo.correct_station_precipitation(self)
 
+        # Extend ROI with the station positions
+        if config.extend_roi_with_stations:
+            pos_outside_roi_stations = self.meteo.within_grid_extent & ~self.meteo.within_roi
+            any_outside_roi_stations = np.any(pos_outside_roi_stations)
+            if any_outside_roi_stations:
+                self.meteo.within_roi[pos_outside_roi_stations] = True
+                outside_roi_rows = self.meteo.row[pos_outside_roi_stations].values
+                outside_roi_cols = self.meteo.col[pos_outside_roi_stations].values
+                self.grid.roi[outside_roi_rows, outside_roi_cols] = True
+                self.grid.prepare_roi_coordinates()
+
         self._calculate_terrain_parameters()
 
         config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
