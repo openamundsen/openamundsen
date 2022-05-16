@@ -399,13 +399,23 @@ class OpenAmundsen:
 
         if dem_file.exists():
             self.logger.info(f'Reading DEM ({dem_file})')
-            self.state.base.dem[:] = fileio.read_raster_file(dem_file, check_meta=self.grid)
+            self.state.base.dem[:] = fileio.read_raster_file(
+                dem_file,
+                check_meta=self.grid,
+                fill_value=np.nan,
+                dtype=float,
+            )
         else:
             raise FileNotFoundError(f'DEM file not found: {dem_file}')
 
         if roi_file.exists():
             self.logger.info(f'Reading ROI ({roi_file})')
-            self.grid.roi[:] = fileio.read_raster_file(roi_file, check_meta=self.grid)
+            self.grid.roi[:] = fileio.read_raster_file(
+                roi_file,
+                check_meta=self.grid,
+                fill_value=False,
+                dtype=bool,
+            )
         else:
             self.logger.debug('No ROI file available, setting ROI to entire grid area')
             self.grid.roi[:] = True
@@ -418,7 +428,12 @@ class OpenAmundsen:
 
         if svf_file.exists():
             self.logger.info(f'Reading sky view factor ({svf_file})')
-            self.state.base.svf[:] = fileio.read_raster_file(svf_file, check_meta=self.grid)
+            self.state.base.svf[:] = fileio.read_raster_file(
+                svf_file,
+                check_meta=self.grid,
+                fill_value=np.nan,
+                dtype=float,
+            )
         else:
             self.logger.info('Calculating sky view factor')
             svf = terrain.sky_view_factor(
@@ -441,7 +456,12 @@ class OpenAmundsen:
                     srf_file = util.raster_filename('srf', self.config)
 
                 self.logger.info(f'Reading snow redistribution factor ({srf_file})')
-                self.state.base.srf[:] = fileio.read_raster_file(srf_file, check_meta=self.grid)
+                self.state.base.srf[:] = fileio.read_raster_file(
+                    srf_file,
+                    check_meta=self.grid,
+                    fill_value=np.nan,
+                    dtype=float,
+                )
                 break
 
         # Read land cover file
@@ -453,6 +473,8 @@ class OpenAmundsen:
                 self.state.land_cover.land_cover[:] = fileio.read_raster_file(
                     land_cover_file,
                     check_meta=self.grid,
+                    fill_value=0,
+                    dtype=int,
                 )
             else:
                 raise FileNotFoundError(f'Land cover file not found: {land_cover_file}')
@@ -466,6 +488,8 @@ class OpenAmundsen:
                 self.state.evapotranspiration.soil_texture[:] = fileio.read_raster_file(
                     soil_texture_file,
                     check_meta=self.grid,
+                    fill_value=0,
+                    dtype=int,
                 )
             else:
                 raise FileNotFoundError(f'Soil texture file not found: {soil_texture_file}')
