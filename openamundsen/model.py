@@ -399,6 +399,12 @@ class OpenAmundsen:
             self.logger.debug('No ROI file available, setting ROI to entire grid area')
             self.grid.roi[:] = True
 
+        dem_nan_pos = np.isnan(self.state.base.dem) & self.grid.roi
+        if np.any(dem_nan_pos):
+            self.logger.debug(f'Excluding {dem_nan_pos.sum()} pixels where DEM is NaN '
+                              'from the ROI')
+            self.grid.roi[dem_nan_pos] = False
+
         if svf_file.exists():
             self.logger.info(f'Reading sky view factor ({svf_file})')
             self.state.base.svf[:] = fileio.read_raster_file(svf_file, check_meta=self.grid)

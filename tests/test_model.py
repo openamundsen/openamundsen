@@ -230,12 +230,6 @@ def test_roi(tmp_path):
     config.start_date = '2020-01-15 12:00'
     config.end_date = '2020-01-15 12:00'
 
-    grid_cfg = config.output_data.grids
-    grid_cfg.variables = [
-        {'var': 'meteo.temp'},
-        {'var': 'snow.swe'},
-    ]
-
     for p in Path(config.input_data.grids.dir).glob('*.asc'):
         if not p.name.startswith('roi_'):
             (tmp_path / p.name).symlink_to(p)
@@ -263,7 +257,23 @@ def test_roi(tmp_path):
     assert_array_equal(roi, model2.grid.roi)
     model2.run()
 
-    for model in (model1, model2):
+    # ROI should be False where DEM is NaN
+    Path(oa.util.raster_filename('roi', config)).unlink()
+    dem = model2.state.base.dem
+    dem[-10:, -10:] = np.nan
+    oa.fileio.write_raster_file(
+        oa.util.raster_filename('dem', config),
+        dem,
+        model2.grid.transform,
+        driver='AAIGrid',
+    )
+    model3 = oa.OpenAmundsen(config)
+    model3.initialize()
+    assert np.all(model3.grid.roi[np.isfinite(dem)])
+    assert not np.any(model3.grid.roi[np.isnan(dem)])
+    model3.run()
+
+    for model in (model1, model2, model3):
         for var in ('meteo.temp', 'snow.swe'):
             var_data = model.state[var]
             assert np.all(np.isfinite(var_data[model.grid.roi]))
