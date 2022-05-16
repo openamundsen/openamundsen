@@ -38,6 +38,8 @@ def test_evapotranspiration(tmp_path):
         })
         lc.flat[model.grid.roi_idxs_flat[lcc_num]] = lcc
 
+    config.input_data.grids.dir = str(tmp_path)
+
     rio_meta = {'driver': 'AAIGrid'}
     oa.fileio.write_raster_file(
         oa.util.raster_filename('soil', config),
