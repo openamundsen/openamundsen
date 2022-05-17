@@ -191,7 +191,7 @@ def _clear_sky_shortwave_irradiance(
     sun_frac = shadows[roi].mean()
     pos_sun = shadows[roi] == 1
     if pos_sun.sum() > 0:
-        mean_sun_aoi = aoi[roi][pos_sun].mean()
+        mean_sun_aoi = np.nanmean(aoi[roi][pos_sun])
     else:
         mean_sun_aoi = 0.
     diff_irr_terrain_ref = (
