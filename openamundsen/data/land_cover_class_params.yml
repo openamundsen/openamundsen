@@ -171,7 +171,7 @@ classes:
       - 366
       - 0
     max_height: 3.
-    rooting_depth: 5.
+    rooting_depth: 0.5
     depletion_fraction: 0.5
     is_sparse: true
     sparse_vegetation_fraction: 0.25
