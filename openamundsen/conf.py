@@ -38,6 +38,13 @@ class ConfigurationValidator(cerberus.Validator):
 
         return model
 
+    def _normalize_coerce_meteo_interpolation(self, d):
+        # 'wind_speed' is deprecated -> change to 'wind'
+        if 'wind_speed' in d:
+            d['wind'] = d.pop('wind_speed')
+
+        return d
+
 
 class ConfigurationEncoder(json.JSONEncoder):
     def default(self, o):

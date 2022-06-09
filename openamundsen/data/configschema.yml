@@ -230,6 +230,7 @@ meteo:
     interpolation:
       type: dict
       default: {}
+      coerce: meteo_interpolation
       schema:
         temperature:
           type: dict
@@ -337,7 +338,7 @@ meteo:
                 - -0.0047  # Nov
                 - -0.0046  # Dec
 
-        wind_speed:
+        wind:
           type: dict
           default: {}
           schema:
