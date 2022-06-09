@@ -200,7 +200,7 @@ def interpolate_station_data(model):
     target_ys = model.grid.roi_points[:, 1]
     target_zs = model.state.base.dem[roi]
 
-    for param in ('temp', 'precip', 'wind_speed'):
+    for param in ('temp', 'precip'):
         param_config = model.config['meteo']['interpolation'][constants.INTERPOLATION_CONFIG_PARAM_MAPPINGS[param]]
         data, xs, ys, zs = _param_station_data(model.meteo, param, date)
 
@@ -237,6 +237,22 @@ def interpolate_station_data(model):
         target_zs,
         temps=temps,
         target_temps=model.state.meteo['temp'][roi],
+    )
+
+    wind_config = model.config['meteo']['interpolation']['wind']
+    param = 'wind_speed'
+    data, xs, ys, zs = _param_station_data(model.meteo, param, date)
+    model.state.meteo[param][roi] = interpolate_param(
+        param,
+        model.date,
+        wind_config,
+        data,
+        xs,
+        ys,
+        zs,
+        target_xs,
+        target_ys,
+        target_zs,
     )
 
 
