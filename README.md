@@ -12,7 +12,7 @@ openAMUNDSEN is a fully distributed model, designed primarily for resolving the 
 balance of snow and ice covered surfaces in mountain regions.
 Typically, it is applied in areas ranging from the point scale to the regional scale (i.e., up to
 some hundreds to thousands of square kilometers), using a spatial resolution of 10–100 m and a
-temporal resolution of 1–3 h, however its potential applications are very versatile.
+temporal resolution of 1–3 h, however its potential applications are very versatile. Additional documentation can be found at [doc.openamundsen.org](https://doc.openamundsen.org/).
 
 Main features include:
 
