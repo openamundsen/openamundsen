@@ -573,3 +573,53 @@ def log_wind_profile(ref_wind_speed, ref_height, height, roughness_length):
         np.log(height / roughness_length)
         / np.log(ref_height / roughness_length)
     )
+
+
+def wind_to_uv(ws, wd):
+    """
+    Convert wind speed and direction to u and v components.
+
+    Parameters
+    ----------
+    ws : numeric
+        Wind speed (m s-1).
+
+    wd : numeric
+        Wind direction (meteorological degrees, i.e., 0 = North, 90 = East).
+
+    Returns
+    -------
+    u : numeric
+        Zonal component (m s-1).
+
+    v : numeric
+        Meridional component (m s-1).
+    """
+    u = -ws * np.sin(np.deg2rad(wd))
+    v = -ws * np.cos(np.deg2rad(wd))
+    return u, v
+
+
+def wind_from_uv(u, v):
+    """
+    Convert u and v components to wind speed and direction.
+
+    Parameters
+    ----------
+    u : numeric
+        Zonal component (m s-1).
+
+    v : numeric
+        Meridional component (m s-1).
+
+    Returns
+    -------
+    ws : numeric
+        Wind speed (m s-1).
+
+    wd : numeric
+        Wind direction (meteorological degrees, i.e., 0 = North, 90 = East).
+    """
+    ws = np.sqrt(u**2 + v**2)
+    wd = (270 - np.rad2deg(np.arctan2(v, u))) % 360
+    return ws, wd

@@ -18,6 +18,8 @@ from .atmosphere import (
     specific_humidity,
     vapor_pressure,
     wet_bulb_temperature,
+    wind_from_uv,
+    wind_to_uv,
 )
 from .interpolation import interpolate_station_data, interpolate_param
 from .precipcorr import correct_station_precipitation
