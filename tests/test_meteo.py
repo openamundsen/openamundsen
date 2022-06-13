@@ -132,3 +132,14 @@ def test_precipitation_phase():
 
 def test_log_wind_profile():
     assert_allclose(meteo.log_wind_profile(1, 10, 2, 0.03), 0.722947444)
+
+
+def test_wind_uv():
+    u = np.array([0, -1, 0, 1, 1, 1, -1, -1])
+    v = np.array([-1, 0, 1, 0, 1, -1, 1, -1])
+    ws, wd = meteo.wind_from_uv(u, v)
+    assert_allclose(ws, [1, 1, 1, 1, np.sqrt(2), np.sqrt(2), np.sqrt(2), np.sqrt(2)])
+    assert_allclose(wd, [0, 90, 180, 270, 225, 315, 135, 45])
+    u2, v2 = meteo.wind_to_uv(ws, wd)
+    assert_allclose(u, u2, atol=1e-10)
+    assert_allclose(v, v2, atol=1e-10)
