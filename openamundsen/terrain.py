@@ -256,8 +256,11 @@ def curvature(dem, res, kind, L=None):
        Glaciology, 53(181), 241–256.
     """
     if kind == 'liston':
+        if L is None:
+            L = res
+
         L_px = int(np.ceil(L / res))
-        
+
         z = dem
         z_n = _shift_arr(dem, 0, L_px, mode='edge')
         z_ne = _shift_arr(dem, 1, L_px, mode='edge')
