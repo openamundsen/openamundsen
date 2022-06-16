@@ -69,6 +69,10 @@ METEO_VAR_METADATA = {
         'standard_name': 'wind_speed',
         'units': 'm s-1',
     },
+    'wind_dir': {
+        'standard_name': 'wind_from_direction',
+        'units': 'degree',
+    },
 }
 
 NETCDF_VAR_MAPPINGS = {
@@ -77,6 +81,7 @@ NETCDF_VAR_MAPPINGS = {
     'hurs': 'rel_hum',
     'rsds': 'sw_in',
     'wss': 'wind_speed',
+    'wind_dir': 'wind_dir',
 }
 
 # Mappings of internal variable names to interpolation config keys (e.g.

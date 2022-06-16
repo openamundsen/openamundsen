@@ -212,3 +212,30 @@ class TimestepProperties:
     last_of_year: bool
     last_of_month: bool
     last_of_day: bool
+
+
+def normalize_array(data, min, max):
+    """
+    Normalize an array within a range.
+
+    Parameters
+    ----------
+    data : array-like
+        Data values.
+
+    min : numeric
+       Minimum of the normalized array.
+
+    max : numeric
+       Maximum of the normalized array.
+
+    Returns
+    -------
+    data_norm : np.array
+        Data normalized within [min, max].
+    """
+    data = np.asarray(data)
+    data_min = np.nanmin(data)
+    data_max = np.nanmax(data)
+    scale_factor = (max - min) / (data_max - data_min)
+    return min + scale_factor * (data - data_min)

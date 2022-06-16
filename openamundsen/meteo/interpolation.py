@@ -1,5 +1,5 @@
 import numpy as np
-from openamundsen import constants, interpolation, meteo
+from openamundsen import constants, interpolation, meteo, util
 
 
 def _param_station_data(ds, param, date):
@@ -240,20 +240,68 @@ def interpolate_station_data(model):
     )
 
     wind_config = model.config['meteo']['interpolation']['wind']
-    param = 'wind_speed'
-    data, xs, ys, zs = _param_station_data(model.meteo, param, date)
-    model.state.meteo[param][roi] = interpolate_param(
-        param,
-        model.date,
-        wind_config,
-        data,
-        xs,
-        ys,
-        zs,
-        target_xs,
-        target_ys,
-        target_zs,
-    )
+    if wind_config['method'] == 'idw':
+        param = 'wind_speed'
+        data, xs, ys, zs = _param_station_data(model.meteo, param, date)
+        model.state.meteo[param][roi] = interpolate_param(
+            param,
+            model.date,
+            wind_config,
+            data,
+            xs,
+            ys,
+            zs,
+            target_xs,
+            target_ys,
+            target_zs,
+        )
+    elif wind_config['method'] == 'liston':
+        data, xs, ys, zs = _param_station_data(model.meteo, ['wind_speed', 'wind_dir'], date)
+        wind_speeds = data[0, :]
+        wind_dirs = data[1, :]
+        wind_us, wind_vs = meteo.wind_to_uv(wind_speeds, wind_dirs)
+        wind_u_roi = interpolate_param(
+            'wind_vec',
+            model.date,
+            wind_config,
+            wind_us,
+            xs,
+            ys,
+            zs,
+            target_xs,
+            target_ys,
+            target_zs,
+        )
+        wind_v_roi = interpolate_param(
+            'wind_vec',
+            model.date,
+            wind_config,
+            wind_vs,
+            xs,
+            ys,
+            zs,
+            target_xs,
+            target_ys,
+            target_zs,
+        )
+        wind_speed_roi, wind_dir_roi = meteo.wind_from_uv(wind_u_roi, wind_v_roi)
+        wind_dir_minus_aspect = np.deg2rad(wind_dir_roi - model.state.base.aspect[roi])
+        wind_slope = (  # slope in the direction of the wind (eq. (15))
+            np.deg2rad(model.state.base.slope[roi]) * np.cos(wind_dir_minus_aspect)
+        )
+        wind_slope_scaled = util.normalize_array(wind_slope, -0.5, 0.5)
+        wind_weighting_factor = (  # eq. (16)
+            1
+            + wind_config.slope_weight * wind_slope_scaled
+            + wind_config.curvature_weight * model.state.base.scaled_curvature[roi]
+        )
+        wind_dir_diverting_factor = (  # eq. (18)
+            -0.5 * wind_slope_scaled * np.sin(-2 * wind_dir_minus_aspect)
+        )
+        model.state.meteo.wind_speed[roi] = wind_speed_roi * wind_weighting_factor
+        model.state.meteo.wind_dir[roi] = (wind_dir_roi + wind_dir_diverting_factor) % 360
+    else:
+        raise NotImplementedError(f'Unsupported method: {wind_config.method}')
 
 
 def interpolate_param(
@@ -318,7 +366,7 @@ def interpolate_param(
     if param in ('temp', 'precip', 'rel_hum'):
         trend_method = param_config['trend_method']
         lapse_rate = param_config['lapse_rate'][date.month - 1]
-    elif param == 'wind_speed':
+    elif param in ('wind_speed', 'wind_vec'):
         trend_method = 'regression'
         lapse_rate = np.nan
     else:
@@ -360,5 +408,8 @@ def interpolate_param(
         if np.isfinite(min_range):
             data_interpol = np.clip(data_interpol, min_range, max_range)
 
-    min_range, max_range = constants.ALLOWED_METEO_VAR_RANGES[param]
-    return np.clip(data_interpol, min_range, max_range)
+    if param in constants.ALLOWED_METEO_VAR_RANGES:
+        min_range, max_range = constants.ALLOWED_METEO_VAR_RANGES[param]
+        data_interpol = np.clip(data_interpol, min_range, max_range)
+
+    return data_interpol
