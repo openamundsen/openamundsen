@@ -277,6 +277,7 @@ def add_default_state_variables(model):
     meteo.add_variable('rainfall', 'kg m-2', 'Rainfall amount', 'rainfall_amount')
     meteo.add_variable('rel_hum', '%', 'Relative humidity', 'relative_humidity')
     meteo.add_variable('wind_speed', 'm s-1', 'Wind speed', 'wind_speed')
+    meteo.add_variable('wind_dir', 'degree', 'Wind direction', 'wind_from_direction')
     meteo.add_variable('sw_in', 'W m-2', 'Incoming shortwave radiation', 'surface_downwelling_shortwave_flux_in_air')
     meteo.add_variable('sw_out', 'W m-2', 'Outgoing shortwave radiation', 'surface_upwelling_shortwave_flux_in_air')
     meteo.add_variable('lw_in', 'W m-2', 'Incoming longwave radiation', 'downwelling_longwave_flux_in_air')

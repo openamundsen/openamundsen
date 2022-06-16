@@ -342,6 +342,13 @@ meteo:
           type: dict
           default: {}
           schema:
+            method:
+              type: string
+              allowed:
+                - idw
+                - liston # wind speed/direction distribution after Liston & Elder (2006)
+              default: idw
+
             trend_method:
               type: string
               allowed:
@@ -351,6 +358,19 @@ meteo:
             extrapolate:
               type: boolean
               default: false
+
+            # Curvature length scale as in Liston et al. (2007) required for method "liston"
+            curvature_length_scale:
+              type: number
+              default: 1750. # average ridge-to-valley distance for Alpine conditions (Marke 2008)
+
+            # Slope and curvature weight as in eq. (16) of Liston & Elder (2006) required for method "liston"
+            slope_weight:
+              type: number
+              default: 0.58 # value from Liston & Elder (2006)
+            curvature_weight:
+              type: number
+              default: 0.42 # value from Liston & Elder (2006)
 
         cloudiness:
           type: dict

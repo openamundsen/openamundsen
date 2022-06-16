@@ -88,6 +88,14 @@ class OpenAmundsen:
         if self._require_evapotranspiration:
             self.evapotranspiration = modules.evapotranspiration.EvapotranspirationModel(self)
 
+        if config.meteo.interpolation.wind.method == 'liston':
+            self.state.base.add_variable(
+                'scaled_curvature',
+                '1',
+                'Topographic curvature scaled to [-0.5, 0.5]',
+                retain=True,
+            )
+
         # Create snow redistribution factor state variables
         for precip_corr in config.meteo.precipitation_correction:
             if precip_corr['method'] == 'srf':
@@ -386,6 +394,17 @@ class OpenAmundsen:
         self.state.base.slope[:] = slope
         self.state.base.aspect[:] = aspect
         self.state.base.normal_vec[:] = normal_vec
+
+        if self.config.meteo.interpolation.wind.method == 'liston':
+            # Calculate topographic curvature and normalize to a [-0.5, 0.5] range following Liston
+            # et al. (2007)
+            curv = terrain.curvature(
+                self.state.base.dem,
+                self.grid.resolution,
+                'liston',
+                L=self.config.meteo.interpolation.wind.curvature_length_scale,
+            )
+            self.state.base.scaled_curvature[:] = util.normalize_array(curv, -0.5, 0.5)
 
     def _read_input_data(self):
         """
