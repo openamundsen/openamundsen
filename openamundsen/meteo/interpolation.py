@@ -366,12 +366,9 @@ def interpolate_param(
 
         return np.full(target_xs.shape, fill_value)
 
-    if param in ('temp', 'precip', 'rel_hum'):
+    if param in ('temp', 'precip', 'rel_hum', 'wind_speed', 'wind_vec'):
         trend_method = param_config['trend_method']
         lapse_rate = param_config['lapse_rate'][date.month - 1]
-    elif param in ('wind_speed', 'wind_vec'):
-        trend_method = 'regression'
-        lapse_rate = np.nan
     else:
         raise NotImplementedError(f'Unsupported parameter: {param}')
 
