@@ -25,12 +25,14 @@ def meteo_to_netcdf(ds, out_dir):
         'rel_hum',
         'sw_in',
         'wind_speed',
+        'wind_dir',
     ]].rename_vars({
         'temp': 'tas',
         'precip': 'pr',
         'rel_hum': 'hurs',
         'sw_in': 'rsds',
         'wind_speed': 'wss',
+        'wind_dir': 'wind_dir',
     })
 
     ds['pr'] /= timestep

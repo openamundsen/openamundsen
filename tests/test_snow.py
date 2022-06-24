@@ -234,7 +234,7 @@ def test_temperature_index(method):
         + ds.cold_content.sum('snow_layer').shift(time=1)
         + ds.snowfall
     )
-    assert np.all(ds.melt <= melt_potential.fillna(np.inf))
+    assert np.all(ds.melt <= melt_potential.fillna(np.inf) + 1e-6)
 
 
 @pytest.mark.slow
