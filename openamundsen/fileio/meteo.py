@@ -1,5 +1,5 @@
 import loguru
-from openamundsen import constants, errors, forcing, util
+from openamundsen import constants, errors, forcing, meteo as oameteo, util
 import pandas as pd
 from pathlib import Path
 import xarray as xr
@@ -316,6 +316,10 @@ def _resample_dataset(ds, freq, aggregate=False):
         # Calculate averages
         df_res = df.resample(freq, **resample_kwargs).mean()
 
+        # Wind direction must be aggregated separately
+        if 'wind_dir' in df.columns:
+            df_res['wind_dir'] = _aggregate_wind_dir(df, freq, resample_kwargs)
+
         # We might end up with an extra bin after resampling; take only the dates which we would
         # have taken when using instantaneous values
         dates = df.asfreq(freq).index
@@ -500,3 +504,42 @@ def _apply_station_rules(meta, bounds, exclude, include):
 
     meta = meta[~meta.index.duplicated(keep='first')]  # remove potential duplicate entries
     return meta
+
+
+def _aggregate_wind_dir(df, freq, resample_kwargs):
+    """
+    Aggregate wind direction by averaging the wind vector components.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Original data. Must contain a "wind_dir" column.
+
+    freq : str
+        Aggregation frequency.
+
+    resample_kwargs : dict
+        Keyword arguments to be passed to resample().
+
+    Returns
+    -------
+    wind_dir : Series
+        Aggregated wind direction.
+    """
+    df = df.copy()
+
+    try:
+        ws = df['wind_speed']
+    except KeyError:
+        ws = df['wind_dir'] * float('nan')
+
+    wind_us, wind_vs = oameteo.wind_to_uv(ws, df['wind_dir'])
+    df['wind_u'] = wind_us
+    df['wind_v'] = wind_vs
+    df = df[['wind_u', 'wind_v']]
+
+    df_res = df.resample(freq, **resample_kwargs).mean()
+    _, wd_res = oameteo.wind_from_uv(df_res['wind_u'], df_res['wind_v'])
+    df_res['wind_dir'] = wd_res
+
+    return df_res['wind_dir']

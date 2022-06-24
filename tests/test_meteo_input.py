@@ -2,7 +2,7 @@ from .conftest import base_config
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
 import openamundsen as oa
-import openamundsen.errors as errors
+from openamundsen import errors, meteo as oameteo
 import pandas as pd
 from pathlib import Path
 import pytest
@@ -552,6 +552,40 @@ def test_slice_and_resample(fmt, tmp_path):
     model = oa.OpenAmundsen(config)
     with pytest.raises(errors.MeteoDataError):
         model.initialize()
+
+    # Wind direction
+    config.start_date = '2015-12-20'
+    config.end_date = '2015-12-30'
+    config.timestep = 'H'
+    config.input_data.meteo.aggregate_when_downsampling = False
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    df_h = model.meteo.sel(station='bellavista').to_dataframe()[['wind_speed', 'wind_dir']]
+
+    config.timestep = '3H'
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    df_res = model.meteo.sel(station='bellavista').to_dataframe()[['wind_speed', 'wind_dir']]
+    assert np.allclose(
+        df_h['wind_dir'].loc['2015-12-20 15:00'],
+        df_res['wind_dir'].loc['2015-12-20 15:00'],
+    )
+
+    config.input_data.meteo.aggregate_when_downsampling = True
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    df_res = model.meteo.sel(station='bellavista').to_dataframe()[['wind_speed', 'wind_dir']]
+    wind_us, wind_vs = oameteo.wind_to_uv(
+        df_h['wind_speed'].loc['2015-12-20 13:00':'2015-12-20 15:00'],
+        df_h['wind_dir'].loc['2015-12-20 13:00':'2015-12-20 15:00'],
+    )
+    wind_u_mean = wind_us.mean()
+    wind_v_mean = wind_vs.mean()
+    _, wind_dir = oameteo.wind_from_uv(wind_u_mean, wind_v_mean)
+    assert np.allclose(
+        df_res['wind_dir'].loc['2015-12-20 15:00'],
+        wind_dir,
+    )
 
 
 def test_non_hourly_input(tmp_path):
