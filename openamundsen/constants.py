@@ -89,7 +89,6 @@ NETCDF_VAR_MAPPINGS = {
 INTERPOLATION_CONFIG_PARAM_MAPPINGS = {
     'temp': 'temperature',
     'precip': 'precipitation',
-    'wind_speed': 'wind_speed',
     'rel_hum': 'humidity',
 }
 
