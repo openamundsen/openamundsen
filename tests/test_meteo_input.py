@@ -607,3 +607,25 @@ def test_non_hourly_input(tmp_path):
     ds2 = model.meteo
 
     xr.testing.assert_allclose(ds1, ds2)
+
+
+@pytest.mark.parametrize('aggregate', [False, True])
+def test_resample_with_non_matching_start_date(aggregate, tmp_path):
+    ds = xr.load_dataset(f'{pytest.DATA_DIR}/meteo/rofental/netcdf/proviantdepot.nc')
+    ds = ds.sel(time=slice('2020-11-03 02:00', None))
+    ds.to_netcdf(tmp_path / 'proviantdepot.nc')
+
+    p_orig = Path(f'{pytest.DATA_DIR}/meteo/rofental/netcdf')
+    for station_id in ('bellavista', 'latschbloder'):
+        (tmp_path / f'{station_id}.nc').symlink_to(p_orig / f'{station_id}.nc')
+
+    config = base_config()
+    config.start_date = '2020-11-01'
+    config.end_date = '2020-11-30'
+    config.timestep = '3H'
+    config.input_data.meteo.dir = str(tmp_path)
+    config.input_data.meteo.aggregate_when_downsampling = aggregate
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    assert model.meteo.indexes['time'].equals(model.dates)
