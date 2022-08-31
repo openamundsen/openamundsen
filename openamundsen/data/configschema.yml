@@ -140,6 +140,10 @@ output_data:
             - memory
           default: netcdf
 
+        append: # when using NetCDF output, append data instead of creating a full-size dataset beforehand
+          type: boolean
+          default: true
+
         variables:
           type: list
           default: []
