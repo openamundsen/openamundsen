@@ -421,12 +421,13 @@ class GriddedOutputManager:
         ds = xr.Dataset(data, coords=coords)
         ds.attrs['Conventions'] = 'CF-1.7'
 
+        datetime_units = xr.coding.times.infer_datetime_units(self.model.dates)
         for time_var in times:
             ds[time_var].attrs['standard_name'] = 'time'
 
             # Set time units manually because otherwise the units of the time and the time bounds
             # variables might be different which is not recommended by CF standards
-            ds[time_var].encoding['units'] = f'hours since {self.model.dates[0]:%Y-%m-%d %H:%M}'
+            ds[time_var].encoding['units'] = datetime_units
 
             # Store time variables as doubles for CF compliance
             ds[time_var].encoding['dtype'] = np.float64
