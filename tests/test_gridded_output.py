@@ -294,3 +294,43 @@ def test_dask(tmp_path):
     ds_dask = model.gridded_output._create_dataset(in_memory=False)
     assert ds_inmem.temp.chunks is None
     assert ds_dask.temp.chunks is not None
+
+
+def test_append(tmp_path):
+    config = base_config()
+    config.start_date = '2020-01-17'
+    config.end_date = '2020-01-19'
+    config.results_dir = tmp_path
+    grid_cfg = config.output_data.grids
+    grid_cfg.format = 'netcdf'
+    grid_cfg.variables = [
+        {'var': 'meteo.rel_hum'},
+        {'var': 'meteo.temp', 'freq': 'D', 'agg': 'mean'},
+        {'var': 'meteo.precip', 'freq': 'D', 'agg': 'sum'},
+        {'var': 'meteo.sw_in', 'dates': ['2020-01-17 12:00']},
+        {'var': 'snow.swe', 'freq': 'D'},
+    ]
+
+    grid_cfg.append = False
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    for date_num, date in enumerate(model.dates):
+        model.run_single()
+        if date_num == 0:
+            ds = xr.load_dataset(tmp_path / 'output_grids.nc')
+            assert ds.dims['time1'] == len(model.dates)
+    ds_no_append = xr.load_dataset(tmp_path / 'output_grids.nc')
+
+    grid_cfg.append = True
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    for date_num, date in enumerate(model.dates):
+        model.run_single()
+        if date_num == 0:
+            with pytest.raises(ValueError):
+                # Opening a zero-length dataset with xarray results in ValueError: zero-size array
+                # to reduction operation minimum which has no identity
+                ds = xr.load_dataset(tmp_path / 'output_grids.nc')
+    ds_append = xr.load_dataset(tmp_path / 'output_grids.nc')
+
+    xr.testing.assert_identical(ds_no_append, ds_append)
