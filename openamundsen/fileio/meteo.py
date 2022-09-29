@@ -284,7 +284,7 @@ def _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=False)
     return ds
 
 
-def _resample_dataset(ds, start_date, end_date, freq, origin=None, aggregate=False):
+def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
     """
     Resample a dataset to a given time frequency.
 
