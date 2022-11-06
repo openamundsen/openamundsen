@@ -8,6 +8,8 @@ on:
   release:
     types:
       - published
+  schedule:
+    - cron: '0 0 * * *' # daily at 00:00 UTC
 
 jobs:
   test:
