@@ -43,7 +43,7 @@ jobs:
       - name: Install Rasterio
         if: matrix.os == 'windows'
         run: |
-          conda install -y --channel=conda-forge rasterio
+          conda install -y --channel=conda-forge rasterio pvlib
 
       - name: Get the pip cache folder
         id: pip-cache
