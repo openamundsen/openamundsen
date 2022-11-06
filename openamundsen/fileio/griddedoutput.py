@@ -8,7 +8,7 @@ import pyproj
 import xarray as xr
 
 try:
-    import dask
+    import dask.array
     _DASK_AVAILABLE = True
 except ImportError:
     _DASK_AVAILABLE = False
