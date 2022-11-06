@@ -327,10 +327,8 @@ def test_append(tmp_path):
     for date_num, date in enumerate(model.dates):
         model.run_single()
         if date_num == 0:
-            with pytest.raises(ValueError):
-                # Opening a zero-length dataset with xarray results in ValueError: zero-size array
-                # to reduction operation minimum which has no identity
-                ds = xr.load_dataset(tmp_path / 'output_grids.nc')
+            ds = xr.load_dataset(tmp_path / 'output_grids.nc')
+            assert ds.dims['time1'] == date_num + 1
     ds_append = xr.load_dataset(tmp_path / 'output_grids.nc')
 
     xr.testing.assert_identical(ds_no_append, ds_append)
