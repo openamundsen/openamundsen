@@ -387,6 +387,11 @@ class PointOutputManager:
                     ds.to_netcdf(filename)
                 else:
                     with xr.open_dataset(filename) as old_ds:
+                        # Handle an issue introduced in xarray v2022.06.0 - without this line, the
+                        # time index somehow loses the time information and keeps only the date part
+                        # (triggered by test_point_output.py::test_write_freq)
+                        old_ds['time'] = old_ds.indexes['time']
+
                         ds_merge = xr.concat([old_ds, ds], 'time')
 
                     ds_merge.to_netcdf(filename)

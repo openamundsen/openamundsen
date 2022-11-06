@@ -140,6 +140,10 @@ output_data:
             - memory
           default: netcdf
 
+        append: # when using NetCDF output, append data instead of creating a full-size dataset beforehand
+          type: boolean
+          default: true
+
         variables:
           type: list
           default: []
@@ -353,11 +357,32 @@ meteo:
               type: string
               allowed:
                 - regression
+                - fixed
               default: regression
 
             extrapolate:
               type: boolean
               default: false
+
+            lapse_rate:
+              type: list
+              schema:
+                type: float
+              minlength: 12
+              maxlength: 12
+              default:
+                - .nan  # Jan
+                - .nan  # Feb
+                - .nan  # Mar
+                - .nan  # Apr
+                - .nan  # May
+                - .nan  # Jun
+                - .nan  # Jul
+                - .nan  # Aug
+                - .nan  # Sep
+                - .nan  # Oct
+                - .nan  # Nov
+                - .nan  # Dec
 
             # Curvature length scale as in Liston et al. (2007) required for method "liston"
             curvature_length_scale:

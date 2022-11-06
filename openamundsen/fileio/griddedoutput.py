@@ -8,7 +8,7 @@ import pyproj
 import xarray as xr
 
 try:
-    import dask
+    import dask.array
     _DASK_AVAILABLE = True
 except ImportError:
     _DASK_AVAILABLE = False
@@ -144,9 +144,31 @@ class GriddedOutputManager:
 
         if self.format == 'netcdf':
             nc_file = self.model.config.results_dir / 'output_grids.nc'
+            append = self.model.config.output_data.grids.append
 
             if not self.nc_file_created:
                 ds = self._create_dataset(in_memory=(not _DASK_AVAILABLE))
+
+                if append:
+                    # Convert time values to encoded times (e.g. X hours since YYYY-MM-DD)
+                    self._time_dims = [d for d in list(ds.dims) if d.startswith('time')]
+                    self._encoded_times = {}
+                    for coord_name in list(ds.coords):
+                        if not coord_name.startswith('time'):
+                            continue
+
+                        encoded_times, _, _ = xr.coding.times.encode_cf_datetime(
+                            ds.coords[coord_name],
+                            units=ds[self._time_dims[0]].encoding['units'],
+                            calendar=ds[self._time_dims[0]].encoding['calendar'],
+                        )
+                        # (taking units and calendar from the first time variable works because all
+                        # time variables have the same encoding)
+                        self._encoded_times[coord_name] = encoded_times
+
+                    ds = ds.drop_sel({v: ds[v] for v in self._time_dims})
+                    ds.encoding['unlimited_dims'] = self._time_dims
+
                 ds.to_netcdf(nc_file)
                 self.nc_file_created = True
 
@@ -196,6 +218,14 @@ class GriddedOutputManager:
 
                 if self.format == 'netcdf':
                     ds[field.output_name][date_idx, :, :] = data
+
+                    if append:
+                        field_time_dim = ds[field.output_name].dimensions[0]
+                        ds[field_time_dim][date_idx] = self._encoded_times[field_time_dim][date_idx]
+
+                        bounds_var = f'{field_time_dim}_bounds'
+                        if bounds_var in self._encoded_times:
+                            ds[bounds_var][date_idx, :] = self._encoded_times[bounds_var][date_idx]
                 elif self.format in ('ascii', 'geotiff'):
                     if self.format == 'ascii':
                         ext = 'asc'
@@ -421,12 +451,14 @@ class GriddedOutputManager:
         ds = xr.Dataset(data, coords=coords)
         ds.attrs['Conventions'] = 'CF-1.7'
 
+        _, datetime_units, calendar = xr.coding.times.encode_cf_datetime(self.model.dates)
         for time_var in times:
             ds[time_var].attrs['standard_name'] = 'time'
 
             # Set time units manually because otherwise the units of the time and the time bounds
             # variables might be different which is not recommended by CF standards
-            ds[time_var].encoding['units'] = f'hours since {self.model.dates[0]:%Y-%m-%d %H:%M}'
+            ds[time_var].encoding['units'] = datetime_units
+            ds[time_var].encoding['calendar'] = calendar
 
             # Store time variables as doubles for CF compliance
             ds[time_var].encoding['dtype'] = np.float64

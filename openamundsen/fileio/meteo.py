@@ -1,5 +1,5 @@
 import loguru
-from openamundsen import constants, errors, forcing, util
+from openamundsen import constants, errors, forcing, meteo as oameteo, util
 import pandas as pd
 from pathlib import Path
 import xarray as xr
@@ -109,7 +109,13 @@ def read_meteo_data(
                 grid_crs,
             )
 
-        ds = _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=aggregate)
+        ds = _slice_and_resample_dataset(
+            ds,
+            start_date,
+            end_date,
+            freq,
+            aggregate=aggregate,
+        )
 
         if ds.dims['time'] == 0:
             logger.warning('File contains no meteo data for the specified period')
@@ -273,12 +279,12 @@ def _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=False)
     ds = ds.sel(time=slice(start_date, end_date))
 
     if inferred_freq is not None and inferred_freq != freq:
-        ds = _resample_dataset(ds, freq, aggregate=aggregate)
+        ds = _resample_dataset(ds, start_date, end_date, freq, aggregate=aggregate)
 
     return ds
 
 
-def _resample_dataset(ds, freq, aggregate=False):
+def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
     """
     Resample a dataset to a given time frequency.
 
@@ -286,6 +292,12 @@ def _resample_dataset(ds, freq, aggregate=False):
     ----------
     ds : xr.Dataset
         Dataset.
+
+    start_date : datetime-like
+        Start date.
+
+    end_date : datetime-like
+        End date.
 
     freq : str
         Pandas-compatible frequency string (e.g. '3H'). Must be an exact subset
@@ -303,11 +315,15 @@ def _resample_dataset(ds, freq, aggregate=False):
     td = util.offset_to_timedelta(freq)
     td_1d = pd.Timedelta('1d')
     if td < td_1d:
-        resample_kwargs = dict(label='right', closed='right', origin='start')
+        resample_kwargs = dict(label='right', closed='right', origin=pd.Timestamp(start_date))
     elif td == td_1d:
         resample_kwargs = dict(label='left', closed='right', origin='start')
     else:
         raise errors.MeteoDataError('Resampling to frequencies > 1 day is not supported')
+
+    if ds.dims['time'] == 0:
+        # Nothing to resample
+        return ds
 
     # ds.resample() is extremely slow for some reason, so we resample using pandas
     df = ds.to_dataframe().drop(columns=['lon', 'lat', 'alt'])
@@ -316,17 +332,20 @@ def _resample_dataset(ds, freq, aggregate=False):
         # Calculate averages
         df_res = df.resample(freq, **resample_kwargs).mean()
 
-        # We might end up with an extra bin after resampling; take only the dates which we would
-        # have taken when using instantaneous values
-        dates = df.asfreq(freq).index
-        if td == td_1d:
-            # When resampling from sub-daily to daily timesteps, df also includes the first timestep
-            # of the day after the end date
-            dates = dates[:-1]
-        df_res = df_res.loc[dates]
+        # Wind direction must be aggregated separately
+        if 'wind_dir' in df.columns:
+            df_res['wind_dir'] = _aggregate_wind_dir(df, freq, resample_kwargs)
+
+        # We might end up with an extra bin after resampling; remove it here
+        df_res = df_res.loc[start_date:end_date]
     else:
         # Take the instantaneous values
-        df_res = df.asfreq(freq)
+        df_res = df.reindex(pd.date_range(
+            start=start_date,
+            end=end_date,
+            freq=freq,
+            name='time',
+        )).loc[df.index[0]:df.index[-1]]
 
     # Precipitation is summed up regardless of the aggregation setting
     if 'precip' in df:
@@ -500,3 +519,42 @@ def _apply_station_rules(meta, bounds, exclude, include):
 
     meta = meta[~meta.index.duplicated(keep='first')]  # remove potential duplicate entries
     return meta
+
+
+def _aggregate_wind_dir(df, freq, resample_kwargs):
+    """
+    Aggregate wind direction by averaging the wind vector components.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Original data. Must contain a "wind_dir" column.
+
+    freq : str
+        Aggregation frequency.
+
+    resample_kwargs : dict
+        Keyword arguments to be passed to resample().
+
+    Returns
+    -------
+    wind_dir : Series
+        Aggregated wind direction.
+    """
+    df = df.copy()
+
+    try:
+        ws = df['wind_speed']
+    except KeyError:
+        ws = df['wind_dir'] * float('nan')
+
+    wind_us, wind_vs = oameteo.wind_to_uv(ws, df['wind_dir'])
+    df['wind_u'] = wind_us
+    df['wind_v'] = wind_vs
+    df = df[['wind_u', 'wind_v']]
+
+    df_res = df.resample(freq, **resample_kwargs).mean()
+    _, wd_res = oameteo.wind_from_uv(df_res['wind_u'], df_res['wind_v'])
+    df_res['wind_dir'] = wd_res
+
+    return df_res['wind_dir']

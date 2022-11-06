@@ -298,7 +298,10 @@ def interpolate_station_data(model):
         wind_dir_diverting_factor = (  # eq. (18)
             -0.5 * wind_slope_scaled * np.sin(-2 * wind_dir_minus_aspect)
         )
-        model.state.meteo.wind_speed[roi] = wind_speed_roi * wind_weighting_factor
+        wind_speed_corr = wind_speed_roi * wind_weighting_factor
+        wind_min_range, wind_max_range = constants.ALLOWED_METEO_VAR_RANGES['wind_speed']
+        wind_speed_corr = np.clip(wind_speed_corr, wind_min_range, wind_max_range)
+        model.state.meteo.wind_speed[roi] = wind_speed_corr
         model.state.meteo.wind_dir[roi] = (wind_dir_roi + wind_dir_diverting_factor) % 360
     else:
         raise NotImplementedError(f'Unsupported method: {wind_config.method}')
@@ -363,12 +366,9 @@ def interpolate_param(
 
         return np.full(target_xs.shape, fill_value)
 
-    if param in ('temp', 'precip', 'rel_hum'):
+    if param in ('temp', 'precip', 'rel_hum', 'wind_speed', 'wind_vec'):
         trend_method = param_config['trend_method']
         lapse_rate = param_config['lapse_rate'][date.month - 1]
-    elif param in ('wind_speed', 'wind_vec'):
-        trend_method = 'regression'
-        lapse_rate = np.nan
     else:
         raise NotImplementedError(f'Unsupported parameter: {param}')
 

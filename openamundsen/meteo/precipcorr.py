@@ -74,7 +74,7 @@ def correct_station_precipitation(model):
         wind_speeds,
         model.config.meteo.interpolation.temperature,
         model.config.meteo.interpolation.humidity,
-        model.config.meteo.interpolation.wind_speed,
+        model.config.meteo.interpolation.wind,
     )
 
     temps_c = temps - constants.T0
