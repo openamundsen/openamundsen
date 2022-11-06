@@ -16,8 +16,8 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu
-          - macos
+          #- ubuntu
+          #- macos
           - windows
         python-version:
           - 3.8
@@ -46,7 +46,7 @@ jobs:
         if: matrix.os == 'windows'
         run: |
           #conda install -y --channel=conda-forge rasterio
-          conda install -y --channel=conda-forge rasterio=1.1.8 loguru munch netCDF4 numba numpy pandas pyproj setuptools_scm scipy ruamel.yaml xarray pooch pytest pytest-lazy-fixture pvlib-python
+          conda install -y --channel=conda-forge rasterio loguru munch netCDF4 numba numpy pandas pyproj setuptools_scm scipy ruamel.yaml xarray pooch pytest pytest-lazy-fixture pvlib-python
 
       - name: Get the pip cache folder
         id: pip-cache
