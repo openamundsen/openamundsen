@@ -16,12 +16,12 @@ jobs:
     strategy:
       matrix:
         os:
-          #- ubuntu
-          #- macos
+          - ubuntu
+          - macos
           - windows
         python-version:
-          #- 3.8
-          #- 3.9
+          - 3.8
+          - 3.9
           - "3.10"
 
     steps:
