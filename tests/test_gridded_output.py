@@ -326,8 +326,7 @@ def test_append(tmp_path):
     model.initialize()
     for date_num, date in enumerate(model.dates):
         model.run_single()
-        if date_num == 0:
-            ds = xr.load_dataset(tmp_path / 'output_grids.nc')
+        with xr.open_dataset(tmp_path / 'output_grids.nc') as ds:
             assert ds.dims['time1'] == date_num + 1
     ds_append = xr.load_dataset(tmp_path / 'output_grids.nc')
 
