@@ -334,7 +334,7 @@ def is_valid_point_dataset(ds, dates=None):
     """
     Test if the passed variable is a valid point forcing dataset.
     """
-    if tuple(ds.dims) != ('station', 'time'):
+    if set(ds.dims) != set(['station', 'time']):
         return False
 
     for v in _POINT_DATASET_MINIMAL_VARS:
