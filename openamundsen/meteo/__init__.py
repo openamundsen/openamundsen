@@ -11,6 +11,7 @@ from .atmosphere import (
     log_wind_profile,
     precipitable_water,
     precipitation_phase,
+    pressure_to_altitude,
     psychrometric_constant,
     relative_humidity,
     saturation_vapor_pressure,

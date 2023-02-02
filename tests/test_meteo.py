@@ -11,6 +11,13 @@ def test_atmospheric_pressure():
     assert_allclose(press_calc, pressures, rtol=1e-2)
 
 
+def test_pressure_to_altitude():
+    elevs = np.linspace(0, 3000, 100)
+    pressures = meteo.atmospheric_pressure(elevs)
+    elevs_calc = meteo.pressure_to_altitude(pressures)
+    assert_allclose(elevs, elevs_calc)
+
+
 def test_latent_heat_of_vaporization():
     assert_allclose(
         meteo.latent_heat_of_vaporization([273.15, 20 + 273.15]),

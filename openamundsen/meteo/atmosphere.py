@@ -27,6 +27,30 @@ def atmospheric_pressure(elev):
     )**(c.SPEC_HEAT_CAP_DRY_AIR * c.MOLAR_MASS_DRY_AIR / c.UNIVERSAL_GAS_CONSTANT)
 
 
+def pressure_to_altitude(pressure):
+    """
+    Calculate altitude from atmospheric pressure.
+
+    This is the inverse function for atmospheric_pressure().
+
+    Parameters
+    ----------
+    pressure : numeric
+        Atmospheric pressure (Pa).
+
+    Returns
+    -------
+    elev : numeric
+        Height above sea level (m).
+    """
+    exp = c.SPEC_HEAT_CAP_DRY_AIR * c.MOLAR_MASS_DRY_AIR / c.UNIVERSAL_GAS_CONSTANT
+    return (
+        (1 - (np.asarray(pressure) / c.STANDARD_ATMOSPHERE)**(1 / exp))
+        * c.SPEC_HEAT_CAP_DRY_AIR * c.STANDARD_SEA_LEVEL_TEMPERATURE
+        / c.GRAVITATIONAL_ACCELERATION
+    )
+
+
 def dry_air_density(temp, pressure):
     """
     Calculate the density of dry air.
