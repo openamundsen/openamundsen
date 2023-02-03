@@ -124,7 +124,7 @@ def test_cloud_fraction():
 
     assert cf.min() >= 0
     assert cf.max() <= 1
-    assert_allclose(cf[[1, 2]], [0.0752, 0.832], atol=1e-3)
+    assert_allclose(cf[[1, 2]], [0.075224, 0.845268], atol=1e-3)
 
 
 def test_precipitation_phase():

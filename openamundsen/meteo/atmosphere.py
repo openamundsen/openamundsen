@@ -394,10 +394,19 @@ def precipitable_water(temp, vap_press):
     return u * (1e-3 * 1e4)  # in kg m-2
 
 
-def cloud_fraction_from_humidity(temp, rel_hum, elev, temp_lapse_rate, dew_point_temp_lapse_rate):
+def cloud_fraction_from_humidity(
+    temp,
+    rel_hum,
+    elev,
+    temp_lapse_rate,
+    dew_point_temp_lapse_rate,
+    pressure_level=70000,
+    saturation_cloud_fraction=0.832,
+    e_folding_humidity=58.4,
+):
     """
     Calculate cloud fraction from relative humidity at the 700 hPa level
-    following Liston and Elder (2006).
+    following Walcek (1994) and Liston and Elder (2006).
 
     Parameters
     ----------
@@ -416,6 +425,18 @@ def cloud_fraction_from_humidity(temp, rel_hum, elev, temp_lapse_rate, dew_point
     dew_point_temp_lapse_rate : numeric
         Dew point temperature lapse rate (K m-1).
 
+    pressure_level : float, default 70000
+        Pressure level (Pa) on which the calculation should be performed.
+        Default value of 700 hPa is from [2].
+
+    saturation_cloud_fraction : float, default 0.832
+        Cloud fraction at 100% relative humidity. Default value from [2].
+
+    e_folding_humidity : float, default 58.4
+        "e-folding relative humidity", i.e., the relative humidity depression
+        below 100% where cloud fraction decreases to 37% (exp(-1)) of its value
+        at 100% humidity. Default value from [2].
+
     Returns
     -------
     cloud_fraction : numeric
@@ -423,7 +444,12 @@ def cloud_fraction_from_humidity(temp, rel_hum, elev, temp_lapse_rate, dew_point
 
     References
     ----------
-    .. [1] Liston, G. E., & Elder, K. (2006). A Meteorological Distribution
+    .. [1] Walcek, C. J. (1994). Cloud Cover and Its Relationship to Relative
+       Humidity during a Springtime Midlatitude Cyclone. Monthly Weather Review,
+       122(6), 1021–1035.
+       https://doi.org/10.1175/1520-0493(1994)122<1021:CCAIRT>2.0.CO;2
+
+    .. [2] Liston, G. E., & Elder, K. (2006). A Meteorological Distribution
        System for High-Resolution Terrestrial Modeling (MicroMet). Journal of
        Hydrometeorology, 7(2), 217–234. https://doi.org/10.1175/JHM486.1
     """
@@ -431,16 +457,20 @@ def cloud_fraction_from_humidity(temp, rel_hum, elev, temp_lapse_rate, dew_point
     rel_hum = np.asarray(rel_hum)
     elev = np.asarray(elev)
 
-    td = dew_point_temperature(temp, rel_hum)
-    elev_diff = elev - 3000  # 700 hPa = 3000 m in a standard atmosphere
+    pressure_level_elev = pressure_to_altitude(pressure_level)
+    elev_diff = elev - pressure_level_elev
 
+    td = dew_point_temperature(temp, rel_hum)
     temp700 = temp - (temp_lapse_rate * elev_diff)  # T in 700 hPa
     td700 = td - (dew_point_temp_lapse_rate * elev_diff)  # Td in 700 hPa
     sat_vap_press700 = saturation_vapor_pressure(temp700)
     vap_press700 = saturation_vapor_pressure(td700)
     rel_hum700 = 100 * vap_press700 / sat_vap_press700  # RH in 700 hPa
 
-    cloud_frac = 0.832 * np.exp((rel_hum700 - 100) / 41.6)
+    cloud_frac = (  # eq. (1) in [1], eq. (20) in [2]
+        saturation_cloud_fraction
+        * np.exp((rel_hum700 - 100) / (100 - e_folding_humidity))
+    )
     return cloud_frac.clip(0, 1)
 
 
