@@ -419,6 +419,18 @@ meteo:
               type: boolean
               default: true
 
+            # Parameters for the "humidity" method (Walcek (1994), Liston & Elder (2006)).
+            # Default values are from Liston & Elder (2006).
+            pressure_level: # pressure level for which the calculation should be performed (hPa (!))
+              type: number
+              default: 700
+            saturation_cloud_fraction: # cloud fraction at 100% relative humidity (0-1)
+              type: number
+              default: 0.832
+            e_folding_humidity: # "e-folding relative humidity" (%)
+              type: number
+              default: 58.4
+
     # Parameters for precipitation phase detection
     precipitation_phase:
       type: dict

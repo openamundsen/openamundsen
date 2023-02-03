@@ -119,6 +119,9 @@ def shortwave_irradiance(model):
             ds_temp_hum.alt,
             lr_t,
             lr_td,
+            pressure_level=cloud_config.pressure_level * 100,  # hPa -> Pa
+            saturation_cloud_fraction=cloud_config.saturation_cloud_fraction,
+            e_folding_humidity=cloud_config.e_folding_humidity,
         )
         cloud_factors = meteo.cloud_factor_from_cloud_fraction(cloud_fracs)
         cloud_factor_interpol = interpolation.idw(
