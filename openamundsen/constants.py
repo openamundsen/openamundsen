@@ -74,6 +74,7 @@ METEO_VAR_METADATA = {
         'units': 'degree',
     },
 }
+MINIMUM_REQUIRED_METEO_VARS = ['temp', 'precip', 'rel_hum', 'sw_in', 'wind_speed']
 
 NETCDF_VAR_MAPPINGS = {
     'tas': 'temp',

@@ -11,7 +11,7 @@ _POINT_DATASET_META_VARS = [
     'lat',
     'alt',
 ]
-_POINT_DATASET_DATA_VARS = list(constants.METEO_VAR_METADATA.keys())
+_POINT_DATASET_ALLOWED_METEO_VARS = list(constants.METEO_VAR_METADATA.keys())
 _POINT_DATASET_GRID_VARS = [
     'x',
     'y',
@@ -20,7 +20,7 @@ _POINT_DATASET_GRID_VARS = [
     'within_grid_extent',
     'within_roi',
 ]
-_POINT_DATASET_MINIMAL_VARS = _POINT_DATASET_META_VARS + _POINT_DATASET_DATA_VARS
+_POINT_DATASET_MINIMAL_VARS = _POINT_DATASET_META_VARS + constants.MINIMUM_REQUIRED_METEO_VARS
 
 
 def make_point_dataset(
@@ -111,12 +111,20 @@ def make_point_dataset(
             raise TypeError('Altitude neither in data nor passed as keyword argument')
         alt = float(data.alt)
 
-    ds = make_empty_point_dataset(dates, point_id, name, lon, lat, alt)
+    meteo_vars = list(set(data.data_vars) & set(_POINT_DATASET_ALLOWED_METEO_VARS))
+    ds = make_empty_point_dataset(
+        dates,
+        point_id,
+        name,
+        lon,
+        lat,
+        alt,
+        meteo_vars=meteo_vars,
+    )
 
     # Copy values (and check if the units are as expected)
-    for var, meta in constants.METEO_VAR_METADATA.items():
-        if var not in data:
-            continue
+    for var in meteo_vars:
+        meta = constants.METEO_VAR_METADATA[var]
 
         if var == 'precip':
             # Convert precipitation rates to sums first if required
@@ -141,7 +149,7 @@ def make_point_dataset(
     return ds
 
 
-def make_empty_point_dataset(dates, point_id, name, lon, lat, alt):
+def make_empty_point_dataset(dates, point_id, name, lon, lat, alt, meteo_vars=None):
     """
     Create an empty dataset for the meteorological forcing data for a single
     point.
@@ -170,6 +178,10 @@ def make_empty_point_dataset(dates, point_id, name, lon, lat, alt):
     alt : float
         Altitude (m)
 
+    meteo_vars : list, default None
+        Meteorological variables to create. If None, create a dataset with the
+        minimally required variables.
+
     Returns
     -------
     ds : xr.Dataset
@@ -180,7 +192,11 @@ def make_empty_point_dataset(dates, point_id, name, lon, lat, alt):
         'alt': ([], float(alt)),
     }
 
-    for var, meta in constants.METEO_VAR_METADATA.items():
+    if meteo_vars is None:
+        meteo_vars = constants.MINIMUM_REQUIRED_METEO_VARS
+
+    for var in meteo_vars:
+        meta = constants.METEO_VAR_METADATA[var]
         data[var] = (
             ['time'],
             np.full(len(dates), np.nan),
@@ -199,19 +215,36 @@ def make_empty_point_dataset(dates, point_id, name, lon, lat, alt):
     return ds
 
 
-def combine_point_datasets(datasets):
+def combine_point_datasets(datasets, add_minimum_required_vars=True):
     """
     Combine a list of meteo datasets as returned by `make_point_dataset`.
     The datasets are merged by adding an additional "station" (= station id)
     dimension.
+
+    Parameters
+    ----------
+    add_minimum_required_vars : bool, default True
+        Add the minimum required variables for an openAMUNDSEN model run to the
+        resulting combined dataset even if the variables do not exist in any of
+        the individual datasets.
     """
     datasets_processed = []
+
+    # Create a list of all meteo variables occurring in at least one of the datasets
+    meteo_vars = set()
+    if add_minimum_required_vars:
+        meteo_vars.update(set(constants.MINIMUM_REQUIRED_METEO_VARS))
+    for ds in datasets:
+        meteo_vars.update(set(ds.data_vars))
+    meteo_vars = sorted(list(meteo_vars & set(_POINT_DATASET_ALLOWED_METEO_VARS)))
 
     for ds in datasets:
         ds = ds.copy()
 
-        for var, meta in constants.METEO_VAR_METADATA.items():
-            # add missing variables to the dataset
+        for var in meteo_vars:
+            meta = constants.METEO_VAR_METADATA[var]
+
+            # Add missing variables to the dataset
             if var not in ds:
                 ds[var] = xr.DataArray(
                     data=np.full(ds.time.shape, np.nan),
@@ -317,7 +350,8 @@ def prepare_point_coordinates(ds, grid, crs):
             within_roi_var.loc[station] = grid.roi[row, col]
 
     # reorder variables (only for aesthetic reasons)
-    var_order = _POINT_DATASET_META_VARS + _POINT_DATASET_GRID_VARS + _POINT_DATASET_DATA_VARS
+    meteo_vars = sorted(list(set(_POINT_DATASET_ALLOWED_METEO_VARS) & set(ds.data_vars)))
+    var_order = _POINT_DATASET_META_VARS + _POINT_DATASET_GRID_VARS + meteo_vars
     ds = ds[var_order]
 
     return ds
@@ -327,7 +361,7 @@ def strip_point_dataset(ds):
     """
     Remove the grid-specific variables from a point forcing dataset.
     """
-    return ds[_POINT_DATASET_MINIMAL_VARS]
+    return ds.drop_vars(_POINT_DATASET_GRID_VARS)
 
 
 def is_valid_point_dataset(ds, dates=None):

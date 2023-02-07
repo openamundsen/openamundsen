@@ -301,7 +301,7 @@ def test_station_selection(tmp_path):
 
 def test_missing_variables(tmp_path):
     ds = xr.load_dataset(f'{pytest.DATA_DIR}/meteo/rofental/netcdf/proviantdepot.nc')
-    ds = ds.drop_vars(['hurs', 'rsds', 'wss'])
+    ds = ds.drop_vars(['tas', 'hurs', 'rsds', 'wss', 'wind_dir'])
     ds.to_netcdf(tmp_path / 'proviantdepot.nc')
 
     config = base_config()
@@ -309,9 +309,12 @@ def test_missing_variables(tmp_path):
     model = oa.OpenAmundsen(config)
     model.initialize()
 
+    assert 'temp' in model.meteo
+    assert 'precip' in model.meteo
     assert 'rel_hum' in model.meteo
     assert 'sw_in' in model.meteo
     assert 'wind_speed' in model.meteo
+    assert 'wind_dir' not in model.meteo
 
 
 def test_netcdf_precip_units(tmp_path):
