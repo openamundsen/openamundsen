@@ -176,9 +176,14 @@ class ModelGrid(Munch):
 
         self.extended_grid = Munch(dict(
             available=False,
+            rows=None,
+            cols=None,
+            row_offset=None,
+            col_offset=None,
             row_slice=None,
             col_slice=None,
             dem=None,
+            svf=None,
         ))
 
         self.prepare_roi_coordinates()

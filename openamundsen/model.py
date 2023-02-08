@@ -416,24 +416,50 @@ class OpenAmundsen:
         roi_file = util.raster_filename('roi', self.config)
         svf_file = util.raster_filename('svf', self.config)
 
-        # Read DEM (first try to read extended DEM and set the model DEM from there; if no extended
-        # DEM is available read the "normal" DEM file)
-        self._read_extended_dem()
+        self._read_extended_grids()
+
+        # If an extendeded DEM+SVF are available, set the model DEM and SVF using them, otherwise
+        # (try to) read them from file (or calculate SVF)
         if self.grid.extended_grid.available:
             self.state.base.dem[:] = self.grid.extended_grid.dem[
                 self.grid.extended_grid.row_slice,
                 self.grid.extended_grid.col_slice,
             ]
-        elif dem_file.exists():
-            self.logger.info(f'Reading DEM ({dem_file})')
-            self.state.base.dem[:] = fileio.read_raster_file(
-                dem_file,
-                check_meta=self.grid,
-                fill_value=np.nan,
-                dtype=float,
-            )
+            self.state.base.svf[:] = self.grid.extended_grid.svf[
+                self.grid.extended_grid.row_slice,
+                self.grid.extended_grid.col_slice,
+            ]
         else:
-            raise FileNotFoundError(f'DEM file not found: {dem_file}')
+            if dem_file.exists():
+                self.logger.info(f'Reading DEM ({dem_file})')
+                self.state.base.dem[:] = fileio.read_raster_file(
+                    dem_file,
+                    check_meta=self.grid,
+                    fill_value=np.nan,
+                    dtype=float,
+                )
+            else:
+                raise FileNotFoundError(f'DEM file not found: {dem_file}')
+
+            if svf_file.exists():
+                self.logger.info(f'Reading sky view factor ({svf_file})')
+                self.state.base.svf[:] = fileio.read_raster_file(
+                    svf_file,
+                    check_meta=self.grid,
+                    fill_value=np.nan,
+                    dtype=float,
+                )
+            else:
+                self.logger.info('Calculating sky view factor')
+                svf = terrain.sky_view_factor(
+                    self.state.base.dem,
+                    self.grid.resolution,
+                    num_sweeps=self.config.meteo.radiation.num_shadow_sweeps,
+                    logger=self.logger,
+                )
+                self.state.base.svf[:] = svf
+                self.logger.debug(f'Writing sky view factor file ({svf_file})')
+                fileio.write_raster_file(svf_file, svf, self.grid.transform)
 
         if roi_file.exists():
             self.logger.info(f'Reading ROI ({roi_file})')
@@ -452,40 +478,6 @@ class OpenAmundsen:
             self.logger.debug(f'Excluding {dem_nan_pos.sum()} pixels where DEM is NaN '
                               'from the ROI')
             self.grid.roi[dem_nan_pos] = False
-
-        if svf_file.exists():
-            self.logger.info(f'Reading sky view factor ({svf_file})')
-            self.state.base.svf[:] = fileio.read_raster_file(
-                svf_file,
-                check_meta=self.grid,
-                fill_value=np.nan,
-                dtype=float,
-            )
-        else:
-            self.logger.info('Calculating sky view factor')
-
-            if self.grid.extended_grid.available:
-                svf_dem = self.grid.extended_grid.dem
-            else:
-                svf_dem = self.state.base.dem
-
-            svf = terrain.sky_view_factor(
-                svf_dem,
-                self.grid.resolution,
-                num_sweeps=self.config.meteo.radiation.num_shadow_sweeps,
-                logger=self.logger,
-            )
-
-            if self.grid.extended_grid.available:
-                svf = svf[
-                    self.grid.extended_grid.row_slice,
-                    self.grid.extended_grid.col_slice,
-                ]
-
-            self.state.base.svf[:] = svf
-
-            self.logger.debug(f'Writing sky view factor file ({svf_file})')
-            fileio.write_raster_file(svf_file, svf, self.grid.transform)
 
         # Read snow redistribution factor files
         for precip_corr in self.config.meteo.precipitation_correction:
@@ -536,57 +528,82 @@ class OpenAmundsen:
 
         self.grid.prepare_roi_coordinates()
 
-    def _read_extended_dem(self):
+    def _read_extended_grids(self):
         """
-        Try to read the extended DEM if available.
+        Try to read the extended DEM if available, and read/calculate the extended SVF.
         """
         extended_dem_file = util.raster_filename('extended-dem', self.config)
+        extended_svf_file = util.raster_filename('extended-svf', self.config)
 
-        if extended_dem_file.exists():
-            self.logger.info(f'Reading extended DEM ({extended_dem_file})')
-            ext_meta = fileio.read_raster_metadata(extended_dem_file, crs=self.config.crs)
-            ext_dem = fileio.read_raster_file(
-                extended_dem_file,
+        if not extended_dem_file.exists():
+            return False
+
+        self.logger.info(f'Reading extended DEM ({extended_dem_file})')
+        ext_meta = fileio.read_raster_metadata(extended_dem_file, crs=self.config.crs)
+        ext_dem = fileio.read_raster_file(
+            extended_dem_file,
+            fill_value=np.nan,
+            dtype=float,
+        )
+        grid_transform = self.grid.transform
+        ext_transform = ext_meta['transform']
+        grid_ul_xy = rasterio.transform.xy(grid_transform, 0, 0, offset='ul')
+        grid_lr_xy = rasterio.transform.xy(
+            grid_transform,
+            self.grid.rows - 1,
+            self.grid.cols - 1,
+            offset='lr',
+        )
+        ext_ul_xy = rasterio.transform.xy(ext_transform, 0, 0, offset='ul')
+        ext_lr_xy = rasterio.transform.xy(
+            ext_transform,
+            ext_meta['rows'] - 1,
+            ext_meta['cols'] - 1,
+            offset='lr',
+        )
+        ext_offset_ul = rasterio.transform.rowcol(ext_transform, *grid_ul_xy, op=float)
+        if not (float.is_integer(ext_offset_ul[0]) and float.is_integer(ext_offset_ul[1])):
+            raise errors.RasterFileError('Extended DEM is not aligned correctly')
+        if not (
+            grid_ul_xy[0] >= ext_ul_xy[0]
+            and grid_ul_xy[1] <= ext_ul_xy[1]
+            and grid_lr_xy[0] <= ext_lr_xy[0]
+            and grid_lr_xy[1] >= ext_lr_xy[1]
+        ):
+            raise errors.RasterFileError('Extended DEM does not fully cover the model grid')
+
+        if extended_svf_file.exists():
+            ext_svf = fileio.read_raster_file(
+                extended_svf_file,
                 fill_value=np.nan,
                 dtype=float,
             )
-            grid_transform = self.grid.transform
-            ext_transform = ext_meta['transform']
-            grid_ul_xy = rasterio.transform.xy(grid_transform, 0, 0, offset='ul')
-            grid_lr_xy = rasterio.transform.xy(
-                grid_transform,
-                self.grid.rows - 1,
-                self.grid.cols - 1,
-                offset='lr',
+            if ext_svf.shape != ext_dem.shape:
+                raise errors.RasterFileError('Extended DEM and SVF have differing dimensions')
+        else:
+            self.logger.info('Calculating extended sky view factor')
+            ext_svf = terrain.sky_view_factor(
+                ext_dem,
+                self.grid.resolution,
+                num_sweeps=self.config.meteo.radiation.num_shadow_sweeps,
+                logger=self.logger,
             )
-            ext_ul_xy = rasterio.transform.xy(ext_transform, 0, 0, offset='ul')
-            ext_lr_xy = rasterio.transform.xy(
-                ext_transform,
-                ext_meta['rows'] - 1,
-                ext_meta['cols'] - 1,
-                offset='lr',
-            )
-            ext_offset_ul = rasterio.transform.rowcol(ext_transform, *grid_ul_xy, op=float)
-            if not (float.is_integer(ext_offset_ul[0]) and float.is_integer(ext_offset_ul[1])):
-                raise errors.RasterFileError('Extended DEM is not aligned correctly')
-            if not (
-                grid_ul_xy[0] >= ext_ul_xy[0]
-                and grid_ul_xy[1] <= ext_ul_xy[1]
-                and grid_lr_xy[0] <= ext_lr_xy[0]
-                and grid_lr_xy[1] >= ext_lr_xy[1]
-            ):
-                raise errors.RasterFileError('Extended DEM does not fully cover the model grid')
+            self.logger.debug(f'Writing extended sky view factor file ({extended_svf_file})')
+            fileio.write_raster_file(extended_svf_file, ext_svf, ext_transform)
 
-            row_offset = int(ext_offset_ul[0])
-            col_offset = int(ext_offset_ul[1])
-            self.grid.extended_grid.available = True
-            self.grid.extended_grid.row_slice = slice(row_offset, row_offset + self.grid.rows)
-            self.grid.extended_grid.col_slice = slice(col_offset, col_offset + self.grid.cols)
-            self.grid.extended_grid.dem = ext_dem
+        row_offset = int(ext_offset_ul[0])
+        col_offset = int(ext_offset_ul[1])
+        self.grid.extended_grid.available = True
+        self.grid.extended_grid.rows = ext_dem.shape[0]
+        self.grid.extended_grid.cols = ext_dem.shape[1]
+        self.grid.extended_grid.row_offset = row_offset
+        self.grid.extended_grid.col_offset = col_offset
+        self.grid.extended_grid.row_slice = slice(row_offset, row_offset + self.grid.rows)
+        self.grid.extended_grid.col_slice = slice(col_offset, col_offset + self.grid.cols)
+        self.grid.extended_grid.dem = ext_dem
+        self.grid.extended_grid.svf = ext_svf
 
-            return True
-
-        return False
+        return True
 
     def _read_meteo_data(self):
         """
