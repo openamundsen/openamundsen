@@ -95,12 +95,16 @@ def shortwave_irradiance(model):
                 method = 'clear_sky_fraction'
             else:
                 if cloud_config['allow_fallback'] and num_temp_hum_stations > 0:
-                    model.logger.debug('No radiation measurements available, falling back '
-                                      'to humidity-based cloudiness calculation')
+                    model.logger.debug(
+                        'No radiation measurements available, falling back to humidity-based '
+                        'cloudiness calculation'
+                    )
                     method = 'humidity'
                 else:
-                    model.logger.debug('No radiation measurements available, using cloudiness '
-                                      'from previous time step')
+                    model.logger.debug(
+                        'No radiation measurements available, using cloudiness from previous time '
+                        'step'
+                    )
                     method = 'constant'
         else:
             method = cloud_config['day_method']
@@ -109,9 +113,13 @@ def shortwave_irradiance(model):
             if num_temp_hum_stations > 0:
                 method = 'humidity'
             else:
-                model.logger.debug('No temperature and humidity measurements available, using '
-                                  'cloudiness from previous time step')
+                model.logger.debug(
+                    'No temperature and humidity measurements available, using cloudiness from '
+                    'previous time step'
+                )
                 method = 'constant'
+
+    interpolate_cloud_factor = False
 
     if method == 'constant':  # use cloudiness from previous time step
         cloud_factor_roi_prev = m.cloud_factor[roi]
@@ -124,7 +132,8 @@ def shortwave_irradiance(model):
     elif method == 'humidity':
         lr_t = model.config.meteo.interpolation.temperature.lapse_rate[model.date.month - 1]
         lr_td = model.config.meteo.interpolation.humidity.lapse_rate[model.date.month - 1]
-        # TODO use here also the same settings for regression/fixed gradients as for the interpolation
+        # TODO use here also the same settings for regression/fixed gradients as for the
+        # interpolation
         cloud_fracs = meteo.cloud_fraction_from_humidity(
             ds_temp_hum.temp,
             ds_temp_hum.rel_hum,
@@ -135,20 +144,20 @@ def shortwave_irradiance(model):
             saturation_cloud_fraction=cloud_config.saturation_cloud_fraction,
             e_folding_humidity=cloud_config.e_folding_humidity,
         )
+        cloud_factor_xs = ds_temp_hum.x
+        cloud_factor_ys = ds_temp_hum.y
         cloud_factors = meteo.cloud_factor_from_cloud_fraction(cloud_fracs)
-        cloud_factor_interpol = interpolation.idw(
-            ds_temp_hum.x,
-            ds_temp_hum.y,
-            cloud_factors,
-            model.grid.roi_points[:, 0],
-            model.grid.roi_points[:, 1],
-        )
-        m.cloud_factor[roi] = cloud_factor_interpol.clip(0, 1)
+        interpolate_cloud_factor = True
     elif method == 'clear_sky_fraction':
+        cloud_factor_xs = ds_rad.x
+        cloud_factor_ys = ds_rad.y
         cloud_factors = ds_rad.sw_in.values / m.sw_in_clearsky[ds_rad.row, ds_rad.col]
+        interpolate_cloud_factor = True
+
+    if interpolate_cloud_factor:
         cloud_factor_interpol = interpolation.idw(
-            ds_rad.x,
-            ds_rad.y,
+            cloud_factor_xs,
+            cloud_factor_ys,
             cloud_factors,
             model.grid.roi_points[:, 0],
             model.grid.roi_points[:, 1],
