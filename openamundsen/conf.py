@@ -45,6 +45,17 @@ class ConfigurationValidator(cerberus.Validator):
 
         return d
 
+    def _normalize_coerce_cloudiness(self, d):
+        # 'day_method' is deprecated -> change to 'method'
+        if 'day_method' in d:
+            d['method'] = d.pop('day_method')
+
+        # 'night_method' is deprecated -> change to 'clear_sky_fraction_night_method'
+        if 'night_method' in d:
+            d['clear_sky_fraction_night_method'] = d.pop('night_method')
+
+        return d
+
 
 class ConfigurationEncoder(json.JSONEncoder):
     def default(self, o):

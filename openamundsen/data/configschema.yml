@@ -400,15 +400,16 @@ meteo:
         cloudiness:
           type: dict
           default: {}
+          coerce: cloudiness
           schema:
-            day_method:
+            method:
               type: string
               allowed:
                 - clear_sky_fraction
                 - humidity
               default: clear_sky_fraction
 
-            night_method:
+            clear_sky_fraction_night_method:
               type: string
               allowed:
                 - humidity

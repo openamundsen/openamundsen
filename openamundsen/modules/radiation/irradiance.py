@@ -69,6 +69,7 @@ def shortwave_irradiance(model):
     cloud_config = model.config.meteo.interpolation.cloudiness
     roi = model.grid.roi
     m = model.state.meteo
+    method = cloud_config['method']
 
     # Select stations within the grid extent and with shortwave radiation measurements
     # for the current time step
@@ -88,34 +89,20 @@ def shortwave_irradiance(model):
     )
     num_temp_hum_stations = len(ds_temp_hum.station)
 
-    method = 'constant'
-    if model.sun_params['sun_over_horizon']:
-        if cloud_config['day_method'] == 'clear_sky_fraction':
-            if num_rad_stations > 0:
-                method = 'clear_sky_fraction'
-            else:
-                if cloud_config['allow_fallback'] and num_temp_hum_stations > 0:
-                    model.logger.debug(
-                        'No radiation measurements available, falling back to humidity-based '
-                        'cloudiness calculation'
-                    )
-                    method = 'humidity'
-                else:
-                    model.logger.debug(
-                        'No radiation measurements available, using cloudiness from previous time '
-                        'step'
-                    )
-                    method = 'constant'
-        else:
-            method = cloud_config['day_method']
-    else:
-        if cloud_config['night_method'] == 'humidity':
-            if num_temp_hum_stations > 0:
+    if method == 'clear_sky_fraction':
+        if not model.sun_params['sun_over_horizon']:
+            method = cloud_config['clear_sky_fraction_night_method']
+        elif num_rad_stations == 0:
+            if cloud_config['allow_fallback'] and num_temp_hum_stations > 0:
+                model.logger.debug(
+                    'No radiation measurements available, falling back to humidity-based '
+                    'cloudiness calculation'
+                )
                 method = 'humidity'
             else:
                 model.logger.debug(
-                    'No temperature and humidity measurements available, using cloudiness from '
-                    'previous time step'
+                    'No radiation measurements available, using cloudiness from previous time '
+                    'step'
                 )
                 method = 'constant'
 
@@ -124,8 +111,11 @@ def shortwave_irradiance(model):
     if method == 'constant':  # use cloudiness from previous time step
         cloud_factor_roi_prev = m.cloud_factor[roi]
 
-        # When there is no cloudiness from the previous time step (i.e. when the model run starts
+        # When there is no cloudiness from the previous time step (e.g. when the model run starts
         # during nighttime) set cloudiness to a constant value
+        model.logger.debug(
+            'No cloudiness from previous time step available, setting to constant value'
+        )
         cloud_factor_roi_prev[np.isnan(cloud_factor_roi_prev)] = 0.75
 
         m.cloud_factor[roi] = cloud_factor_roi_prev
