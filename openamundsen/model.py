@@ -416,7 +416,15 @@ class OpenAmundsen:
         roi_file = util.raster_filename('roi', self.config)
         svf_file = util.raster_filename('svf', self.config)
 
-        if dem_file.exists():
+        # Read DEM (first try to read extended DEM and set the model DEM from there; if no extended
+        # DEM is available read the "normal" DEM file)
+        self._read_extended_dem()
+        if self.grid.extended_grid.available:
+            self.state.base.dem[:] = self.grid.extended_grid.dem[
+                self.grid.extended_grid.row_slice,
+                self.grid.extended_grid.col_slice,
+            ]
+        elif dem_file.exists():
             self.logger.info(f'Reading DEM ({dem_file})')
             self.state.base.dem[:] = fileio.read_raster_file(
                 dem_file,
@@ -455,12 +463,25 @@ class OpenAmundsen:
             )
         else:
             self.logger.info('Calculating sky view factor')
+
+            if self.grid.extended_grid.available:
+                svf_dem = self.grid.extended_grid.dem
+            else:
+                svf_dem = self.state.base.dem
+
             svf = terrain.sky_view_factor(
-                self.state.base.dem,
+                svf_dem,
                 self.grid.resolution,
                 num_sweeps=self.config.meteo.radiation.num_shadow_sweeps,
                 logger=self.logger,
             )
+
+            if self.grid.extended_grid.available:
+                svf = svf[
+                    self.grid.extended_grid.row_slice,
+                    self.grid.extended_grid.col_slice,
+                ]
+
             self.state.base.svf[:] = svf
 
             self.logger.debug(f'Writing sky view factor file ({svf_file})')
@@ -514,6 +535,58 @@ class OpenAmundsen:
                 raise FileNotFoundError(f'Soil texture file not found: {soil_texture_file}')
 
         self.grid.prepare_roi_coordinates()
+
+    def _read_extended_dem(self):
+        """
+        Try to read the extended DEM if available.
+        """
+        extended_dem_file = util.raster_filename('extended-dem', self.config)
+
+        if extended_dem_file.exists():
+            self.logger.info(f'Reading extended DEM ({extended_dem_file})')
+            ext_meta = fileio.read_raster_metadata(extended_dem_file, crs=self.config.crs)
+            ext_dem = fileio.read_raster_file(
+                extended_dem_file,
+                fill_value=np.nan,
+                dtype=float,
+            )
+            grid_transform = self.grid.transform
+            ext_transform = ext_meta['transform']
+            grid_ul_xy = rasterio.transform.xy(grid_transform, 0, 0, offset='ul')
+            grid_lr_xy = rasterio.transform.xy(
+                grid_transform,
+                self.grid.rows - 1,
+                self.grid.cols - 1,
+                offset='lr',
+            )
+            ext_ul_xy = rasterio.transform.xy(ext_transform, 0, 0, offset='ul')
+            ext_lr_xy = rasterio.transform.xy(
+                ext_transform,
+                ext_meta['rows'] - 1,
+                ext_meta['cols'] - 1,
+                offset='lr',
+            )
+            ext_offset_ul = rasterio.transform.rowcol(ext_transform, *grid_ul_xy, op=float)
+            if not (float.is_integer(ext_offset_ul[0]) and float.is_integer(ext_offset_ul[1])):
+                raise errors.RasterFileError('Extended DEM is not aligned correctly')
+            if not (
+                grid_ul_xy[0] >= ext_ul_xy[0]
+                and grid_ul_xy[1] <= ext_ul_xy[1]
+                and grid_lr_xy[0] <= ext_lr_xy[0]
+                and grid_lr_xy[1] >= ext_lr_xy[1]
+            ):
+                raise errors.RasterFileError('Extended DEM does not fully cover the model grid')
+
+            row_offset = int(ext_offset_ul[0])
+            col_offset = int(ext_offset_ul[1])
+            self.grid.extended_grid.available = True
+            self.grid.extended_grid.row_slice = slice(row_offset, row_offset + self.grid.rows)
+            self.grid.extended_grid.col_slice = slice(col_offset, col_offset + self.grid.cols)
+            self.grid.extended_grid.dem = ext_dem
+
+            return True
+
+        return False
 
     def _read_meteo_data(self):
         """

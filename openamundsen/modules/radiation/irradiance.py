@@ -18,12 +18,24 @@ def clear_sky_shortwave_irradiance(model):
             mean_surface_albedo = model.config.soil.albedo
 
         model.logger.debug('Calculating shadows')
+
+        if model.grid.extended_grid.available:
+            shadows_dem = model.grid.extended_grid.dem
+        else:
+            shadows_dem = model.state.base.dem
+
         shadows = modules.radiation.shadows(
-            model.state.base.dem,
+            shadows_dem,
             model.grid.resolution,
             model.sun_params['sun_vector'],
             num_sweeps=model.config.meteo.radiation.num_shadow_sweeps,
         )
+
+        if model.grid.extended_grid.available:
+            shadows = shadows[
+                model.grid.extended_grid.row_slice,
+                model.grid.extended_grid.col_slice,
+            ]
 
         model.logger.debug('Calculating clear-sky shortwave irradiance')
         dir_irr, diff_irr = _clear_sky_shortwave_irradiance(

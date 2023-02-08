@@ -173,6 +173,14 @@ class ModelGrid(Munch):
         self.all_points = np.column_stack((X.flat, Y.flat))
         self.center_lon = center_lon
         self.center_lat = center_lat
+
+        self.extended_grid = Munch(dict(
+            available=False,
+            row_slice=None,
+            col_slice=None,
+            dem=None,
+        ))
+
         self.prepare_roi_coordinates()
 
     def prepare_roi_coordinates(self):
