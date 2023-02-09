@@ -184,7 +184,12 @@ class ModelGrid(Munch):
             col_slice=None,
             dem=None,
             svf=None,
+            normal_vec=None,
+            shadows=None,
         ))
+        # ("shadows" required because the shadows are calculated in
+        # clear_sky_shortwave_irradiance(), but are required again later in shortwave_irradiance()
+        # for calculating the clear sky irradiance for the extended-grid stations)
 
         self.prepare_roi_coordinates()
 

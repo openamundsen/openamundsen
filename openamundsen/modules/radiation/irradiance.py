@@ -6,6 +6,7 @@ from openamundsen import (
     meteo,
     modules,
 )
+import xarray as xr
 
 
 def clear_sky_shortwave_irradiance(model):
@@ -32,6 +33,7 @@ def clear_sky_shortwave_irradiance(model):
         )
 
         if model.grid.extended_grid.available:
+            model.grid.extended_grid.shadows = shadows
             shadows = shadows[
                 model.grid.extended_grid.row_slice,
                 model.grid.extended_grid.col_slice,
@@ -64,47 +66,128 @@ def clear_sky_shortwave_irradiance(model):
     model.state.meteo.diff_in_clearsky[roi] = diff_irr[roi]
 
 
+def extended_grid_stations_clear_sky_shortwave_irradiance(model):
+    model.logger.debug('Calculating clear-sky shortwave irradiance for extended-grid stations')
+    roi = model.grid.roi
+    ext_grid = model.grid.extended_grid
+
+    ext_row_offset = ext_grid.row_offset
+    ext_col_offset = ext_grid.col_offset
+    station_rows_ext = model.meteo.row + ext_row_offset
+    station_cols_ext = model.meteo.col + ext_col_offset
+    # TODO this is the same in every time step, maybe add a "within_extended_grid_extent"
+    # variable to model.meteo
+    stations_within_ext_grid = (
+        (station_rows_ext >= 0)
+        & (station_cols_ext >= 0)
+        & (station_rows_ext < ext_grid.rows)
+        & (station_cols_ext < ext_grid.cols)
+    )
+
+    meteo_ds = (
+        model.meteo
+        .sel(station=stations_within_ext_grid & ~model.meteo.within_grid_extent)
+        .sel(time=model.date)
+    )
+    # Consider only stations with temperature and humidity measurements (required for calculating
+    # precipitable water)
+    meteo_ds = meteo_ds.dropna(dim='station', how='any', subset=['temp', 'rel_hum'])
+    clear_sky_rad = xr.DataArray(
+        np.full(meteo_ds.dims['station'], np.nan),
+        coords=meteo_ds.coords,
+        dims=meteo_ds.dims,
+    )
+
+    if meteo_ds.dims['station'] > 0:
+        extgrid_rows = (meteo_ds.row + ext_grid.row_offset).values
+        extgrid_cols = (meteo_ds.col + ext_grid.col_offset).values
+
+        # This is also calculated twice (here and in clear_sky_shortwave_irradiance() :/)
+        mean_surface_albedo = model.state.surface.albedo[roi].mean()
+        if np.isnan(mean_surface_albedo):
+            mean_surface_albedo = model.config.soil.albedo
+
+        extgrid_atmos_press = meteo.atmospheric_pressure(
+            ext_grid.dem[extgrid_rows, extgrid_cols],
+        )
+        extgrid_precipitable_water = meteo.precipitable_water(
+            meteo_ds.temp,
+            meteo.vapor_pressure(meteo_ds.temp, meteo_ds.rel_hum),
+        ).values
+        # (-> this works only for stations with temperature and humidity measurements)
+
+        extgrid_dir_irr, extgrid_diff_irr = _clear_sky_shortwave_irradiance(
+            model.sun_params['day_angle'],
+            model.sun_params['sun_vector'],
+            ext_grid.shadows[extgrid_rows, extgrid_cols],
+            ext_grid.dem[extgrid_rows, extgrid_cols],
+            ext_grid.svf[extgrid_rows, extgrid_cols],
+            ext_grid.normal_vec[:, extgrid_rows, extgrid_cols],
+            extgrid_atmos_press,
+            extgrid_precipitable_water,
+            mean_surface_albedo,
+            ozone_layer_thickness=model.config.meteo.radiation.ozone_layer_thickness,
+            atmospheric_visibility=model.config.meteo.radiation.atmospheric_visibility,
+            single_scattering_albedo=model.config.meteo.radiation.single_scattering_albedo,
+            clear_sky_albedo=model.config.meteo.radiation.clear_sky_albedo,
+        )
+        clear_sky_rad[:] = extgrid_dir_irr + extgrid_diff_irr
+
+    return clear_sky_rad
+
+
 def shortwave_irradiance(model):
     model.logger.debug('Calculating actual shortwave irradiance')
     cloud_config = model.config.meteo.interpolation.cloudiness
     roi = model.grid.roi
     m = model.state.meteo
+    ext_grid = model.grid.extended_grid
     method = cloud_config['method']
 
-    # Select stations within the grid extent and with shortwave radiation measurements
-    # for the current time step
-    ds_rad = (
-        model.meteo
-        .isel(station=model.meteo.within_grid_extent)
-        .sel(time=model.date)
-        .dropna('station', subset=['sw_in'])
-    )
-    num_rad_stations = len(ds_rad.station)
+    meteo_ds = model.meteo.sel(time=model.date)
+
+    if method == 'clear_sky_fraction':
+        # Select stations within the grid extent and with shortwave radiation measurements for the
+        # current time step
+        ds_rad = (
+            meteo_ds
+            .sel(station=model.meteo.within_grid_extent)
+            .dropna('station', subset=['sw_in'])
+        )
+        num_rad_stations = len(ds_rad.station)
 
     # Select stations with temperature and humidity measurements for the current time step
-    ds_temp_hum = (
-        model.meteo
-        .sel(time=model.date)
-        .dropna('station', how='any', subset=['temp', 'rel_hum'])
-    )
+    ds_temp_hum = meteo_ds.dropna('station', how='any', subset=['temp', 'rel_hum'])
     num_temp_hum_stations = len(ds_temp_hum.station)
 
     if method == 'clear_sky_fraction':
-        if not model.sun_params['sun_over_horizon']:
+        if model.sun_params['sun_over_horizon']:
+            if ext_grid.available:
+                extgrid_sw_in_clearsky = extended_grid_stations_clear_sky_shortwave_irradiance(
+                    model
+                )
+                rad_ds_extgrid = (
+                    meteo_ds
+                    .sel(station=extgrid_sw_in_clearsky.station)
+                    .dropna('station', subset=['sw_in'])
+                )
+                num_rad_stations += rad_ds_extgrid.dims['station']
+
+            if num_rad_stations == 0:
+                if cloud_config['allow_fallback'] and num_temp_hum_stations > 0:
+                    model.logger.debug(
+                        'No radiation measurements available, falling back to humidity-based '
+                        'cloudiness calculation'
+                    )
+                    method = 'humidity'
+                else:
+                    model.logger.debug(
+                        'No radiation measurements available, using cloudiness from previous time '
+                        'step'
+                    )
+                    method = 'constant'
+        else:
             method = cloud_config['clear_sky_fraction_night_method']
-        elif num_rad_stations == 0:
-            if cloud_config['allow_fallback'] and num_temp_hum_stations > 0:
-                model.logger.debug(
-                    'No radiation measurements available, falling back to humidity-based '
-                    'cloudiness calculation'
-                )
-                method = 'humidity'
-            else:
-                model.logger.debug(
-                    'No radiation measurements available, using cloudiness from previous time '
-                    'step'
-                )
-                method = 'constant'
 
     interpolate_cloud_factor = False
 
@@ -141,8 +224,16 @@ def shortwave_irradiance(model):
     elif method == 'clear_sky_fraction':
         cloud_factor_xs = ds_rad.x
         cloud_factor_ys = ds_rad.y
-        cloud_factors = ds_rad.sw_in.values / m.sw_in_clearsky[ds_rad.row, ds_rad.col]
+        cloud_factors = (
+            ds_rad.sw_in.values / m.sw_in_clearsky[ds_rad.row, ds_rad.col]
+        )
         interpolate_cloud_factor = True
+
+        if ext_grid.available:
+            extgrid_cloud_factors = rad_ds_extgrid.sw_in / extgrid_sw_in_clearsky
+            cloud_factor_xs = np.append(cloud_factor_xs, rad_ds_extgrid.x)
+            cloud_factor_ys = np.append(cloud_factor_ys, rad_ds_extgrid.y)
+            cloud_factors = np.append(cloud_factors, extgrid_cloud_factors)
 
     if interpolate_cloud_factor:
         cloud_factor_interpol = interpolation.idw(

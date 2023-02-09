@@ -602,6 +602,7 @@ class OpenAmundsen:
         self.grid.extended_grid.col_slice = slice(col_offset, col_offset + self.grid.cols)
         self.grid.extended_grid.dem = ext_dem
         self.grid.extended_grid.svf = ext_svf
+        self.grid.extended_grid.normal_vec = terrain.normal_vector(ext_dem, self.grid.resolution)
 
         return True
 
