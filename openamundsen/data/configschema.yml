@@ -416,7 +416,7 @@ meteo:
                 - constant
               default: humidity
 
-            allow_fallback:  # allow to fall back to calculate cloud fraction from humidity if no radiation measurements are available
+            allow_fallback:  # allow to fall back to calculate cloud fraction using other methods if the selected method is unavailable (e.g. due to missing measurements)
               type: boolean
               default: true
 

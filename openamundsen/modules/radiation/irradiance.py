@@ -172,22 +172,22 @@ def shortwave_irradiance(model):
                     .dropna('station', subset=['sw_in'])
                 )
                 num_rad_stations += rad_ds_extgrid.dims['station']
-
-            if num_rad_stations == 0:
-                if cloud_config['allow_fallback'] and num_temp_hum_stations > 0:
-                    model.logger.debug(
-                        'No radiation measurements available, falling back to humidity-based '
-                        'cloudiness calculation'
-                    )
-                    method = 'humidity'
-                else:
-                    model.logger.debug(
-                        'No radiation measurements available, using cloudiness from previous time '
-                        'step'
-                    )
-                    method = 'constant'
         else:
             method = cloud_config['clear_sky_fraction_night_method']
+
+    if cloud_config['allow_fallback']:
+        if method == 'clear_sky_fraction' and num_rad_stations == 0:
+            model.logger.debug(
+                'No radiation measurements available, trying humidity-based cloudiness calculation'
+            )
+            method = 'humidity'
+
+        if method == 'humidity' and num_temp_hum_stations == 0:
+            model.logger.debug(
+                'No temperature/humidity measurements available, using cloudiness from previous '
+                'time step'
+            )
+            method = 'constant'
 
     interpolate_cloud_factor = False
 
