@@ -2,8 +2,11 @@ from pathlib import Path
 
 import numpy as np
 import openamundsen as oa
+import openamundsen.errors as errors
+import pytest
 import rasterio
 import rasterio.windows
+import xarray as xr
 from numpy.testing import assert_allclose, assert_equal
 
 from .conftest import base_config
@@ -13,6 +16,7 @@ def base_cloudiness_config():
     config = base_config()
     config.start_date = '2019-10-05'
     config.end_date = '2019-10-10'
+    config.input_data.meteo.bounds = 'global'
     return config
 
 
@@ -98,10 +102,43 @@ def test_humidity():
     assert np.all(ds.sw_in.drop_sel(time=ds.sel(time=nan_pos).time).notnull())
 
 
+def test_prescribed(tmp_path):
+    config = base_cloudiness_config()
+    config.meteo.interpolation.cloudiness.method = 'clear_sky_fraction'
+    config.meteo.interpolation.cloudiness.allow_fallback = False
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    ds_ref = model.point_output.data
+
+    for station_id in ds_ref.indexes['point']:
+        ds = xr.load_dataset(f'{config.input_data.meteo.dir}/{station_id}.nc')
+        ds = ds.sel(time=ds_ref.time)
+        ds['cloud_cover'] = xr.DataArray(
+            ds_ref.cloud_factor.sel(point=station_id).values * 100,
+            coords=ds.coords,
+            dims=ds.dims,
+        )
+        ds = ds.drop_vars('sw_in', errors='ignore')
+        ds.to_netcdf(f'{tmp_path}/{station_id}.nc')
+
+    config.meteo.interpolation.cloudiness.method = 'prescribed'
+    model = oa.OpenAmundsen(config)
+    with pytest.raises(errors.MeteoDataError):
+        model.initialize()
+
+    config.input_data.meteo.dir = str(tmp_path)
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    ds = model.point_output.data
+    assert_allclose(ds_ref.cloud_factor, ds.cloud_factor, atol=0.05)
+    # (differences are (likely) due to interpolation from station positions to grid points)
+
+
 def test_outside_grid_data(tmp_path):
     config = base_cloudiness_config()
     config.meteo.interpolation.cloudiness.allow_fallback = False
-    # config.output_data.grids.variables = [{'var': 'meteo.sw_in'}]
     config.output_data.timeseries.points.append({
         'x': 638483,
         'y': 5190972,
@@ -137,7 +174,6 @@ def test_outside_grid_data(tmp_path):
                 dst_ds.write(src_ds.read(window=window))
 
     config.input_data.grids.dir = str(dst_dir)
-    config.input_data.meteo.bounds = 'global'
 
     config.meteo.interpolation.cloudiness.method = 'clear_sky_fraction'
     model = oa.OpenAmundsen(config)

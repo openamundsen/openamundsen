@@ -407,6 +407,7 @@ meteo:
               allowed:
                 - clear_sky_fraction
                 - humidity
+                - prescribed
               default: clear_sky_fraction
 
             clear_sky_fraction_night_method:

@@ -144,6 +144,14 @@ class OpenAmundsen:
             )
             meteo = forcing.combine_point_datasets([dummyds]).drop_isel(station=0)
 
+        if (
+            config.meteo.interpolation.cloudiness.method == 'prescribed'
+            and 'cloud_cover' not in meteo
+        ):
+            raise errors.MeteoDataError(
+                'Cloud cover data must be provided for cloudiness method "prescribed"'
+            )
+
         self.meteo = forcing.prepare_point_coordinates(meteo, self.grid, self.config.crs)
         oameteo.correct_station_precipitation(self)
 
