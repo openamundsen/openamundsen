@@ -40,7 +40,7 @@ def _clear_sky_shortwave_irradiance(
     svf : ndarray
         Sky view factor.
 
-    normal_vec : ndarray with dimensions (3, rows, cols)
+    normal_vec : ndarray with dimensions (3, *dem.shape)
         Unit vector perpendicular to the surface.
 
     atmos_press : ndarray
@@ -99,9 +99,9 @@ def _clear_sky_shortwave_irradiance(
     # unit vector normal to the surface and the unit vector in the direction
     # of the sun)
     aoi = (
-        sun_vec[0] * normal_vec[0, :, :] +
-        sun_vec[1] * (-normal_vec[1, :, :]) +
-        sun_vec[2] * normal_vec[2, :, :]
+        sun_vec[0] * normal_vec[0, :] +
+        sun_vec[1] * (-normal_vec[1, :]) +
+        sun_vec[2] * normal_vec[2, :]
     )
     aoi = aoi.clip(min=0)  # shadows due to steepness of the slope (sun "behind")
 
