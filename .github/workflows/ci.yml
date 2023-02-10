@@ -39,6 +39,7 @@ jobs:
 
       - name: Get the pip cache folder
         id: pip-cache
+        shell: bash # use bash instead of PowerShell on Windows
         run: |
           echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
