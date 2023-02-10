@@ -53,7 +53,7 @@ jobs:
       - name: Get the pip cache folder
         id: pip-cache
         run: |
-          echo "::set-output name=dir::$(pip cache dir)"
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
       - name: Set up caching for pip packages
         uses: actions/cache@v3
