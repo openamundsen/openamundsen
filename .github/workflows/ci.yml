@@ -37,19 +37,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Set up Miniconda
-        if: matrix.os == 'windows'
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
-      
-      - name: Install Rasterio
-        if: matrix.os == 'windows'
-        run: |
-          #conda install -y --channel=conda-forge rasterio
-          conda install -y --channel=conda-forge rasterio loguru munch netCDF4 numba numpy pandas pyproj setuptools_scm scipy ruamel.yaml xarray pooch pytest pytest-lazy-fixture pvlib-python dask
-
       - name: Get the pip cache folder
         id: pip-cache
         run: |
