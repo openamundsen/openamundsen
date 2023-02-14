@@ -25,12 +25,30 @@ def clear_sky_shortwave_irradiance(model):
         else:
             shadows_dem = model.state.base.dem
 
+        # Downsample DEM before calculating shadows if requested
+        shadows_downsampling_factor = model.config.meteo.radiation.shadows_downsampling_factor
+        if shadows_downsampling_factor > 1:
+            orig_shadows_shape = shadows_dem.shape
+            shadows_dem = shadows_dem[::shadows_downsampling_factor, ::shadows_downsampling_factor]
+
         shadows = modules.radiation.shadows(
             shadows_dem,
-            model.grid.resolution,
+            model.grid.resolution * shadows_downsampling_factor,
             model.sun_params['sun_vector'],
             num_sweeps=model.config.meteo.radiation.num_shadow_sweeps,
         )
+
+        # Upsample shadows array if necessary (by simple repetition of array elements)
+        if shadows_downsampling_factor > 1:
+            shadows = (
+                shadows
+                .repeat(shadows_downsampling_factor, axis=0)
+                .repeat(shadows_downsampling_factor, axis=1)
+            )
+            if shadows.shape[0] > orig_shadows_shape[0]:
+                shadows = shadows[:orig_shadows_shape[0], :]
+            if shadows.shape[1] > orig_shadows_shape[1]:
+                shadows = shadows[:, :orig_shadows_shape[1]]
 
         if model.grid.extended_grid.available:
             model.grid.extended_grid.shadows = shadows

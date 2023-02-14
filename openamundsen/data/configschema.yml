@@ -509,6 +509,10 @@ meteo:
         num_shadow_sweeps:
           type: integer
           default: 1
+        shadows_downsampling_factor: # can be set to a value > 1 to speed up shadows calculation by downsampling the DEM first and upsampling the calculated shadows array afterwards
+          type: integer
+          default: 1
+          min: 1
 
     # Measurement heights
     measurement_height:
