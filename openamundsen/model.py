@@ -467,7 +467,7 @@ class OpenAmundsen:
                 )
                 self.state.base.svf[:] = svf
                 self.logger.debug(f'Writing sky view factor file ({svf_file})')
-                fileio.write_raster_file(svf_file, svf, self.grid.transform)
+                fileio.write_raster_file(svf_file, svf, self.grid.transform, decimal_precision=3)
 
         if roi_file.exists():
             self.logger.info(f'Reading ROI ({roi_file})')
@@ -597,7 +597,7 @@ class OpenAmundsen:
                 logger=self.logger,
             )
             self.logger.debug(f'Writing extended sky view factor file ({extended_svf_file})')
-            fileio.write_raster_file(extended_svf_file, ext_svf, ext_transform)
+            fileio.write_raster_file(extended_svf_file, ext_svf, ext_transform, decimal_precision=3)
 
         row_offset = int(ext_offset_ul[0])
         col_offset = int(ext_offset_ul[1])
