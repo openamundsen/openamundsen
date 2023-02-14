@@ -256,7 +256,8 @@ def shortwave_irradiance(model):
         cloudiness_ds = meteo_ds.dropna('station', subset=['cloud_cover'])
         cloud_factor_xs = cloudiness_ds.x
         cloud_factor_ys = cloudiness_ds.y
-        cloud_factors = cloudiness_ds.cloud_cover / 100  # convert from % to 0-1
+        cloud_fractions = cloudiness_ds.cloud_cover / 100  # convert from % to 0-1
+        cloud_factors = meteo.cloud_factor_from_cloud_fraction(cloud_fractions)
         interpolate_cloud_factor = True
 
     if interpolate_cloud_factor:

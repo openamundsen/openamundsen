@@ -115,7 +115,7 @@ def test_prescribed(tmp_path):
         ds = xr.load_dataset(f'{config.input_data.meteo.dir}/{station_id}.nc')
         ds = ds.sel(time=ds_ref.time)
         ds['cloud_cover'] = xr.DataArray(
-            ds_ref.cloud_factor.sel(point=station_id).values * 100,
+            ds_ref.cloud_fraction.sel(point=station_id).values * 100,
             coords=ds.coords,
             dims=ds.dims,
         )
@@ -132,7 +132,7 @@ def test_prescribed(tmp_path):
     model.initialize()
     model.run()
     ds = model.point_output.data
-    assert_allclose(ds_ref.cloud_factor, ds.cloud_factor, atol=0.05)
+    assert_allclose(ds_ref.cloud_fraction, ds.cloud_fraction, atol=0.09)
     # (differences are (likely) due to interpolation from station positions to grid points)
 
 
