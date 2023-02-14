@@ -109,7 +109,21 @@ def test_dew_point_temperature():
     )
 
 
-def test_cloud_fraction():
+def test_cloud_factor_from_cloud_fraction():
+    cloud_fractions = np.linspace(0, 1, 100)
+    cloud_factors = meteo.cloud_factor_from_cloud_fraction(cloud_fractions)
+    assert cloud_factors.min() >= 0
+    assert cloud_factors.max() <= 1
+
+
+def test_cloud_fraction_from_cloud_factor():
+    cloud_fractions = np.linspace(0, 1, 100)
+    cloud_factors = meteo.cloud_factor_from_cloud_fraction(cloud_fractions)
+    cloud_fractions_inv = meteo.cloud_fraction_from_cloud_factor(cloud_factors)
+    assert_allclose(cloud_fractions, cloud_fractions_inv, atol=1e-6)
+
+
+def test_cloud_fraction_from_humidity():
     temps = [285, 277, 260.3, 268]
     rel_hums = [70, 0.1, 100, 33.77]
     elevs = [100, 500, 3000, 1400]

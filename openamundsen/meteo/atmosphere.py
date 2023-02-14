@@ -524,8 +524,10 @@ def cloud_fraction_from_cloud_factor(cloud_factor):
        summer. Journal of Geophysical Research, 102(D22), 25941–25954.
        https://doi.org/10.1029/97JD02083
     """
-    cloud_factor = np.asarray(cloud_factor)
-    cloud_fraction = -1.4059 * cloud_factor**2 + 0.4473 * cloud_factor + 0.997
+    a = -0.415
+    b = -0.233
+    c = 1.
+    cloud_fraction = (-b - np.sqrt(b**2 - 4 * a * (c - np.asarray(cloud_factor)))) / (2 * a)
     return cloud_fraction.clip(0, 1)
 
 
