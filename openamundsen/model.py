@@ -146,7 +146,7 @@ class OpenAmundsen:
 
         if (
             config.meteo.interpolation.cloudiness.method == 'prescribed'
-            and 'cloud_cover' not in meteo
+            and 'cloud_fraction' not in meteo
         ):
             raise errors.MeteoDataError(
                 'Cloud cover data must be provided for cloudiness method "prescribed"'

@@ -114,7 +114,7 @@ def test_prescribed(tmp_path):
     for station_id in ds_ref.indexes['point']:
         ds = xr.load_dataset(f'{config.input_data.meteo.dir}/{station_id}.nc')
         ds = ds.sel(time=ds_ref.time)
-        ds['cloud_cover'] = xr.DataArray(
+        ds['cloud_fraction'] = xr.DataArray(
             ds_ref.cloud_fraction.sel(point=station_id).values * 100,
             coords=ds.coords,
             dims=ds.dims,

@@ -137,6 +137,17 @@ def make_point_dataset(
 
                 data['precip'] *= dt
                 data['precip'].attrs['units'] = 'kg m-2'
+        elif var == 'cloud_fraction':
+            # Convert cloud cover fraction to percent if required: either if the units are
+            # explicitly set to "1" or if no units are set but the maximum cloud fraction value is
+            # <= 1. (As the cloud_fraction model variable has units "1" but for the forcing data
+            # units "%" are expected, this could happen easily.)
+            if (
+                data['cloud_fraction'].attrs.get('units') == '1'
+                or (len(data) > 10 and data['cloud_fraction'].max() <= 1)
+            ):
+                data['cloud_fraction'] *= 100
+                data['cloud_fraction'].attrs['units'] = '%'
 
         units = meta['units']
         if 'units' in data[var].attrs and data[var].units != units:

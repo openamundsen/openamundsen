@@ -253,10 +253,10 @@ def shortwave_irradiance(model):
             cloud_factor_ys = np.append(cloud_factor_ys, rad_ds_extgrid.y)
             cloud_factors = np.append(cloud_factors, extgrid_cloud_factors)
     elif method == 'prescribed':
-        cloudiness_ds = meteo_ds.dropna('station', subset=['cloud_cover'])
+        cloudiness_ds = meteo_ds.dropna('station', subset=['cloud_fraction'])
         cloud_factor_xs = cloudiness_ds.x
         cloud_factor_ys = cloudiness_ds.y
-        cloud_fractions = cloudiness_ds.cloud_cover / 100  # convert from % to 0-1
+        cloud_fractions = cloudiness_ds.cloud_fraction / 100  # convert from % to 0-1
         cloud_factors = meteo.cloud_factor_from_cloud_fraction(cloud_fractions)
         interpolate_cloud_factor = True
 

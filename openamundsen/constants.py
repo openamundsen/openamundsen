@@ -73,7 +73,7 @@ METEO_VAR_METADATA = {
         'standard_name': 'wind_from_direction',
         'units': 'degree',
     },
-    'cloud_cover': {
+    'cloud_fraction': {
         'standard_name': 'cloud_area_fraction',
         'units': '%',
     },
@@ -103,5 +103,5 @@ ALLOWED_METEO_VAR_RANGES = {
     'rel_hum': (0, 100),
     'sw_in': (0, None),
     'wind_speed': (0.1, None),
-    'cloud_cover': (0, 100),
+    'cloud_fraction': (0, 100),
 }
