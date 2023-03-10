@@ -143,8 +143,8 @@ output_data:
         append: # when using NetCDF output, append data instead of creating a full-size dataset beforehand
           type: boolean
           default: true
-        
-        compress_output:
+
+        compress_output: # compress netcdf output grids with zlib/compression level 1
           type: boolean
           default: false
 
