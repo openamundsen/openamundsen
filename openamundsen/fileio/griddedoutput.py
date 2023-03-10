@@ -125,6 +125,7 @@ class GriddedOutputManager:
         self.fields = fields
         self.format = config.format
         self.nc_file_created = False
+        self.compress_output = config.compress_output
         self.data = None
 
     def update(self):
@@ -464,6 +465,11 @@ class GriddedOutputManager:
             ds[time_var].encoding['dtype'] = np.float64
             if f'{time_var}_bounds' in ds:
                 ds[f'{time_var}_bounds'].encoding['dtype'] = np.float64
+
+        if self.compress_output:
+            for data_var in ds.data_vars:
+                ds[data_var].encoding["zlib"] = True
+                ds[data_var].encoding["complevel"] = 1
 
         return ds
 
