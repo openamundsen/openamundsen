@@ -144,7 +144,7 @@ output_data:
           type: boolean
           default: true
 
-        compress_output: # compress netcdf output grids with zlib/compression level 1
+        compress: # compress output grids with zlib/compression level 1
           type: boolean
           default: false
 
