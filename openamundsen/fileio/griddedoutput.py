@@ -239,6 +239,9 @@ class GriddedOutputManager:
                             'crs': self.model.grid.crs,
                         }
 
+                        if self.model.config.output_data.grids.compress:
+                            rio_meta['compress'] = 'lzw'
+
                     if field.agg is None:
                         date_str = f'{date:%Y-%m-%dT%H%M}'
                     else:
