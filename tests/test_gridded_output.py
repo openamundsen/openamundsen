@@ -331,3 +331,32 @@ def test_append(tmp_path):
     ds_append = xr.load_dataset(tmp_path / 'output_grids.nc')
 
     xr.testing.assert_identical(ds_no_append, ds_append)
+
+
+@pytest.mark.parametrize('fmt', ['netcdf', 'geotiff'])
+def test_compress(fmt, tmp_path):
+    config = base_config()
+    config.start_date = '2020-01-01 00:00'
+    config.end_date = '2020-01-01 03:00'
+    config.results_dir = tmp_path
+    grid_cfg = config.output_data.grids
+    grid_cfg.format = fmt
+    grid_cfg.variables = [
+        {'var': 'meteo.temp'},
+    ]
+
+    for compress in (False, True):
+        grid_cfg.compress = compress
+        model = oa.OpenAmundsen(config)
+        model.initialize()
+        model.run()
+
+        if fmt == 'netcdf':
+            with xr.open_dataset(tmp_path / 'output_grids.nc') as ds:
+                assert ds['temp'].encoding['zlib'] is compress
+        elif fmt == 'geotiff':
+            with rasterio.open(tmp_path / 'temp_2020-01-01T0000.tif') as ds:
+                if compress:
+                    assert ds.compression is not None
+                else:
+                    assert ds.compression is None
