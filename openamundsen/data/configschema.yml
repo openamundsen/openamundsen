@@ -144,6 +144,10 @@ output_data:
           type: boolean
           default: true
 
+        compress: # compress output grids
+          type: boolean
+          default: false
+
         variables:
           type: list
           default: []

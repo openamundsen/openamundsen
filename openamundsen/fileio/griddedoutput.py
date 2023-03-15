@@ -239,6 +239,9 @@ class GriddedOutputManager:
                             'crs': self.model.grid.crs,
                         }
 
+                        if self.model.config.output_data.grids.compress:
+                            rio_meta['compress'] = 'lzw'
+
                     if field.agg is None:
                         date_str = f'{date:%Y-%m-%dT%H%M}'
                     else:
@@ -464,6 +467,11 @@ class GriddedOutputManager:
             ds[time_var].encoding['dtype'] = np.float64
             if f'{time_var}_bounds' in ds:
                 ds[f'{time_var}_bounds'].encoding['dtype'] = np.float64
+
+        if self.model.config.output_data.grids.compress:
+            for data_var in ds.data_vars:
+                ds[data_var].encoding['zlib'] = True
+                ds[data_var].encoding['complevel'] = 1
 
         return ds
 
