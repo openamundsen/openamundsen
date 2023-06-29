@@ -284,7 +284,7 @@ class EvapotranspirationModel:
             # Ignore snow cover for water
             if is_water_body:
                 pos_snowfree = model.global_mask(pos[roi])
-                pos_snow = model.global_mask(~pos[roi])
+                pos_snow = np.full(pos_snowfree.shape, False)
 
             # Calculate crop ET under standard conditions
             if crop_coefficient_type == 'single':
