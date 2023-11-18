@@ -5,7 +5,7 @@ import numpy as np
 try:
     import matplotlib
     import matplotlib.pyplot as plt
-    matplotlib.use('Qt5Agg')
+    matplotlib.use('QtAgg')
     mpl_available = True
 except ImportError:
     mpl_available = False
@@ -30,7 +30,10 @@ class LiveView:
     """
     def __init__(self, config, state, roi):
         if not mpl_available:
-            raise ModuleNotFoundError('matplotlib and/or PyQt5 not available')
+            raise ModuleNotFoundError(
+                'matplotlib and a Qt binding (PyQt6/PySide6/PyQt5/PySide2) must be installed for '
+                'the live view functionality'
+            )
 
         self.config = config
         self.state = state
