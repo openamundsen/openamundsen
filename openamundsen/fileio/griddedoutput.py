@@ -180,15 +180,22 @@ class GriddedOutputManager:
         # Loop through all fields, update aggregations where necessary and write files at the
         # specified dates
         for field in self.fields:
+            dtype, fill_value = self._field_dtype_and_fill_value(field)
+
+            # Keep float values in float64 for calculating sums and averages, only cast to float32
+            # when writing
+            if np.issubdtype(dtype, np.floating):
+                dtype = np.float64
+
             if field.agg is not None:
                 if field.data is None:
                     meta = self.model.state.meta(field.var)
 
                     if meta.dim3 == 0:
-                        arr = np.full(self.model.grid.shape, np.nan)
+                        arr = np.full(self.model.grid.shape, fill_value, dtype=dtype)
                         arr[roi] = 0
                     else:
-                        arr = np.full((meta.dim3, *self.model.grid.shape), np.nan)
+                        arr = np.full((meta.dim3, *self.model.grid.shape), fill_value, dtype=dtype)
                         arr[:, roi] = 0
 
                     field.data = arr
@@ -408,20 +415,13 @@ class GriddedOutputManager:
 
             attrs['grid_mapping'] = 'crs'
 
-            # Assign output data type - float-like variables are written as float32, integer
-            # variables as int32 or float32 (the latter if agg == 'mean')
-            if (
-                np.issubdtype(self.model.state.meta(field.var).dtype, np.integer)
-                and field.agg != 'mean'
-            ):
-                dtype = np.int32
-            else:
-                dtype = np.float32
+            dtype, fill_value = self._field_dtype_and_fill_value(field)
+            attrs['_FillValue'] = fill_value
 
             if meta.dim3 == 0:  # 2-dimensional variable
                 data[field.output_name] = (
                     [field_time_var, 'y', 'x'],
-                    full((len(field.write_dates), len(y_coords), len(x_coords)), np.nan, dtype=dtype),
+                    full((len(field.write_dates), len(y_coords), len(x_coords)), fill_value, dtype=dtype),
                     attrs,
                 )
             else:  # 3-dimensional variable
@@ -441,7 +441,7 @@ class GriddedOutputManager:
                     [field_time_var, coord_name, 'y', 'x'],
                     full(
                         (len(field.write_dates), meta.dim3, len(y_coords), len(x_coords)),
-                        np.nan,
+                        fill_value,
                         dtype=dtype,
                     ),
                     attrs,
@@ -474,6 +474,34 @@ class GriddedOutputManager:
                 ds[data_var].encoding['complevel'] = 1
 
         return ds
+
+
+    def _field_dtype_and_fill_value(self, field: OutputField):
+        """
+        Return the dtype and fill value for a given output field.
+        Float-like variables are written as float32, integer variables are written as int32 or
+        float32 (the latter if agg == 'mean').
+
+        Parameters
+        ----------
+        field : OutputField
+            Field variable.
+
+        Returns
+        -------
+        A (dtype, fill_value) tuple.
+        """
+        if (
+            np.issubdtype(self.model.state.meta(field.var).dtype, np.integer)
+            and field.agg != 'mean'
+        ):
+            dtype = np.int32
+            fill_value = np.iinfo(dtype).min
+        else:
+            dtype = np.float32
+            fill_value = np.nan
+
+        return (dtype, fill_value)
 
 
 def _freq_write_dates(dates, out_freq, agg):

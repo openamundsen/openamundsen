@@ -264,8 +264,12 @@ class PointOutputManager:
 
             if np.issubdtype(meta.dtype, np.integer):
                 dtype = np.int32
+                fill_value = np.iinfo(dtype).min
             else:
                 dtype = np.float32
+                fill_value = np.nan
+
+            attrs['_FillValue'] = fill_value
 
             for attr in ('standard_name', 'long_name', 'units'):
                 attr_val = getattr(meta, attr)
@@ -275,7 +279,7 @@ class PointOutputManager:
             if meta.dim3 == 0:  # 2-dimensional variable
                 var_def = (
                     ['time', 'point'],
-                    np.full((len(dates), len(self.points)), np.nan, dtype=dtype),
+                    np.full((len(dates), len(self.points)), fill_value, dtype=dtype),
                     attrs,
                 )
             else:  # 3-dimensional variable
@@ -293,7 +297,7 @@ class PointOutputManager:
 
                 var_def = (
                     ['time', coord_name, 'point'],
-                    np.full((len(dates), meta.dim3, len(self.points)), np.nan, dtype=np.float32),
+                    np.full((len(dates), meta.dim3, len(self.points)), fill_value, dtype=dtype),
                     attrs,
                 )
 

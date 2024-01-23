@@ -24,7 +24,13 @@ def test_formats(fmt, tmp_path):
 
     if fmt in ('netcdf', 'memory'):
         if fmt == 'netcdf':
-            ds = xr.open_dataset(tmp_path / 'output_timeseries.nc')
+            # Set mask_and_scale=False because otherwise integer variables with a _FillValue are
+            # converted to float by xarray (see e.g. https://github.com/pydata/xarray/issues/1194),
+            # even when they do not actually contain any missing values.
+            ds = xr.open_dataset(
+                tmp_path / 'output_timeseries.nc',
+                mask_and_scale=False,
+            )
         elif fmt == 'memory':
             ds = model.point_output.data
 
