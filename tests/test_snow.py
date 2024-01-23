@@ -117,7 +117,7 @@ def test_depth(ds):
     with warnings.catch_warnings():
         warnings.filterwarnings(
             'ignore',
-            'invalid value encountered in true_divide',
+            'invalid value encountered in divide',
             RuntimeWarning,
         )
         density_calc = swe3d / thickness
