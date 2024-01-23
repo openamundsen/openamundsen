@@ -254,6 +254,21 @@ def interpolate_station_data(model):
             target_ys,
             target_zs,
         )
+
+        if model._has_wind_gusts:
+            data, xs, ys, zs = _param_station_data(model.meteo, 'wind_speed_gust', date)
+            model.state.meteo['wind_speed_gust'][roi] = interpolate_param(
+                'wind_speed',
+                model.date,
+                wind_config,
+                data,
+                xs,
+                ys,
+                zs,
+                target_xs,
+                target_ys,
+                target_zs,
+            )
     elif wind_config['method'] == 'liston':
         data, xs, ys, zs = _param_station_data(model.meteo, ['wind_speed', 'wind_dir'], date)
         wind_speeds = data[0, :]
@@ -278,6 +293,30 @@ def interpolate_station_data(model):
             *constants.ALLOWED_METEO_VAR_RANGES['wind_speed'],
         )
         model.state.meteo.wind_dir[roi] = wind_dir_corr
+
+        if model._has_wind_gusts:
+            data, xs, ys, zs = _param_station_data(model.meteo, ['wind_speed_gust', 'wind_dir'], date)
+            wind_speed_gusts = data[0, :]
+            wind_dirs = data[1, :]
+            wind_speed_gusts_corr, _ = _liston_wind_correction(
+                model.date,
+                wind_config,
+                wind_speed_gusts,
+                wind_dirs,
+                xs,
+                ys,
+                zs,
+                target_xs,
+                target_ys,
+                target_zs,
+                model.state.base.slope[roi],
+                model.state.base.aspect[roi],
+                model.state.base.scaled_curvature[roi],
+            )
+            model.state.meteo.wind_speed_gust[roi] = np.clip(
+                wind_speed_gusts_corr,
+                *constants.ALLOWED_METEO_VAR_RANGES['wind_speed_gust'],
+            )
     else:
         raise NotImplementedError(f'Unsupported method: {wind_config.method}')
 

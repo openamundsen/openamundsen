@@ -69,6 +69,10 @@ METEO_VAR_METADATA = {
         'standard_name': 'wind_speed',
         'units': 'm s-1',
     },
+    'wind_speed_gust': {
+        'standard_name': 'wind_speed_of_gust',
+        'units': 'm s-1',
+    },
     'wind_dir': {
         'standard_name': 'wind_from_direction',
         'units': 'degree',
@@ -87,6 +91,7 @@ NETCDF_VAR_MAPPINGS = {
     'rsds': 'sw_in',
     'wss': 'wind_speed',
     'wind_dir': 'wind_dir',
+    'wind_speed_gust': 'wind_speed_gust',
 }
 
 # Mappings of internal variable names to interpolation config keys (e.g.
@@ -103,5 +108,6 @@ ALLOWED_METEO_VAR_RANGES = {
     'rel_hum': (0, 100),
     'sw_in': (0, None),
     'wind_speed': (0.1, None),
+    'wind_speed_gust': (0.1, None),
     'cloud_fraction': (0, 100),
 }

@@ -383,6 +383,13 @@ def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
             **resample_kwargs,
         ).agg(pd.Series.sum, skipna=False)
 
+    # For wind gusts always take the maximum value
+    if 'wind_speed_gust' in df.columns:
+        df_res['wind_speed_gust'] = df['wind_speed_gust'].resample(
+            freq,
+            **resample_kwargs,
+        ).max()
+
     # Check if the desired frequency is a subset of the original frequency of the
     # data (e.g., resampling hourly to 3-hourly data is ok, but not hourly to
     # 1.5-hourly, or upsampling in general)

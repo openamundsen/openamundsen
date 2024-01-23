@@ -155,6 +155,8 @@ class OpenAmundsen:
         self.meteo = forcing.prepare_point_coordinates(meteo, self.grid, self.config.crs)
         oameteo.correct_station_precipitation(self)
 
+        self._has_wind_gusts = 'wind_speed_gust' in self.meteo
+
         # Extend ROI with the station positions
         if config.extend_roi_with_stations:
             pos_outside_roi_stations = self.meteo.within_grid_extent & ~self.meteo.within_roi
