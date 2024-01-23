@@ -241,10 +241,9 @@ def interpolate_station_data(model):
 
     wind_config = model.config['meteo']['interpolation']['wind']
     if wind_config['method'] == 'idw':
-        param = 'wind_speed'
-        data, xs, ys, zs = _param_station_data(model.meteo, param, date)
-        model.state.meteo[param][roi] = interpolate_param(
-            param,
+        data, xs, ys, zs = _param_station_data(model.meteo, 'wind_speed', date)
+        model.state.meteo['wind_speed'][roi] = interpolate_param(
+            'wind_speed',
             model.date,
             wind_config,
             data,
@@ -259,50 +258,26 @@ def interpolate_station_data(model):
         data, xs, ys, zs = _param_station_data(model.meteo, ['wind_speed', 'wind_dir'], date)
         wind_speeds = data[0, :]
         wind_dirs = data[1, :]
-        wind_us, wind_vs = meteo.wind_to_uv(wind_speeds, wind_dirs)
-        wind_u_roi = interpolate_param(
-            'wind_vec',
+        wind_speed_corr, wind_dir_corr = _liston_wind_correction(
             model.date,
             wind_config,
-            wind_us,
+            wind_speeds,
+            wind_dirs,
             xs,
             ys,
             zs,
             target_xs,
             target_ys,
             target_zs,
+            model.state.base.slope[roi],
+            model.state.base.aspect[roi],
+            model.state.base.scaled_curvature[roi],
         )
-        wind_v_roi = interpolate_param(
-            'wind_vec',
-            model.date,
-            wind_config,
-            wind_vs,
-            xs,
-            ys,
-            zs,
-            target_xs,
-            target_ys,
-            target_zs,
+        model.state.meteo.wind_speed[roi] = np.clip(
+            wind_speed_corr,
+            *constants.ALLOWED_METEO_VAR_RANGES['wind_speed'],
         )
-        wind_speed_roi, wind_dir_roi = meteo.wind_from_uv(wind_u_roi, wind_v_roi)
-        wind_dir_minus_aspect = np.deg2rad(wind_dir_roi - model.state.base.aspect[roi])
-        wind_slope = (  # slope in the direction of the wind (eq. (15))
-            np.deg2rad(model.state.base.slope[roi]) * np.cos(wind_dir_minus_aspect)
-        )
-        wind_slope_scaled = util.normalize_array(wind_slope, -0.5, 0.5)
-        wind_weighting_factor = (  # eq. (16)
-            1
-            + wind_config.slope_weight * wind_slope_scaled
-            + wind_config.curvature_weight * model.state.base.scaled_curvature[roi]
-        )
-        wind_dir_diverting_factor = (  # eq. (18)
-            -0.5 * wind_slope_scaled * np.sin(-2 * wind_dir_minus_aspect)
-        )
-        wind_speed_corr = wind_speed_roi * wind_weighting_factor
-        wind_min_range, wind_max_range = constants.ALLOWED_METEO_VAR_RANGES['wind_speed']
-        wind_speed_corr = np.clip(wind_speed_corr, wind_min_range, wind_max_range)
-        model.state.meteo.wind_speed[roi] = wind_speed_corr
-        model.state.meteo.wind_dir[roi] = (wind_dir_roi + wind_dir_diverting_factor) % 360
+        model.state.meteo.wind_dir[roi] = wind_dir_corr
     else:
         raise NotImplementedError(f'Unsupported method: {wind_config.method}')
 
@@ -413,3 +388,63 @@ def interpolate_param(
         data_interpol = np.clip(data_interpol, min_range, max_range)
 
     return data_interpol
+
+
+def _liston_wind_correction(
+    date,
+    wind_config,
+    wind_speeds,
+    wind_dirs,
+    xs,
+    ys,
+    zs,
+    target_xs,
+    target_ys,
+    target_zs,
+    target_slopes,
+    target_aspects,
+    target_scaled_curvatures,
+):
+    wind_us, wind_vs = meteo.wind_to_uv(wind_speeds, wind_dirs)
+    wind_u_roi = interpolate_param(
+        'wind_vec',
+        date,
+        wind_config,
+        wind_us,
+        xs,
+        ys,
+        zs,
+        target_xs,
+        target_ys,
+        target_zs,
+    )
+    wind_v_roi = interpolate_param(
+        'wind_vec',
+        date,
+        wind_config,
+        wind_vs,
+        xs,
+        ys,
+        zs,
+        target_xs,
+        target_ys,
+        target_zs,
+    )
+    wind_speed_roi, wind_dir_roi = meteo.wind_from_uv(wind_u_roi, wind_v_roi)
+    wind_dir_minus_aspect = np.deg2rad(wind_dir_roi - target_aspects)
+    wind_slope = (  # slope in the direction of the wind (eq. (15))
+        np.deg2rad(target_slopes) * np.cos(wind_dir_minus_aspect)
+    )
+    wind_slope_scaled = util.normalize_array(wind_slope, -0.5, 0.5)
+    wind_weighting_factor = (  # eq. (16)
+        1
+        + wind_config.slope_weight * wind_slope_scaled
+        + wind_config.curvature_weight * target_scaled_curvatures
+    )
+    wind_dir_diverting_factor = (  # eq. (18)
+        -0.5 * wind_slope_scaled * np.sin(-2 * wind_dir_minus_aspect)
+    )
+    wind_speed_corr = wind_speed_roi * wind_weighting_factor
+    wind_dir_corr = (wind_dir_roi + wind_dir_diverting_factor) % 360
+
+    return wind_speed_corr, wind_dir_corr
