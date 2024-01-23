@@ -632,3 +632,42 @@ def test_resample_with_non_matching_start_date(aggregate, tmp_path):
     model = oa.OpenAmundsen(config)
     model.initialize()
     assert model.meteo.indexes['time'].equals(model.dates)
+
+
+def test_filters(tmp_path):
+    config = base_config()
+    config.start_date = '2015-07-28'
+    config.end_date = '2020-12-31'
+    config.timestep = 'H'
+    default_filters = config.input_data.meteo.filters
+
+    config.input_data.meteo.filters = []
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    ds_unfiltered = model.meteo
+
+    config.input_data.meteo.filters = default_filters
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    xr.testing.assert_identical(ds_unfiltered, model.meteo)
+
+    ds_unfiltered['temp'].loc['bellavista', '2015-08-01 12:00':'2015-08-02 23:00'] = 15
+    ds_unfiltered['rel_hum'].loc['bellavista', '2015-08-03 12:00'] = 100
+    ds_unfiltered['rel_hum'].loc['bellavista', '2015-08-03 13:00'] = 100.1
+    ds_unfiltered['precip'].loc['bellavista', '2015-08-03 12:00'] = -10
+    ds_unfiltered['precip'].loc['bellavista', '2015-08-03 13:00'] = 10000
+
+    meteo_to_netcdf(ds_unfiltered, tmp_path)
+    config.input_data.meteo.dir = str(tmp_path)
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    ds_filtered = model.meteo
+    assert all(np.isnan(ds_filtered['temp'].loc['bellavista', '2015-08-01 12:00':'2015-08-02 23:00']))
+    assert ds_filtered['rel_hum'].loc['bellavista', '2015-08-03 12:00'] == 100
+    assert np.isnan(ds_filtered['rel_hum'].loc['bellavista', '2015-08-03 13:00'])
+    assert np.isnan(ds_filtered['precip'].loc['bellavista', '2015-08-03 12:00'])
+    assert ds_filtered['precip'].loc['bellavista', '2015-08-03 13:00'] == 10000
+    xr.testing.assert_identical(
+        ds_unfiltered.sel(time=slice('2015-08-04 00:00', None)),
+        ds_filtered.sel(time=slice('2015-08-04 00:00', None)),
+    )

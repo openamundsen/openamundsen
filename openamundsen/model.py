@@ -651,6 +651,7 @@ class OpenAmundsen:
             bounds=(x_min, y_min, x_max, y_max),
             exclude=self.config.input_data.meteo.exclude,
             include=self.config.input_data.meteo.include,
+            filters=self.config.input_data.meteo.filters,
             freq=self.config['timestep'],
             aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
             logger=self.logger,

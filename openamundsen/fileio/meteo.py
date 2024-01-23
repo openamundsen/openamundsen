@@ -1,8 +1,11 @@
 import loguru
+import numpy as np
 from openamundsen import constants, errors, forcing, meteo as oameteo, util
 import pandas as pd
 from pathlib import Path
 import xarray as xr
+
+from typing import List, Dict
 
 
 def read_meteo_data(
@@ -15,6 +18,7 @@ def read_meteo_data(
     bounds=None,
     exclude=None,
     include=None,
+    filters=None,
     freq='H',
     aggregate=False,
     logger=None,
@@ -108,6 +112,9 @@ def read_meteo_data(
                 meta.loc[station_id, 'alt'],
                 grid_crs,
             )
+
+        if filters is not None:
+            ds = _apply_filters(ds, filters)
 
         ds = _slice_and_resample_dataset(
             ds,
@@ -229,6 +236,38 @@ def read_csv_meteo_file(filename, station_id, station_name, x, y, alt, crs):
     )
 
     return ds
+
+
+def _apply_filters(ds: xr.Dataset, filters: List[Dict]) -> xr.Dataset:
+    if len(filters) == 0:
+        return ds
+
+    ds = ds.copy()
+
+    for filter_dict in filters:
+        var = filter_dict['var']
+        if var in ds:
+            ds[var] = _apply_filter(ds[var], filter_dict)
+
+    return ds
+
+
+def _apply_filter(data: xr.DataArray, f: Dict) -> xr.DataArray:
+    data = data.copy(deep=True)
+
+    if f['filter'] == 'range':
+        min_range = f.get('min', np.nan)
+        max_range = f.get('max', np.nan)
+
+        if np.isfinite(min_range):
+            data[data < min_range] = np.nan
+
+        if np.isfinite(max_range):
+            data[data > max_range] = np.nan
+    else:
+        raise NotImplementedError
+    
+    return data
 
 
 def _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=False):

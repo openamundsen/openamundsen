@@ -121,6 +121,53 @@ input_data:
           type: boolean
           default: false
 
+        filters:
+          type: list
+          default:
+            - var: temp
+              filter: range
+              min: 200
+              max: 330
+            - var: rel_hum
+              filter: range
+              min: 0
+              max: 100
+            - var: precip
+              filter: range
+              min: 0
+            - var: wind_speed
+              filter: range
+              min: 0
+              max: 50
+            - var: sw_in
+              filter: range
+              min: 0
+              max: 1500
+          schema:
+            type: dict
+            oneof:
+              - type: dict
+                schema:
+                  var:
+                    type: string
+                    required: true
+                    allowed:
+                      - temp
+                      - rel_hum
+                      - precip
+                      - wind_speed
+                      - sw_in
+                      - cloud_fraction
+                  filter:
+                    type: string
+                    required: true
+                    allowed:
+                      - range
+                  min:
+                    type: number
+                  max:
+                    type: number
+
 # Parameters for gridded output data (fields)
 output_data:
   type: dict
