@@ -111,12 +111,12 @@ def extended_grid_stations_clear_sky_shortwave_irradiance(model):
     # precipitable water)
     meteo_ds = meteo_ds.dropna(dim='station', how='any', subset=['temp', 'rel_hum'])
     clear_sky_rad = xr.DataArray(
-        np.full(meteo_ds.dims['station'], np.nan),
+        np.full(meteo_ds.sizes['station'], np.nan),
         coords=meteo_ds.coords,
         dims=meteo_ds.dims,
     )
 
-    if meteo_ds.dims['station'] > 0:
+    if meteo_ds.sizes['station'] > 0:
         extgrid_rows = (meteo_ds.row + ext_grid.row_offset).values
         extgrid_cols = (meteo_ds.col + ext_grid.col_offset).values
 
@@ -189,7 +189,7 @@ def shortwave_irradiance(model):
                     .sel(station=extgrid_sw_in_clearsky.station)
                     .dropna('station', subset=['sw_in'])
                 )
-                num_rad_stations += rad_ds_extgrid.dims['station']
+                num_rad_stations += rad_ds_extgrid.sizes['station']
         else:
             method = cloud_config['clear_sky_fraction_night_method']
 

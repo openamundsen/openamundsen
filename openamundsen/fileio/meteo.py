@@ -117,7 +117,7 @@ def read_meteo_data(
             aggregate=aggregate,
         )
 
-        if ds.dims['time'] == 0:
+        if ds.sizes['time'] == 0:
             logger.warning('File contains no meteo data for the specified period')
         else:
             datasets.append(ds)
@@ -264,7 +264,7 @@ def _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=False)
     inferred_freq = ds.time.to_index().inferred_freq
     td_1d = pd.Timedelta('1d')
 
-    if inferred_freq is None and ds.dims['time'] > 2:
+    if inferred_freq is None and ds.sizes['time'] > 2:
         # ("> 2" because inferring the frequency requires at least 3 points, so for shorter
         # time series inferred_freq is always None)
         raise errors.MeteoDataError('File contains missing records or non-uniform timesteps')
@@ -321,7 +321,7 @@ def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
     else:
         raise errors.MeteoDataError('Resampling to frequencies > 1 day is not supported')
 
-    if ds.dims['time'] == 0:
+    if ds.sizes['time'] == 0:
         # Nothing to resample
         return ds
 
