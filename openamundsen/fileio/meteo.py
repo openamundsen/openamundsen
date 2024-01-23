@@ -209,18 +209,8 @@ def read_csv_meteo_file(filename, station_id, station_name, x, y, alt, crs):
     ds : Dataset
         Station data.
     """
-    param_mappings = {
-        'temp': 'temp',
-        'precip': 'precip',
-        'rel_hum': 'rel_hum',
-        'sw_in': 'sw_in',
-        'wind_speed': 'wind_speed',
-    }
-
     lon, lat = util.transform_coords(x, y, crs, constants.CRS_WGS84)
-
     df = pd.read_csv(filename, parse_dates=True, index_col=0)
-    df = df.rename(columns=param_mappings)
 
     if 'precip' in df.columns:
         pass
