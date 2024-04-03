@@ -66,7 +66,7 @@ class OpenAmundsen:
             conf.SNOW_MANAGEMENT_AVAILABLE and config.snow_management.enabled
         )
 
-        self._initialize_logger()
+        self.configure_logger()
 
         self._prepare_time_steps()
         self._initialize_grid()
@@ -330,16 +330,20 @@ class OpenAmundsen:
         if self._require_evapotranspiration:
             self.evapotranspiration.evapotranspiration()
 
-    def _initialize_logger(self):
+    def configure_logger(self):
         """
-        Initialize the logger for the model instance.
+        Configure the logger.
         """
+        # Remove all handlers and re-add default handler, filtering out openAMUNDSEN messages
         loguru.logger.remove()
-        logger = copy.deepcopy(loguru.logger)
+        loguru.logger.add(sys.stderr, filter=lambda record: not record['name'].startswith('openamundsen.'))
+
+        # Add handler for openAMUNDSEN messages
         log_format = ('<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | ' +
                       '<level>{message}</level>')
-        logger.add(sys.stderr, format=log_format, filter='openamundsen', level=self.config.log_level)
-        self.logger = logger
+        loguru.logger.add(sys.stderr, format=log_format, filter='openamundsen', level=self.config.log_level)
+
+        self.logger = loguru.logger
 
     def _initialize_grid(self):
         """
