@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from loguru import logger
 import netCDF4
 import numpy as np
 from openamundsen import constants, errors, fileio, util
@@ -104,8 +105,8 @@ class GriddedOutputManager:
                 & (write_dates <= model.dates[-1])
             ]
             if len(write_dates) == 0:
-                model.logger.debug(f'Discarding grid output variable {field_cfg["var"]}'
-                                   ' (nothing to be written)')
+                logger.debug(f'Discarding grid output variable {field_cfg["var"]}'
+                             ' (nothing to be written)')
                 continue
 
             if output_name is None:
@@ -137,7 +138,7 @@ class GriddedOutputManager:
         if len(self.fields) == 0:
             return
 
-        self.model.logger.debug('Updating field outputs')
+        logger.debug('Updating field outputs')
 
         date = self.model.date
         roi = self.model.grid.roi
@@ -264,7 +265,7 @@ class GriddedOutputManager:
 
                     if data.ndim == 2:
                         filename = self.model.config.results_dir / f'{field.output_name}_{date_str}.{ext}'
-                        self.model.logger.debug(f'Writing field {field.var} to {filename}')
+                        logger.debug(f'Writing field {field.var} to {filename}')
                         fileio.write_raster_file(
                             filename,
                             data,
@@ -278,7 +279,7 @@ class GriddedOutputManager:
                                 self.model.config.results_dir
                                 / f'{field.output_name}_{layer_num}_{date_str}.{ext}'
                             )
-                            self.model.logger.debug(f'Writing field {field.var} (layer {layer_num})'
+                            logger.debug(f'Writing field {field.var} (layer {layer_num})'
                                                     ' to {filename}')
                             fileio.write_raster_file(
                                 filename,

@@ -1,4 +1,4 @@
-import loguru
+from loguru import logger
 import numpy as np
 from openamundsen import constants, errors, forcing, meteo as oameteo, util
 import pandas as pd
@@ -21,7 +21,6 @@ def read_meteo_data(
     filters=None,
     freq='H',
     aggregate=False,
-    logger=None,
 ):
     """
     Read all available stations in NetCDF or CSV format for a given period.
@@ -73,17 +72,11 @@ def read_meteo_data(
         Aggregate data when downsampling to a lower frequency or take
         instantaneous values.
 
-    logger : logger, default None
-        Logger to use for status messages.
-
     Returns
     -------
     ds : Dataset
         Station data.
     """
-    if logger is None:
-        logger = loguru.logger
-
     meteo_data_dir = Path(meteo_data_dir)
 
     meta = _read_meteo_metadata(meteo_format, meteo_data_dir, meteo_crs, grid_crs)

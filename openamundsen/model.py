@@ -1,5 +1,5 @@
 import copy
-import loguru
+from loguru import logger
 from openamundsen import (
     conf,
     constants,
@@ -40,7 +40,6 @@ class OpenAmundsen:
 
     def __init__(self, config):
         self.config = conf.parse_config(config)
-        self.logger = None
         self.state = None
         self.dates = None
         self.date = None
@@ -177,7 +176,7 @@ class OpenAmundsen:
         self._initialize_state_variables()
 
         if self.config.liveview.enabled:
-            self.logger.info('Creating live view window')
+            logger.info('Creating live view window')
             from openamundsen import liveview
             lv = liveview.LiveView(self.config.liveview, self.state, self.grid.roi)
             lv.create_window()
@@ -188,14 +187,14 @@ class OpenAmundsen:
         Start the model run. Before calling this method, the model must be
         properly initialized by calling `initialize()`.
         """
-        self.logger.info('Starting model run')
+        logger.info('Starting model run')
         start_time = time.time()
 
         for _ in range(len(self.dates)):
             self.run_single()
 
         time_diff = pd.Timedelta(seconds=(time.time() - start_time))
-        self.logger.success('Model run finished. Runtime: ' + str(time_diff))
+        logger.success('Model run finished. Runtime: ' + str(time_diff))
 
     def run_single(self):
         """
@@ -211,7 +210,7 @@ class OpenAmundsen:
 
         self.date = self.dates[self.date_idx]
 
-        self.logger.info(f'Processing time step {self.date:%Y-%m-%d %H:%M}')
+        logger.info(f'Processing time step {self.date:%Y-%m-%d %H:%M}')
 
         if self.config.reset_state_variables:
             self.state.reset()
@@ -228,7 +227,7 @@ class OpenAmundsen:
         self.gridded_output.update()
 
         if self.config.liveview.enabled:
-            self.logger.debug('Updating live view window')
+            logger.debug('Updating live view window')
             self.liveview.update(self.date)
 
     def global_mask(self, mask, global_mask=None, global_idxs=None):
@@ -335,15 +334,13 @@ class OpenAmundsen:
         Configure the logger.
         """
         # Remove all handlers and re-add default handler, filtering out openAMUNDSEN messages
-        loguru.logger.remove()
-        loguru.logger.add(sys.stderr, filter=lambda record: not record['name'].startswith('openamundsen.'))
+        logger.remove()
+        logger.add(sys.stderr, filter=lambda record: not record['name'].startswith('openamundsen.'))
 
         # Add handler for openAMUNDSEN messages
         log_format = ('<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | ' +
                       '<level>{message}</level>')
-        loguru.logger.add(sys.stderr, format=log_format, filter='openamundsen', level=self.config.log_level)
-
-        self.logger = loguru.logger
+        logger.add(sys.stderr, format=log_format, filter='openamundsen', level=self.config.log_level)
 
     def _initialize_grid(self):
         """
@@ -351,11 +348,11 @@ class OpenAmundsen:
         parameters) for the OpenAmundsen instance by reading the DEM file associated to the
         model run.
         """
-        self.logger.info('Initializing model grid')
+        logger.info('Initializing model grid')
 
         dem_file = util.raster_filename('dem', self.config)
         meta = fileio.read_raster_metadata(dem_file, crs=self.config.crs)
-        self.logger.info(f'Grid has dimensions {meta["rows"]}x{meta["cols"]}')
+        logger.info(f'Grid has dimensions {meta["rows"]}x{meta["cols"]}')
 
         grid = util.ModelGrid(meta)
         grid.prepare_coordinates()
@@ -402,7 +399,7 @@ class OpenAmundsen:
         self.gridded_output = fileio.GriddedOutputManager(self)
 
     def _calculate_terrain_parameters(self):
-        self.logger.info('Calculating terrain parameters')
+        logger.info('Calculating terrain parameters')
         slope, aspect = terrain.slope_aspect(self.state.base.dem, self.grid.resolution)
         normal_vec = terrain.normal_vector(self.state.base.dem, self.grid.resolution)
         self.state.base.slope[:] = slope
@@ -445,7 +442,7 @@ class OpenAmundsen:
             ]
         else:
             if dem_file.exists():
-                self.logger.info(f'Reading DEM ({dem_file})')
+                logger.info(f'Reading DEM ({dem_file})')
                 self.state.base.dem[:] = fileio.read_raster_file(
                     dem_file,
                     check_meta=self.grid,
@@ -456,7 +453,7 @@ class OpenAmundsen:
                 raise FileNotFoundError(f'DEM file not found: {dem_file}')
 
             if svf_file.exists():
-                self.logger.info(f'Reading sky view factor ({svf_file})')
+                logger.info(f'Reading sky view factor ({svf_file})')
                 self.state.base.svf[:] = fileio.read_raster_file(
                     svf_file,
                     check_meta=self.grid,
@@ -464,19 +461,18 @@ class OpenAmundsen:
                     dtype=float,
                 )
             else:
-                self.logger.info('Calculating sky view factor')
+                logger.info('Calculating sky view factor')
                 svf = terrain.sky_view_factor(
                     self.state.base.dem,
                     self.grid.resolution,
                     num_sweeps=self.config.meteo.radiation.num_shadow_sweeps,
-                    logger=self.logger,
                 )
                 self.state.base.svf[:] = svf
-                self.logger.debug(f'Writing sky view factor file ({svf_file})')
+                logger.debug(f'Writing sky view factor file ({svf_file})')
                 fileio.write_raster_file(svf_file, svf, self.grid.transform, decimal_precision=3)
 
         if roi_file.exists():
-            self.logger.info(f'Reading ROI ({roi_file})')
+            logger.info(f'Reading ROI ({roi_file})')
             self.grid.roi[:] = fileio.read_raster_file(
                 roi_file,
                 check_meta=self.grid,
@@ -484,12 +480,12 @@ class OpenAmundsen:
                 dtype=bool,
             )
         else:
-            self.logger.debug('No ROI file available, setting ROI to entire grid area')
+            logger.debug('No ROI file available, setting ROI to entire grid area')
             self.grid.roi[:] = True
 
         dem_nan_pos = np.isnan(self.state.base.dem) & self.grid.roi
         if np.any(dem_nan_pos):
-            self.logger.debug(f'Excluding {dem_nan_pos.sum()} pixels where DEM is NaN '
+            logger.debug(f'Excluding {dem_nan_pos.sum()} pixels where DEM is NaN '
                               'from the ROI')
             self.grid.roi[dem_nan_pos] = False
 
@@ -501,7 +497,7 @@ class OpenAmundsen:
                 else:
                     srf_file = util.raster_filename('srf', self.config)
 
-                self.logger.info(f'Reading snow redistribution factor ({srf_file})')
+                logger.info(f'Reading snow redistribution factor ({srf_file})')
                 self.state.base.srf[:] = fileio.read_raster_file(
                     srf_file,
                     check_meta=self.grid,
@@ -515,7 +511,7 @@ class OpenAmundsen:
             land_cover_file = util.raster_filename('lc', self.config)
 
             if land_cover_file.exists():
-                self.logger.info(f'Reading land cover ({land_cover_file})')
+                logger.info(f'Reading land cover ({land_cover_file})')
                 self.state.land_cover.land_cover[:] = fileio.read_raster_file(
                     land_cover_file,
                     check_meta=self.grid,
@@ -530,7 +526,7 @@ class OpenAmundsen:
             soil_texture_file = util.raster_filename('soil', self.config)
 
             if soil_texture_file.exists():
-                self.logger.info(f'Reading soil texture ({soil_texture_file})')
+                logger.info(f'Reading soil texture ({soil_texture_file})')
                 self.state.evapotranspiration.soil_texture[:] = fileio.read_raster_file(
                     soil_texture_file,
                     check_meta=self.grid,
@@ -552,7 +548,7 @@ class OpenAmundsen:
         if not extended_dem_file.exists():
             return False
 
-        self.logger.info(f'Reading extended DEM ({extended_dem_file})')
+        logger.info(f'Reading extended DEM ({extended_dem_file})')
         ext_meta = fileio.read_raster_metadata(extended_dem_file, crs=self.config.crs)
         ext_dem = fileio.read_raster_file(
             extended_dem_file,
@@ -595,14 +591,13 @@ class OpenAmundsen:
             if ext_svf.shape != ext_dem.shape:
                 raise errors.RasterFileError('Extended DEM and SVF have differing dimensions')
         else:
-            self.logger.info('Calculating extended sky view factor')
+            logger.info('Calculating extended sky view factor')
             ext_svf = terrain.sky_view_factor(
                 ext_dem,
                 self.grid.resolution,
                 num_sweeps=self.config.meteo.radiation.num_shadow_sweeps,
-                logger=self.logger,
             )
-            self.logger.debug(f'Writing extended sky view factor file ({extended_svf_file})')
+            logger.debug(f'Writing extended sky view factor file ({extended_svf_file})')
             fileio.write_raster_file(extended_svf_file, ext_svf, ext_transform, decimal_precision=3)
 
         row_offset = int(ext_offset_ul[0])
@@ -660,7 +655,6 @@ class OpenAmundsen:
             filters=self.config.input_data.meteo.filters,
             freq=self.config['timestep'],
             aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
-            logger=self.logger,
         )
 
         return ds
@@ -669,7 +663,7 @@ class OpenAmundsen:
         """
         Calculate derived meteorological variables from the interpolated fields.
         """
-        self.logger.debug('Calculating derived meteorological variables')
+        logger.debug('Calculating derived meteorological variables')
 
         m = self.state.meteo
         roi = self.grid.roi

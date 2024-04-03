@@ -1,3 +1,4 @@
+from loguru import logger
 import numpy as np
 from openamundsen import constants, interpolation, meteo, util
 
@@ -192,7 +193,7 @@ def interpolate_station_data(model):
     model : OpenAmundsen
         openAMUNDSEN model instance.
     """
-    model.logger.debug('Interpolating station data')
+    logger.debug('Interpolating station data')
 
     date = model.date
     roi = model.grid.roi

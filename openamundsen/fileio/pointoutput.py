@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from loguru import logger
 import numpy as np
 from openamundsen import constants, errors, util
 import pandas as pd
@@ -222,7 +223,7 @@ class PointOutputManager:
 
             # Check if point is within the ROI (if not, still allow it but raise a warning)
             if not model.grid.roi[row, col]:
-                model.logger.warning(f'Output point is outside of the ROI: {dict(point)}')
+                logger.warning(f'Output point is outside of the ROI: {dict(point)}')
 
             points.append(OutputPoint(
                 name=point_name,
@@ -352,7 +353,7 @@ class PointOutputManager:
         Update the point output data for the current time step, i.e., write the
         output variable values for all point locations to the internal dataset.
         """
-        self.model.logger.debug('Updating point outputs')
+        logger.debug('Updating point outputs')
 
         if self.data is None:
             self.data = self._create_dataset(self._current_chunk_dates())
@@ -382,7 +383,7 @@ class PointOutputManager:
         # If we are at the first write date, simple write the file (i.e. overwrite possibly
         # existing files), otherwise merge the already written dataset with the in-memory one.
         if self.format != 'memory' and date == ds.indexes['time'][-1]:
-            self.model.logger.debug('Writing point outputs')
+            logger.debug('Writing point outputs')
 
             if self.format == 'netcdf':
                 filename = self.model.config.results_dir / 'output_timeseries.nc'

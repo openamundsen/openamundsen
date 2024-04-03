@@ -1,3 +1,4 @@
+from loguru import logger
 from openamundsen import modules
 import numpy as np
 
@@ -28,7 +29,7 @@ class LandCover:
             try:
                 lcc_params = model.config['land_cover']['classes'][lcc]
             except KeyError:
-                model.logger.warning(f'Unknown land cover class: {lcc}')
+                logger.warning(f'Unknown land cover class: {lcc}')
                 continue
 
             self.class_pixels[lcc] = (s.land_cover.land_cover == lcc) & roi
@@ -43,7 +44,7 @@ class LandCover:
                 ):
                     self.lai_classes.append(lcc)
                 else:
-                    model.logger.warning(f'Incomplete LAI parameters for land cover class {lcc}')
+                    logger.warning(f'Incomplete LAI parameters for land cover class {lcc}')
 
     def lai(self):
         model = self.model

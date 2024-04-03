@@ -1,3 +1,4 @@
+from loguru import logger
 from numba import njit, prange
 import numpy as np
 from openamundsen.modules.radiation import shadows
@@ -137,7 +138,6 @@ def sky_view_factor(
         azim_step=10,
         elev_step=1,
         num_sweeps=1,
-        logger=None,
 ):
     """
     Calculate the sky view factor for a DEM after Corripio (2003).
@@ -168,9 +168,6 @@ def sky_view_factor(
     num_sweeps : int, default 1
         Number of sweeps in each direction when calculating shadows.
 
-    logger : Logger, optional
-        Logger instance for printing status messages.
-
     Returns
     -------
     svf : ndarray
@@ -200,9 +197,8 @@ def sky_view_factor(
     elev_angles = np.arange(min_elev_angle, max_elev_angle + 1)[::-1]
 
     for azim_num, azim_angle in enumerate(azim_angles):
-        if logger is not None:
-            logger.info(f'Calculating sky view factor for azimuth={azim_angle}° '
-                        f'({azim_num + 1}/{len(azim_angles)})')
+        logger.info(f'Calculating sky view factor for azimuth={azim_angle}° '
+                    f'({azim_num + 1}/{len(azim_angles)})')
 
         azim_rad = np.deg2rad(azim_angle)
         svf_cur = np.full(dem.shape, max_elev_angle)
