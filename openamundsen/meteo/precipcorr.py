@@ -1,3 +1,4 @@
+from loguru import logger
 import numpy as np
 from openamundsen import constants, interpolation, meteo
 
@@ -122,7 +123,7 @@ def correct_station_precipitation(model):
         ):
             continue
 
-        model.logger.info(f'Correcting station precipitation with method: {method}')
+        logger.info(f'Correcting station precipitation with method: {method}')
 
         if method == 'constant_scf':
             precips *= snowfall_frac * config['scf']

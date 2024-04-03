@@ -1,3 +1,4 @@
+from loguru import logger
 from openamundsen import constants as c, meteo
 import numpy as np
 from .soiltexture import SoilTextureClass
@@ -211,7 +212,7 @@ class EvapotranspirationModel:
         s_et.water_stress_coeff[roi] = np.nan
         s_et.deep_percolation[roi] = 0.
 
-        model.logger.debug('Calculating evapotranspiration')
+        logger.debug('Calculating evapotranspiration')
 
         self._reference_evapotranspiration()
 

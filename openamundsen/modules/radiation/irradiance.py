@@ -1,3 +1,4 @@
+from loguru import logger
 import numpy as np
 from .clearsky import _clear_sky_shortwave_irradiance
 from openamundsen import (
@@ -18,7 +19,7 @@ def clear_sky_shortwave_irradiance(model):
             # E.g. in the first timestep no albedo has yet been calculated; assume a default value here
             mean_surface_albedo = model.config.soil.albedo
 
-        model.logger.debug('Calculating shadows')
+        logger.debug('Calculating shadows')
 
         if model.grid.extended_grid.available:
             shadows_dem = model.grid.extended_grid.dem
@@ -57,7 +58,7 @@ def clear_sky_shortwave_irradiance(model):
                 model.grid.extended_grid.col_slice,
             ]
 
-        model.logger.debug('Calculating clear-sky shortwave irradiance')
+        logger.debug('Calculating clear-sky shortwave irradiance')
         dir_irr, diff_irr = _clear_sky_shortwave_irradiance(
             model.sun_params['day_angle'],
             model.sun_params['sun_vector'],
@@ -85,7 +86,7 @@ def clear_sky_shortwave_irradiance(model):
 
 
 def extended_grid_stations_clear_sky_shortwave_irradiance(model):
-    model.logger.debug('Calculating clear-sky shortwave irradiance for extended-grid stations')
+    logger.debug('Calculating clear-sky shortwave irradiance for extended-grid stations')
     roi = model.grid.roi
     ext_grid = model.grid.extended_grid
 
@@ -155,7 +156,7 @@ def extended_grid_stations_clear_sky_shortwave_irradiance(model):
 
 
 def shortwave_irradiance(model):
-    model.logger.debug('Calculating actual shortwave irradiance')
+    logger.debug('Calculating actual shortwave irradiance')
     cloud_config = model.config.meteo.interpolation.cloudiness
     roi = model.grid.roi
     m = model.state.meteo
@@ -195,13 +196,13 @@ def shortwave_irradiance(model):
 
     if cloud_config['allow_fallback']:
         if method == 'clear_sky_fraction' and num_rad_stations == 0:
-            model.logger.debug(
+            logger.debug(
                 'No radiation measurements available, trying humidity-based cloudiness calculation'
             )
             method = 'humidity'
 
         if method == 'humidity' and num_temp_hum_stations == 0:
-            model.logger.debug(
+            logger.debug(
                 'No temperature/humidity measurements available, using cloudiness from previous '
                 'time step'
             )
@@ -214,7 +215,7 @@ def shortwave_irradiance(model):
 
         # When there is no cloudiness from the previous time step (e.g. when the model run starts
         # during nighttime) set cloudiness to a constant value
-        model.logger.debug(
+        logger.debug(
             'No cloudiness from previous time step available, setting to constant value'
         )
         cloud_factor_roi_prev[np.isnan(cloud_factor_roi_prev)] = 0.75
@@ -275,7 +276,7 @@ def shortwave_irradiance(model):
 
 
 def longwave_irradiance(model):
-    model.logger.debug('Calculating longwave irradiance')
+    logger.debug('Calculating longwave irradiance')
     roi = model.grid.roi
     m = model.state.meteo
     clear_sky_emissivity = meteo.clear_sky_emissivity(m.precipitable_water[roi])
