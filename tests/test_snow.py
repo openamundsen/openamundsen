@@ -8,8 +8,8 @@ import warnings
 
 
 single_point_results_all = [
-    pytest.lazy_fixture('single_point_results_multilayer'),
-    pytest.lazy_fixture('single_point_results_cryolayers'),
+    'single_point_results_multilayer',
+    'single_point_results_cryolayers',
 ]
 
 
@@ -74,8 +74,9 @@ def test_default_multilayer():
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ds', single_point_results_all)
-def test_swe(ds):
+@pytest.mark.parametrize('fixture_name', single_point_results_all)
+def test_swe(fixture_name, request):
+    ds = request.getfixturevalue(fixture_name)
     swe = ds.swe.values
     ice_content = ds.ice_content.values
     liquid_water_content = ds.liquid_water_content.values
@@ -91,8 +92,9 @@ def test_swe(ds):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ds', single_point_results_all)
-def test_density(ds):
+@pytest.mark.parametrize('fixture_name', single_point_results_all)
+def test_density(fixture_name, request):
+    ds = request.getfixturevalue(fixture_name)
     swe3d = (ds.ice_content + ds.liquid_water_content).values
     density = ds.snow_density.values
     assert np.all(np.isnan(density[swe3d == 0.]))
@@ -102,8 +104,9 @@ def test_density(ds):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ds', single_point_results_all)
-def test_depth(ds):
+@pytest.mark.parametrize('fixture_name', single_point_results_all)
+def test_depth(fixture_name, request):
+    ds = request.getfixturevalue(fixture_name)
     depth = ds.snow_depth.values
     swe = ds.swe.values
     assert np.all(depth[swe == 0.] == 0.)
@@ -127,16 +130,18 @@ def test_depth(ds):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ds', single_point_results_all)
-def test_num_layers(ds):
+@pytest.mark.parametrize('fixture_name', single_point_results_all)
+def test_num_layers(fixture_name, request):
+    ds = request.getfixturevalue(fixture_name)
     num_layers = ds.num_snow_layers.values
     thickness = ds.snow_thickness.values
     assert_equal(num_layers, (thickness > 0).sum(axis=1))
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ds', single_point_results_all)
-def test_albedo(ds):
+@pytest.mark.parametrize('fixture_name', single_point_results_all)
+def test_albedo(fixture_name, request):
+    ds = request.getfixturevalue(fixture_name)
     config = base_config()
     albedo = ds.snow_albedo.values
     swe = ds.swe.values
@@ -149,20 +154,23 @@ def test_albedo(ds):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ds', single_point_results_all)
-def test_melt(ds):
+@pytest.mark.parametrize('fixture_name', single_point_results_all)
+def test_melt(fixture_name, request):
+    ds = request.getfixturevalue(fixture_name)
     assert np.all(ds.melt >= 0)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ds', single_point_results_all)
-def test_runoff(ds):
+@pytest.mark.parametrize('fixture_name', single_point_results_all)
+def test_runoff(fixture_name, request):
+    ds = request.getfixturevalue(fixture_name)
     assert np.all(ds.runoff >= 0)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ds', single_point_results_all)
-def test_refreezing(ds):
+@pytest.mark.parametrize('fixture_name', single_point_results_all)
+def test_refreezing(fixture_name, request):
+    ds = request.getfixturevalue(fixture_name)
     assert np.all(ds.refreezing >= 0)
 
 
