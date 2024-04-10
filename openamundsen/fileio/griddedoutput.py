@@ -579,7 +579,7 @@ def _freq_write_dates(dates, out_freq, agg):
         raise errors.ConfigurationError(f'Unsupported output frequency: {out_freq}. '
                                         f'Supported offsets: {allowed_offsets_str}')
 
-    if not out_offset.is_anchored():
+    if not _is_anchored(out_offset):
         # For non-anchored offsets (e.g., '3h', 'D'), the output frequency must be a multiple of
         # (and not smaller than) the model timestep
         out_freq_td = util.offset_to_timedelta(out_freq)
@@ -590,7 +590,7 @@ def _freq_write_dates(dates, out_freq, agg):
             raise ValueError('Output frequency must be a multiple of the model timestep')
 
     if agg:
-        if out_offset.is_anchored():  # e.g. 'ME', 'YE'
+        if _is_anchored(out_offset):  # e.g. 'ME', 'YE'
             if model_freq_td.total_seconds() > constants.HOURS_PER_DAY * constants.SECONDS_PER_HOUR:
                 raise NotImplementedError('Aggregation of gridded outputs with anchored offsets '
                                           'not supported for timesteps > 1d')
@@ -635,3 +635,16 @@ def _freq_write_dates(dates, out_freq, agg):
             write_dates += pd.Timedelta(days=1) - model_freq_td
 
     return write_dates
+
+
+def _is_anchored(offset: pd.offsets.BaseOffset) -> bool:
+    """
+    Replicates the is_anchored() method for an offset object, which is deprecated as of pandas
+    2.2.0.
+    """
+    if isinstance(offset, pd.offsets.Tick):
+        # https://github.com/pandas-dev/pandas/blob/bdc79c146c2e32f2cab629be240f01658cfb6cc2/pandas/_libs/tslibs/offsets.pyx#L965-L987
+        return False
+    else:
+        # https://github.com/pandas-dev/pandas/blob/bdc79c146c2e32f2cab629be240f01658cfb6cc2/pandas/_libs/tslibs/offsets.pyx#L758-L780
+        return offset.n == 1
