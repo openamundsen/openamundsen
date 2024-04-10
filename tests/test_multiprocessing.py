@@ -4,6 +4,7 @@ import openamundsen as oa
 
 
 def run_model(model):
+    model.configure_logger()
     model.run()
 
 
@@ -21,6 +22,6 @@ def test_multiprocessing():
     model2 = oa.OpenAmundsen(config)
     model2.initialize()
 
-    multiprocessing.set_start_method('spawn', force=True)
-    with multiprocessing.Pool() as pool:
+    spawn_context = multiprocessing.get_context('spawn')
+    with spawn_context.Pool() as pool:
         pool.map(run_model, [model1, model2])
