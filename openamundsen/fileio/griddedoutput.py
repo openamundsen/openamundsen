@@ -4,7 +4,6 @@ import netCDF4
 import numpy as np
 from openamundsen import constants, errors, fileio, util
 import pandas as pd
-import pandas.tseries.frequencies
 import pyproj
 import xarray as xr
 
@@ -572,7 +571,7 @@ def _freq_write_dates(dates, out_freq, agg):
     model_freq_td = util.offset_to_timedelta(model_freq)
 
     try:
-        out_offset = pandas.tseries.frequencies.to_offset(out_freq)
+        out_offset = util.to_offset(out_freq)
         if not any([isinstance(out_offset, o) for o in _ALLOWED_OFFSETS]):
             raise ValueError
     except ValueError:

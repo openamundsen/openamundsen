@@ -208,19 +208,33 @@ class ModelGrid(Munch):
         self.roi_idxs_flat = np.where(self.roi.flat)[0]
 
 
-def offset_to_timedelta(offset: Union[str, pd.offsets.BaseOffset]) -> pd.Timedelta:
+def to_offset(offset: Union[str, pd.offsets.BaseOffset]) -> pd.offsets.BaseOffset:
     """
-    Convert a pandas-compatible offset (e.g. '3h') to a Timedelta object.
+    Convert a pandas-compatible offset (e.g. '3h') to a DateOffset object.
     """
     # As of pandas 2.2.0, some frequency aliases have been deprecated (see
     # https://pandas.pydata.org/docs/dev/whatsnew/v2.2.0.html). Since especially the "H" alias
     # (which is now deprecated in favor of "h") has been frequently used in earlier versions of
     # openAMUNDSEN, we replace it here manually with its lowercase version in order to avoid
     # deprecation warnings.
-    if isinstance(offset, str) and offset.endswith('H'):
-        offset = offset[:-1] + 'h'
+    # Furthermore, we parse the offsets "ME" and "YE" (which have been introduced in pandas 2.2.0)
+    # here manually in order to make them work also with earlier pandas versions.
+    if isinstance(offset, str):
+        if offset.endswith('H'):
+            offset = offset[:-1] + 'h'
+        elif offset == 'ME':
+            offset = pd.offsets.MonthEnd()
+        elif offset == 'YE':
+            offset = pd.offsets.YearEnd()
 
-    return pd.to_timedelta(pandas.tseries.frequencies.to_offset(offset))
+    return pandas.tseries.frequencies.to_offset(offset)
+
+
+def offset_to_timedelta(offset: Union[str, pd.offsets.BaseOffset]) -> pd.Timedelta:
+    """
+    Convert a pandas-compatible offset (e.g. '3h') to a Timedelta object.
+    """
+    return pd.to_timedelta(to_offset(offset))
 
 
 @dataclass(frozen=True)

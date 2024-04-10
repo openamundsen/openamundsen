@@ -141,7 +141,7 @@ class PointOutputManager:
             write_dates = pd.date_range(
                 start=model.config.start_date,
                 end=model.config.end_date,
-                freq=config.write_freq,
+                freq=util.to_offset(config.write_freq),
             )
             write_dates = write_dates[
                 (write_dates >= model.config.start_date)
