@@ -82,7 +82,7 @@ def test_values():
     assert_allclose(ds.soil_temp.isel(soil_layer=1).values, data_soil_temp1)
 
 
-@pytest.mark.parametrize('write_freq', ['M', '7H', '3H', '10min'])
+@pytest.mark.parametrize('write_freq', ['ME', '7h', '3h', '10min'])
 def test_write_freq(write_freq, tmp_path):
     config = base_config()
     config.end_date = '2020-01-15'

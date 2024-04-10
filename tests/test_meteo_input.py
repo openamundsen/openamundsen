@@ -57,7 +57,7 @@ def test_formats():
     config = base_config()
     config.start_date = '2015-07-28'
     config.end_date = '2020-12-31'
-    config.timestep = 'H'
+    config.timestep = 'h'
 
     meta = pd.read_csv(f'{pytest.DATA_DIR}/meteo/rofental/csv/stations.csv', index_col=0)
     meta = meta.sort_index()
@@ -180,7 +180,7 @@ def test_missing_csv_metadata_columns(tmp_path):
 def test_missing_records_inbetween(tmp_path):
     config = base_config()
     config.end_date = '2020-04-30'
-    config.timestep = 'H'
+    config.timestep = 'h'
     config.input_data.meteo.format = 'csv'
     config.input_data.meteo.dir = str(tmp_path)
 
@@ -448,14 +448,14 @@ def test_slice_and_resample(fmt, tmp_path):
     config = base_config()
     config.start_date = '2015-11-20'
     config.end_date = '2015-11-30'
-    config.timestep = 'H'
+    config.timestep = 'h'
     config.input_data.meteo.format = fmt
     config.input_data.meteo.dir = f'{pytest.DATA_DIR}/meteo/rofental/{fmt}'
     model = oa.OpenAmundsen(config)
     model.initialize()
     df_h = meteo_to_df(model)
 
-    config.timestep = '3H'
+    config.timestep = '3h'
     model = oa.OpenAmundsen(config)
     model.initialize()
     assert matches_start_and_end_date(model)
@@ -518,7 +518,7 @@ def test_slice_and_resample(fmt, tmp_path):
 
     config.start_date = '2015-11-01 01:00'
     config.end_date = '2015-11-30 22:00'
-    config.timestep = '3H'
+    config.timestep = '3h'
     config.input_data.meteo.aggregate_when_downsampling = False
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -545,7 +545,7 @@ def test_slice_and_resample(fmt, tmp_path):
 
     config.start_date = '2015-11-01 01:37'
     config.end_date = '2015-11-30 22:37'
-    config.timestep = '3H'
+    config.timestep = '3h'
     config.input_data.meteo.aggregate_when_downsampling = False
     model = oa.OpenAmundsen(config)
     with pytest.raises(errors.MeteoDataError):
@@ -561,13 +561,13 @@ def test_slice_and_resample(fmt, tmp_path):
     # Wind direction
     config.start_date = '2015-12-20'
     config.end_date = '2015-12-30'
-    config.timestep = 'H'
+    config.timestep = 'h'
     config.input_data.meteo.aggregate_when_downsampling = False
     model = oa.OpenAmundsen(config)
     model.initialize()
     df_h = model.meteo.sel(station='bellavista').to_dataframe()[['wind_speed', 'wind_dir']]
 
-    config.timestep = '3H'
+    config.timestep = '3h'
     model = oa.OpenAmundsen(config)
     model.initialize()
     df_res = model.meteo.sel(station='bellavista').to_dataframe()[['wind_speed', 'wind_dir']]
@@ -597,7 +597,7 @@ def test_non_hourly_input(tmp_path):
     config = base_config()
     config.start_date = '2015-11-20'
     config.end_date = '2015-11-30'
-    config.timestep = '3H'
+    config.timestep = '3h'
 
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -625,7 +625,7 @@ def test_resample_with_non_matching_start_date(aggregate, tmp_path):
     config = base_config()
     config.start_date = '2020-11-01'
     config.end_date = '2020-11-30'
-    config.timestep = '3H'
+    config.timestep = '3h'
     config.input_data.meteo.dir = str(tmp_path)
     config.input_data.meteo.aggregate_when_downsampling = aggregate
 
@@ -638,7 +638,7 @@ def test_filters(tmp_path):
     config = base_config()
     config.start_date = '2015-07-28'
     config.end_date = '2020-12-31'
-    config.timestep = 'H'
+    config.timestep = 'h'
     default_filters = config.input_data.meteo.filters
 
     config.input_data.meteo.filters = []

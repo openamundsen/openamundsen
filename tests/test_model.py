@@ -36,7 +36,7 @@ def test_timestep_properties():
     config = base_config()
     config.start_date = '2015-07-28 00:00'
     config.end_date = '2015-12-31'
-    config.timestep = 'H'
+    config.timestep = 'h'
 
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -152,7 +152,7 @@ def test_state_variable_reset():
     config = base_config()
     config.start_date = '2019-10-01'
     config.end_date = '2020-05-31'
-    config.timestep = '3H'
+    config.timestep = '3h'
     config.evapotranspiration.enabled = True
     config.canopy.enabled = True
 
@@ -200,7 +200,7 @@ def test_simulation_timezone(tmp_path):
     ds.to_netcdf(tmp_path / 'proviantdepot.nc')
 
     config = base_config()
-    config.timestep = 'H'
+    config.timestep = 'h'
     config.input_data.meteo.dir = str(tmp_path)
 
     config.start_date = '2020-01-15 00:00'

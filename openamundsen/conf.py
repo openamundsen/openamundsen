@@ -203,7 +203,7 @@ def validate_config(config):
         raise ConfigurationError('Start/end date is not compatible with timestep')
 
     # Check if write_freq is compatible with timestep - as long as the time step is <= 1d,
-    # write_freq can be an offset like 'M' or 'Y', but for larger timesteps it is not guaranteed
+    # write_freq can be an offset like 'ME' or 'YE', but for larger timesteps it is not guaranteed
     # that these dates generated with pd.date_range(start=start_date, end=end_date, freq=write_freq)
     # are actually reached, so in this case write_freq must be a multiple of timestep
     # (e.g. timestep = '5D' and write_freq = '30D')
