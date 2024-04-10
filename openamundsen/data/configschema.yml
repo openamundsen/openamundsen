@@ -21,7 +21,7 @@ resolution:  # spatial resolution (m)
 
 timestep:  # temporal resolution as a pandas frequency string
   type: string
-  default: H
+  default: h
 
 results_dir:  # directory for writing the result files
   coerce: path
@@ -238,7 +238,7 @@ output_data:
 
         write_freq:  # how often the files should be written
           type: string
-          default: M
+          default: ME
 
         add_default_points:  # add the station positions
           type: boolean

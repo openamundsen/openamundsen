@@ -511,8 +511,8 @@ def _freq_write_dates(dates, out_freq, agg):
 
     For non-aggregated fields the write dates are assigned to the start of the
     respective intervals for non-anchored and begin-anchored offsets (e.g. 'D',
-    'MS', 'AS'), and to the end of the intervals for end-anchored offsets (e.g.
-    'M', 'A'). For aggregated fields, the write dates are always assigned to the
+    'MS', 'YS'), and to the end of the intervals for end-anchored offsets (e.g.
+    'ME', 'YE'). For aggregated fields, the write dates are always assigned to the
     end of the intervals.
 
     Parameters
@@ -521,7 +521,7 @@ def _freq_write_dates(dates, out_freq, agg):
         Simulation dates.
 
     out_freq : str
-        Output frequency as a pandas offset string (e.g. '3H', 'M').
+        Output frequency as a pandas offset string (e.g. '3h', 'ME').
 
     agg : boolean
         Prepare write dates for aggregated outputs (if True) or for
@@ -536,12 +536,12 @@ def _freq_write_dates(dates, out_freq, agg):
     >>> dates = pd.date_range(
     ...     start='2021-01-01 00:00',
     ...     end='2021-12-31 23:00',
-    ...     freq='H',
+    ...     freq='h',
     ... )
-    ... _freq_write_dates(dates, 'A', False)
+    ... _freq_write_dates(dates, 'YE', False)
     DatetimeIndex(['2021-12-31 23:00:00'], dtype='datetime64[ns]', freq=None)
 
-    >>> _freq_write_dates(dates, 'AS', False)
+    >>> _freq_write_dates(dates, 'YS', False)
     DatetimeIndex(['2021-01-01'], dtype='datetime64[ns]', freq='AS-JAN')
 
     >>> _freq_write_dates(dates, 'D', False)
@@ -581,7 +581,7 @@ def _freq_write_dates(dates, out_freq, agg):
                                         f'Supported offsets: {allowed_offsets_str}')
 
     if not out_offset.is_anchored():
-        # For non-anchored offsets (e.g., '3H', 'D'), the output frequency must be a multiple of
+        # For non-anchored offsets (e.g., '3h', 'D'), the output frequency must be a multiple of
         # (and not smaller than) the model timestep
         out_freq_td = util.offset_to_timedelta(out_freq)
 
@@ -591,7 +591,7 @@ def _freq_write_dates(dates, out_freq, agg):
             raise ValueError('Output frequency must be a multiple of the model timestep')
 
     if agg:
-        if out_offset.is_anchored():  # e.g. 'M', 'A'
+        if out_offset.is_anchored():  # e.g. 'ME', 'YE'
             if model_freq_td.total_seconds() > constants.HOURS_PER_DAY * constants.SECONDS_PER_HOUR:
                 raise NotImplementedError('Aggregation of gridded outputs with anchored offsets '
                                           'not supported for timesteps > 1d')
@@ -600,7 +600,7 @@ def _freq_write_dates(dates, out_freq, agg):
                 pd.period_range(
                     start=dates[0],
                     end=dates[-1],
-                    freq=out_freq,
+                    freq=out_offset,
                 )
                 .asfreq(model_freq, how='end')
                 .to_timestamp()
@@ -620,13 +620,13 @@ def _freq_write_dates(dates, out_freq, agg):
             write_dates = pd.date_range(
                 start=dates[0] + out_freq_td - model_freq_td,
                 end=dates[-1],
-                freq=out_freq,
+                freq=out_offset,
             )
     else:
         write_dates = pd.date_range(
             start=dates[0],
             end=dates[-1],
-            freq=out_freq,
+            freq=out_offset,
         )
 
         if any([isinstance(out_offset, o) for o in (

@@ -209,7 +209,7 @@ class ModelGrid(Munch):
 
 def offset_to_timedelta(offset):
     """
-    Convert a pandas-compatible offset (e.g. '3H') to a Timedelta object.
+    Convert a pandas-compatible offset (e.g. '3h') to a Timedelta object.
     """
     return pd.to_timedelta(pandas.tseries.frequencies.to_offset(offset))
 

@@ -42,7 +42,7 @@ _BASE_CONFIG_YAML = textwrap.dedent(f'''
     start_date: 2020-01-15
     end_date: 2020-01-15
     resolution: 1000
-    timestep: 3H
+    timestep: 3h
     crs: "epsg:32632"
     timezone: 1
 

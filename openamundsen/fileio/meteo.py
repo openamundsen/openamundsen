@@ -19,7 +19,7 @@ def read_meteo_data(
     exclude=None,
     include=None,
     filters=None,
-    freq='H',
+    freq='h',
     aggregate=False,
 ):
     """
@@ -65,7 +65,7 @@ def read_meteo_data(
         or `exclude`.
 
     freq : str
-        Pandas-compatible frequency string (e.g. '3H') to which the data should
+        Pandas-compatible frequency string (e.g. '3h') to which the data should
         be resampled.
 
     aggregate : boolean, default False
@@ -270,7 +270,7 @@ def _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=False)
         End date.
 
     freq : str
-        Pandas-compatible frequency string (e.g. '3H'). Must be an exact subset
+        Pandas-compatible frequency string (e.g. '3h'). Must be an exact subset
         of the original frequency of the data.
 
     aggregate : boolean, default False
@@ -322,7 +322,7 @@ def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
         End date.
 
     freq : str
-        Pandas-compatible frequency string (e.g. '3H'). Must be an exact subset
+        Pandas-compatible frequency string (e.g. '3h'). Must be an exact subset
         of the original frequency of the data.
 
     aggregate : boolean, default False

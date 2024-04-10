@@ -183,7 +183,7 @@ def test_timesteps(minimal_config):
     mc = deepcopy(minimal_config)
     mc['start_date'] = '2019-11-01 02:00'
     mc['end_date'] = '2019-11-01 22:00'
-    mc['timestep'] = '3H'
+    mc['timestep'] = '3h'
     with pytest.raises(errors.ConfigurationError):
         oa.parse_config(mc)
 
@@ -196,7 +196,7 @@ def test_timesteps(minimal_config):
     mc = deepcopy(minimal_config)
     mc['start_date'] = '2019-12-31 01:23'
     mc['end_date'] = '2019-12-31 03:45'
-    mc['timestep'] = 'H'
+    mc['timestep'] = 'h'
     with pytest.raises(errors.ConfigurationError):
         oa.parse_config(mc)
 
