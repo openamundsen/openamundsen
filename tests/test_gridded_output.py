@@ -77,6 +77,18 @@ def test_freq_write_dates():
 
 @pytest.mark.parametrize('fmt', ['netcdf', 'ascii', 'geotiff', 'memory'])
 def test_formats(fmt, tmp_path):
+    # Skip test for format "ascii" for certain GDAL versions because of this bug:
+    # https://github.com/OSGeo/gdal/issues/9666
+    if fmt == 'ascii' and rasterio.__gdal_version__ in (
+        '3.8.0',
+        '3.8.1',
+        '3.8.2',
+        '3.8.3',
+        '3.8.4',
+        '3.8.5',
+    ):
+        pytest.skip()
+
     config = base_config()
     config.end_date = '2020-01-16'
     config.results_dir = tmp_path
