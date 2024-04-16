@@ -335,6 +335,7 @@ def cryo_layer_energy_balance(model):
             available_cc[cold_conties],
         )
         s.snow.liquid_water_content[layer_num, cold_conties] -= refreeze_amount
+        s.snow.ice_content[layer_num, cold_conties] += refreeze_amount
         s.snow.refreezing[cold_conties] += refreeze_amount
         available_cc[cold_conties] -= refreeze_amount
 
