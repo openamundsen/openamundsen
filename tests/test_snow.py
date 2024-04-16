@@ -266,8 +266,9 @@ def test_compare_cryolayers(cryolayer_run):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('ds', single_point_results_all)
-def test_mass_balance(ds):
+@pytest.mark.parametrize('fixture_name', single_point_results_all)
+def test_mass_balance(fixture_name, request):
+    ds = request.getfixturevalue(fixture_name)
     ds_prev = ds.shift(time=1)
 
     ic1 = ds.ice_content.sum('snow_layer')
