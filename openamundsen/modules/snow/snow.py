@@ -343,8 +343,11 @@ def snow_properties(model):
     snow.depth[:] = snow.thickness.sum(axis=0)
     snow.swe[:] = (snow.ice_content + snow.liquid_water_content).sum(axis=0)
 
-    # Snow cover fraction (eq. (13))
-    snow.area_fraction[:] = np.tanh(snow.depth / model.config.snow.snow_cover_fraction_depth_scale)
+    if model.config.snow.snow_cover_fraction_depth_scale > 0:
+        # Snow cover fraction (eq. (13))
+        snow.area_fraction[:] = np.tanh(snow.depth[:] / model.config.snow.snow_cover_fraction_depth_scale)
+    else:
+        snow.area_fraction[:] = (snow.depth[:] > 0) * 1.
 
     # Areal heat capacity of snow (eq. (9))
     snow.heat_cap[:] = (
