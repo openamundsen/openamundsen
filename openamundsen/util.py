@@ -213,16 +213,20 @@ def to_offset(offset: Union[str, pd.offsets.BaseOffset]) -> pd.offsets.BaseOffse
     Convert a pandas-compatible offset (e.g. '3h') to a DateOffset object.
     """
     # As of pandas 2.2.0, some frequency aliases have been deprecated (see
-    # https://pandas.pydata.org/docs/dev/whatsnew/v2.2.0.html). Since especially the "H" alias
-    # (which is now deprecated in favor of "h") has been frequently used in earlier versions of
-    # openAMUNDSEN, we replace it here manually with its lowercase version in order to avoid
-    # deprecation warnings.
+    # https://pandas.pydata.org/docs/dev/whatsnew/v2.2.0.html). In order to avoid deprecation
+    # warnings in case the old aliases are still used in openAMUNDSEN configurations, we replace
+    # the deprecated aliases "H", "M" and "Y" here with their new versions.
     # Furthermore, we parse the offsets "ME" and "YE" (which have been introduced in pandas 2.2.0)
     # here manually in order to make them work also with earlier pandas versions.
     if isinstance(offset, str):
         if offset.endswith('H'):
             offset = offset[:-1] + 'h'
-        elif offset == 'ME':
+        elif offset.endswith('M'):
+            offset = offset[:-1] + 'ME'
+        elif offset.endswith('Y'):
+            offset = offset[:-1] + 'YE'
+
+        if offset == 'ME':
             offset = pd.offsets.MonthEnd()
         elif offset == 'YE':
             offset = pd.offsets.YearEnd()
