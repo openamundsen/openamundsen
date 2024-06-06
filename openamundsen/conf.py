@@ -31,6 +31,16 @@ class ConfigurationValidator(cerberus.Validator):
     def _normalize_coerce_path(self, path):
         return Path(path)
 
+    def _normalize_coerce_timestep(self, timestep):
+        # As of pandas 2.2.0, some frequency aliases have been deprecated (see
+        # https://pandas.pydata.org/docs/dev/whatsnew/v2.2.0.html). Since especially the "H" alias
+        # (which is now deprecated in favor of "h") has been frequently used in earlier versions of
+        # openAMUNDSEN, we replace it here manually with its lowercase version in order to avoid
+        # deprecation warnings.
+        if timestep.endswith('H'):
+            timestep = timestep[:-1] + 'h'
+        return timestep
+
     def _normalize_coerce_snowmodel(self, model):
         # Snow model name 'layers' is deprecated -> change to 'multilayer'
         if model == 'layers':

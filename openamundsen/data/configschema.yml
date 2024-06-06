@@ -21,6 +21,7 @@ resolution:  # spatial resolution (m)
 
 timestep:  # temporal resolution as a pandas frequency string
   type: string
+  coerce: timestep
   default: h
 
 results_dir:  # directory for writing the result files
