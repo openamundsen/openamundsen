@@ -593,6 +593,26 @@ def test_slice_and_resample(fmt, tmp_path):
     )
 
 
+def test_aggregation_when_using_csv_input_and_start_date_before_station_start_date(tmp_path):
+    p_orig = Path(f'{pytest.DATA_DIR}/meteo/rofental/csv')
+    meta = pd.read_csv(p_orig / 'stations.csv', index_col=0)
+    meta.loc[['bellavista', 'latschbloder']].to_csv(tmp_path / 'stations.csv')
+    (tmp_path / 'latschbloder.csv').symlink_to(p_orig / 'latschbloder.csv')
+    df = pd.read_csv(p_orig / 'bellavista.csv', index_col=0, parse_dates=True)
+    df.loc['2015-12-22':].to_csv(tmp_path / 'bellavista.csv')
+
+    config = base_config()
+    config.start_date = '2015-12-20'
+    config.end_date = '2015-12-30'
+    config.timestep = 'D'
+    config.input_data.meteo.format = 'csv'
+    config.input_data.meteo.dir = str(tmp_path)
+    config.input_data.meteo.aggregate_when_downsampling = True
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+
+
 def test_non_hourly_input(tmp_path):
     config = base_config()
     config.start_date = '2015-11-20'

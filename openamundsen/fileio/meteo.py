@@ -360,6 +360,8 @@ def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
 
         # We might end up with an extra bin after resampling; remove it here
         df_res = df_res.loc[start_date:end_date]
+        if df_res.index[0] < df.index[0]:
+            df_res = df_res.iloc[1:]
     else:
         # Take the instantaneous values
         df_res = df.reindex(pd.date_range(
