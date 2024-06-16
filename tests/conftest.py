@@ -30,9 +30,9 @@ data_fetcher = pooch.create(
         'meteo/rofental/netcdf/bellavista.nc': '0fdeb860bce28a287bd48d2fc95f42a07ed842e9a0f0a0045f658605df2ff564',
         'meteo/rofental/netcdf/latschbloder.nc': 'cc96e0dbc4024b093fcc161d8f2c862bb8abd379a7d3dbd540d78242f17aef75',
         'meteo/rofental/netcdf/proviantdepot.nc': 'f8a276c98343c2574fb810eb4b3ee1b08bd29d9f5d0cfaa5a1104f1aa25af374',
-        'results/canopy_point.nc': '2cc0e7a46dd38c1aa05525c026c8e2c12408e446679538e894181530869c0202',
-        'results/snow_cryolayers_point.nc': 'e4ccc4bb49567a51f061c0953c4d0f1c5216095310b3f53e3958aab9f706bac5',
-        'results/snow_multilayer_point.nc': '9279b92ba93af5b39d81a59640456142763369c5b9686d9439e95f1865485b72',
+        'results/canopy_point.nc': '3cd25b0119037be0eb95401ae7cfb618fc840d5244e4b2f42af45e72feff493c',
+        'results/snow_cryolayers_point.nc': '640e593228982fb5ba06478d41328ada6661535b0845b727c7e16609ce18756c',
+        'results/snow_multilayer_point.nc': '702b7879a57f9837c97a629e66cd11fbb014d1b6e42f1241874de86d0714c380',
     },
 )
 DATA_DIR = data_fetcher.abspath
