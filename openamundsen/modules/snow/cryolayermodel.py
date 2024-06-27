@@ -200,7 +200,7 @@ class CryoLayerSnowModel(SnowModel):
         model = self.model
         roi = model.grid.roi
         s = model.state
-        snowies_roi = s.snow.swe[roi] > 0.
+        snowies_roi = s.snow.ice_content[:, roi].sum(axis=0) > 0.
         snowies = model.roi_mask_to_global(snowies_roi)
 
         s.snow.sublimation[roi] = 0.
