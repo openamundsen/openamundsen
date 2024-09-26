@@ -214,7 +214,13 @@ class PointOutputManager:
                 constants.CRS_WGS84,
             )
 
-            row, col = rasterio.transform.rowcol(model.grid.transform, point['x'], point['y'])
+            row, col = rasterio.transform.rowcol(
+                model.grid.transform,
+                point['x'],
+                point['y'],
+            )
+            row = int(row)
+            col = int(col)
 
             # Check if point is within the grid boundaries
             if row < 0 or row >= model.grid.rows or col < 0 or col >= model.grid.cols:
