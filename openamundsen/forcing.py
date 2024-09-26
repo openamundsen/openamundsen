@@ -331,8 +331,8 @@ def prepare_point_coordinates(ds, grid, crs):
 
     if len(x) > 0:
         rows, cols = rasterio.transform.rowcol(grid.transform, x, y)
-        rows = rows.astype(int)
-        cols = cols.astype(int)
+        rows = np.array(rows).astype(int)
+        cols = np.array(cols).astype(int)
     else:
         rows = []
         cols = []
