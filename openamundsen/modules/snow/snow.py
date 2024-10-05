@@ -59,7 +59,7 @@ def albedo(model, pos=None):
     )
 
     # Albedo refresh
-    snowfall_rate = s.meteo.snowfall[pos] / model.timestep
+    snowfall_rate = np.nan_to_num(s.meteo.snowfall[pos] / model.timestep, nan=0.0)
     refresh_snowfall_rate = albedo_config.refresh_snowfall / c.SECONDS_PER_HOUR  # kg m-2 s-1
     if albedo_config.refresh_method == 'binary':
         new_albedo[snowfall_rate >= refresh_snowfall_rate] = albedo_config.max
