@@ -47,7 +47,7 @@ classes:
       - 20
       - 210
       - 30
-    max_height: 0.225 # mean of 0.15–0.30
+    max_height: 0.225 # mean of 0.15-0.30
     rooting_depth: 0.5
     depletion_fraction: 0.6
 
@@ -67,7 +67,7 @@ classes:
       - 0
     max_height: 26. # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
     scale_height: false
-    rooting_depth: 1.25 # mean of 1.0–1.5
+    rooting_depth: 1.25 # mean of 1.0-1.5
     depletion_fraction: 0.7
     leaf_area_index:
       min: 3.8
@@ -90,7 +90,7 @@ classes:
       - 60
     max_height: 24.8 # derived from data for Berchtesgaden National Park, default value from FAO is 14 m
     scale_height: false
-    rooting_depth: 2.05 # mean of 1.7–2.4
+    rooting_depth: 2.05 # mean of 1.7-2.4
     depletion_fraction: 0.5
     leaf_area_index:
       min: 0.5
@@ -114,7 +114,7 @@ classes:
       - 0
     max_height: 26. # derived from data for Berchtesgaden National Park, default value from FAO is 20 m
     scale_height: false
-    rooting_depth: 1.25 # mean of 1.0–1.5
+    rooting_depth: 1.25 # mean of 1.0-1.5
     depletion_fraction: 0.7
     leaf_area_index:
       min: 2.0
@@ -152,7 +152,7 @@ classes:
       - 20
       - 210
       - 30
-    max_height: 0.225 # mean of 0.15–0.30
+    max_height: 0.225 # mean of 0.15-0.30
     rooting_depth: 0.5
     depletion_fraction: 0.6
 
@@ -190,7 +190,7 @@ classes:
       - 20
       - 210
       - 30
-    max_height: 0.225 # mean of 0.15–0.30
+    max_height: 0.225 # mean of 0.15-0.30
     rooting_depth: 0.5
     depletion_fraction: 0.6
 
@@ -208,6 +208,6 @@ classes:
       - 20
       - 210
       - 30
-    max_height: 0.225 # mean of 0.15–0.30
+    max_height: 0.225 # mean of 0.15-0.30
     rooting_depth: 0.5
     depletion_fraction: 0.6
