@@ -58,7 +58,12 @@ class ConfigurationValidator(cerberus.Validator):
     def _normalize_coerce_cloudiness(self, d):
         # 'day_method' is deprecated -> change to 'method'
         if 'day_method' in d:
-            d['method'] = d.pop('day_method')
+            if 'method' not in d:
+                d['method'] = d.pop('day_method')
+            else:
+                raise ConfigurationError(
+                    'cloudiness.day_method is deprecated. Please use cloudiness.method instead.'
+                )
 
         # 'night_method' is deprecated -> change to 'clear_sky_fraction_night_method'
         if 'night_method' in d:
