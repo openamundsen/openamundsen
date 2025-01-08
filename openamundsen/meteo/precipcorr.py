@@ -102,6 +102,8 @@ def correct_station_precipitation(model):
             psych_consts,
         )
         pp_temp = wet_bulb_temps
+    else:
+        raise NotImplementedError
 
     snowfall_frac = meteo.precipitation_phase(
         pp_temp,
@@ -125,8 +127,15 @@ def correct_station_precipitation(model):
 
         logger.info(f'Correcting station precipitation with method: {method}')
 
+        if method in ('wmo', 'kochendorfer'):
+            if np.all(np.isnan(wind_speeds)):
+                logger.warning(
+                    f'Correction method {method} requires wind speeds. Precipitation values '
+                    'will be left unchanged.'
+                )
+
         if method == 'constant_scf':
-            precips *= snowfall_frac * config['scf']
+            corr_factors = snowfall_frac * config['scf']
         elif method == 'wmo':
             gauge = config['gauge']
             cr = np.full(precips.shape, 100.)
@@ -183,8 +192,8 @@ def correct_station_precipitation(model):
                 )
             else:
                 raise NotImplementedError(f'Unknown gauge: {gauge}')
-            
-            precips /= (cr / 100.)
+
+            corr_factors = 1. / (cr / 100.)
         elif method == 'kochendorfer':
             gauge = config['gauge']
             cr = np.full(precips.shape, 1.)  # CR is here not in percent but a fraction
@@ -201,7 +210,14 @@ def correct_station_precipitation(model):
                 * (1 - np.arctan(coeff_b * temps_c[pos_precip]) + coeff_c)
             )
 
-            precips /= cr
+            corr_factors = 1. / cr
+        else:
+            raise NotImplementedError
+
+        # Replace nan values (i.e. where either temperature or wind speed is nan) by 1
+        corr_factors = np.nan_to_num(corr_factors, nan=1.)
+
+        precips *= corr_factors
 
 
 def _interpolate_temp_hum_wind(
