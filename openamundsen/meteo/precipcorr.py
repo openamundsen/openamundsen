@@ -135,7 +135,7 @@ def correct_station_precipitation(model):
                 )
 
         if method == 'constant_scf':
-            corr_factors = snowfall_frac * config['scf']
+            corr_factors = 1 + snowfall_frac * (config['scf'] - 1)
         elif method == 'wmo':
             gauge = config['gauge']
             cr = np.full(precips.shape, 100.)
