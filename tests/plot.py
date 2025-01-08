@@ -34,8 +34,8 @@ def plot_point_comparison(
         num_dims = len(ds_base[v].dims)
 
         if num_dims == 1:
-            data_base = data_base.to_frame()
-            data_dev = data_dev.to_frame()
+            data_base = data_base.to_frame(name=0)
+            data_dev = data_dev.to_frame(name=0)
 
         for dim in range(num_dims):
             fig.add_trace(
