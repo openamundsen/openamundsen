@@ -162,8 +162,21 @@ def shortwave_irradiance(model):
     m = model.state.meteo
     ext_grid = model.grid.extended_grid
     method = cloud_config['method']
+    allow_fallback = cloud_config['allow_fallback']
 
     meteo_ds = model.meteo.sel(time=model.date)
+
+    if method == 'prescribed':
+        # Select stations with cloudiness measurements for the current time step
+        cloudiness_ds = meteo_ds.dropna('station', subset=['cloud_fraction'])
+        num_cloudiness_stations = len(cloudiness_ds.station)
+
+        if num_cloudiness_stations == 0 and allow_fallback:
+            logger.debug(
+                'No cloudiness measurements available, trying radiation-based cloudiness '
+                'calculation'
+            )
+            method = 'clear_sky_fraction'
 
     if method == 'clear_sky_fraction':
         # Select stations within the grid extent and with shortwave radiation measurements for the
@@ -175,11 +188,6 @@ def shortwave_irradiance(model):
         )
         num_rad_stations = len(ds_rad.station)
 
-    # Select stations with temperature and humidity measurements for the current time step
-    ds_temp_hum = meteo_ds.dropna('station', how='any', subset=['temp', 'rel_hum'])
-    num_temp_hum_stations = len(ds_temp_hum.station)
-
-    if method == 'clear_sky_fraction':
         if model.sun_params['sun_over_horizon']:
             if ext_grid.available:
                 extgrid_sw_in_clearsky = extended_grid_stations_clear_sky_shortwave_irradiance(
@@ -191,17 +199,22 @@ def shortwave_irradiance(model):
                     .dropna('station', subset=['sw_in'])
                 )
                 num_rad_stations += rad_ds_extgrid.sizes['station']
+
+            if num_rad_stations == 0 and allow_fallback:
+                logger.debug(
+                    'No radiation measurements available, trying humidity-based cloudiness '
+                    'calculation'
+                )
+                method = 'humidity'
         else:
             method = cloud_config['clear_sky_fraction_night_method']
 
-    if cloud_config['allow_fallback']:
-        if method == 'clear_sky_fraction' and num_rad_stations == 0:
-            logger.debug(
-                'No radiation measurements available, trying humidity-based cloudiness calculation'
-            )
-            method = 'humidity'
+    if method == 'humidity':
+        # Select stations with temperature and humidity measurements for the current time step
+        ds_temp_hum = meteo_ds.dropna('station', how='any', subset=['temp', 'rel_hum'])
+        num_temp_hum_stations = len(ds_temp_hum.station)
 
-        if method == 'humidity' and num_temp_hum_stations == 0:
+        if num_temp_hum_stations == 0 and allow_fallback:
             logger.debug(
                 'No temperature/humidity measurements available, using cloudiness from previous '
                 'time step'
@@ -254,7 +267,6 @@ def shortwave_irradiance(model):
             cloud_factor_ys = np.append(cloud_factor_ys, rad_ds_extgrid.y)
             cloud_factors = np.append(cloud_factors, extgrid_cloud_factors)
     elif method == 'prescribed':
-        cloudiness_ds = meteo_ds.dropna('station', subset=['cloud_fraction'])
         cloud_factor_xs = cloudiness_ds.x
         cloud_factor_ys = cloudiness_ds.y
         cloud_fractions = cloudiness_ds.cloud_fraction / 100  # convert from % to 0-1

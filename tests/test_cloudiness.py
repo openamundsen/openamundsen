@@ -135,6 +135,23 @@ def test_prescribed(tmp_path):
     assert_allclose(ds_ref.cloud_fraction, ds.cloud_fraction, atol=0.09)
     # (differences are (likely) due to interpolation from station positions to grid points)
 
+    # Test if clear_sky_fraction is used when allow_fallback = True and cloudiness values are nan
+    config.meteo.interpolation.cloudiness.allow_fallback = True
+    config.meteo.interpolation.cloudiness.method = 'clear_sky_fraction'
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    ds_csf = model.point_output.data
+    config.meteo.interpolation.cloudiness.method = 'prescribed'
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.meteo['cloud_fraction'].loc[:] = np.nan
+    model.run()
+    ds = model.point_output.data
+    assert_equal(ds_csf['cloud_fraction'].values, ds['cloud_fraction'].values)
+    # (use ds_csf instead of ds_ref because for ds_ref allow_fallback is False and hence the
+    # results differ for time steps with missing radiation data)
+
 
 def test_outside_grid_data(tmp_path):
     config = base_cloudiness_config()
