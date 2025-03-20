@@ -401,6 +401,27 @@ class GriddedOutputManager:
         else:
             full = dask.array.full
 
+        if self.format != 'memory' and not _DASK_AVAILABLE:
+            dataset_size = 0
+            for field in self.fields:
+                meta = self.model.state.meta(field.var)
+                dtype, _ = self._field_dtype_and_fill_value(field)
+                dataset_size += (
+                    np.dtype(dtype).itemsize
+                    * len(field.write_dates)
+                    * max(meta.dim3, 1)
+                    * len(y_coords)
+                    * len(x_coords)
+                )
+
+            dataset_size_gib = dataset_size / 1024**3
+            if dataset_size_gib > 4:
+                logger.warning(
+                    f'Creating large in-memory dataset ({dataset_size_gib:.1f} GiB) for gridded '
+                    'outputs. If you run into memory issues consider installing Dask '
+                    '(pip install dask) to enable memory-efficient dataset creation.'
+                )
+
         # Define data variables
         data = {}
         three_dim_coords = {}
