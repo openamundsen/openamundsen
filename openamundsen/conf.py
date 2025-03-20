@@ -80,7 +80,7 @@ class ConfigurationEncoder(json.JSONEncoder):
             raise TypeError
 
 
-def parse_end_date(end_date, timestep):
+def _parse_end_date(end_date, timestep):
     # If end_date is specified without an hour value, the end hour should be inferred
     # (i.e., set to the latest time step of the end day).
     if type(end_date) is datetime.date:  # do not use isinstance() because we want to catch only datetime.date and not its subclasses (datetime.datetime, pd.Timestamp etc.)
@@ -137,7 +137,7 @@ def parse_config(config):
         raise ConfigurationError('Invalid configuration\n\n' + util.to_yaml(v.errors))
 
     full_config = Configuration.fromDict(v.document)
-    full_config['end_date'] = parse_end_date(full_config['end_date'], full_config['timestep'])
+    full_config['end_date'] = _parse_end_date(full_config['end_date'], full_config['timestep'])
 
     full_config['land_cover']['classes'] = _merge_land_cover_params(
         full_config['land_cover']['classes']
