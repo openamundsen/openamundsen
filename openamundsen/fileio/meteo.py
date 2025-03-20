@@ -291,11 +291,14 @@ def _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=False)
         # time series inferred_freq is always None)
         raise errors.MeteoDataError('File contains missing records or non-uniform timesteps')
 
-    if (
-        aggregate
-        and freq_td == td_1d
-        and util.offset_to_timedelta(inferred_freq) < td_1d
-    ):
+    if freq_td == td_1d and util.offset_to_timedelta(inferred_freq) < td_1d:
+        if not aggregate:
+            logger.warning(
+                'File contains sub-daily data. Data will be aggregated to daily time steps despite '
+                'aggregate_when_downsampling being set to False.'
+            )
+            aggregate = True
+
         end_date = (end_date + td_1d).normalize()
 
     ds = ds.sel(time=slice(start_date, end_date))

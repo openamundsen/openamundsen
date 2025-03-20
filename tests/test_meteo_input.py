@@ -613,6 +613,25 @@ def test_aggregation_when_using_csv_input_and_start_date_before_station_start_da
     model.initialize()
 
 
+def test_aggregation_to_daily_data_with_subdaily_input():
+    config = base_config()
+    config.start_date = '2015-12-20'
+    config.end_date = '2015-12-30'
+    config.timestep = 'D'
+
+    config.input_data.meteo.aggregate_when_downsampling = True
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    meteo1 = model.meteo
+
+    config.input_data.meteo.aggregate_when_downsampling = False
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    meteo2 = model.meteo
+
+    xr.testing.assert_equal(meteo1, meteo2)
+
+
 def test_non_hourly_input(tmp_path):
     config = base_config()
     config.start_date = '2015-11-20'
