@@ -1,3 +1,61 @@
+[project]
+name = "openamundsen"
+authors = [
+    { name = "openAMUNDSEN Developers", email = "florian.hanzer@gmail.com" },
+]
+description = "Modular snow and hydroclimatological modeling framework"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dynamic = ["version"]
+dependencies = [
+    "cerberus",
+    "loguru",
+    "munch",
+    "netCDF4",
+    "numba >= 0.50.1",
+    "numpy",
+    "pandas >= 1.1.0",
+    "pyproj",
+    "setuptools_scm",
+    "setuptools >= 61", # setuptools >= 61 is required by setuptools_scm 8. Because of the version-finding mechanism in __init__.py we need to include this as a dependency here as well.
+    "scipy",
+    "ruamel.yaml >= 0.15.0",
+    "rasterio >= 1.1.0",
+    "xarray >= 0.14.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/openamundsen/openamundsen"
+Documentation = "https://doc.openamundsen.org"
+
+[project.optional-dependencies]
+liveview = [
+    "matplotlib >= 3.0.0",
+    "PyQt6",
+]
+test = [
+    "dask",
+    "pooch",
+    "pytest",
+    "pvlib",
+]
+
+[project.scripts]
+openamundsen = "openamundsen.cli:main"
+
 [build-system]
 requires = [
     "setuptools>=61",
@@ -9,3 +67,11 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 version_scheme = "post-release"
 write_to = "openamundsen/_version.py"
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*"]
