@@ -35,12 +35,12 @@ def surface_properties(model):
     )
 
     s.surface.roughness_length[:] = (
-        model.config.snow.roughness_length**s.snow.area_fraction
-        * model.config.soil.roughness_length**(1 - s.snow.area_fraction)
+        model.config.snow.roughness_length** s.snow.area_fraction
+        * model.config.soil.roughness_length ** (1 - s.snow.area_fraction)
     )
     calc_turbulent_exchange_coefficient(model)
 
-    if model.config.snow.model == 'multilayer':
+    if model.config.snow.model == "multilayer":
         # Calculate surface conductance (eq. (35) from [2])
         # (the constant 1/100 therein corresponds to
         # model.config.soil.saturated_soil_surface_conductance; the clipping of (theta_1/theta_c)**2
@@ -49,8 +49,10 @@ def surface_properties(model):
             np.maximum(
                 (
                     s.soil.frac_unfrozen_moisture_content[0, :]
-                    * s.soil.vol_moisture_content_sat / s.soil.vol_moisture_content_crit
-                )**2,
+                    * s.soil.vol_moisture_content_sat
+                    / s.soil.vol_moisture_content_crit
+                )
+                ** 2,
                 1,
             )
         )
@@ -79,8 +81,7 @@ def surface_layer_properties(model):
     s.surface.thickness[:] = np.maximum(s.snow.thickness[0, :], s.soil.thickness[0, :])
     s.surface.layer_temp[:] = (
         s.soil.temp[0, :]
-        + (s.snow.temp[0, :] - s.soil.temp[0, :])
-        * s.snow.thickness[0, :] / s.soil.thickness[0, :]
+        + (s.snow.temp[0, :] - s.soil.temp[0, :]) * s.snow.thickness[0, :] / s.soil.thickness[0, :]
     )
 
     pos1 = s.snow.thickness[0, :] <= s.soil.thickness[0, :] / 2
@@ -88,14 +89,9 @@ def surface_layer_properties(model):
 
     # Effective surface thermal conductivity (eq. (79))
     s.surface.therm_cond[:] = s.snow.therm_cond[0, :]
-    s.surface.therm_cond[pos1] = (
-        s.soil.thickness[0, pos1]
-        / (
-            2 * s.snow.thickness[0, pos1] / s.snow.therm_cond[0, pos1]
-            + (
-                s.soil.thickness[0, pos1] - 2 * s.snow.thickness[0, pos1]
-            ) / s.soil.therm_cond[0, pos1]
-        )
+    s.surface.therm_cond[pos1] = s.soil.thickness[0, pos1] / (
+        2 * s.snow.thickness[0, pos1] / s.snow.therm_cond[0, pos1]
+        + (s.soil.thickness[0, pos1] - 2 * s.snow.thickness[0, pos1]) / s.soil.therm_cond[0, pos1]
     )
 
     s.surface.layer_temp[pos2] = s.snow.temp[0, pos2]
@@ -104,9 +100,9 @@ def surface_layer_properties(model):
 def energy_balance(model):
     snow_model = model.config.snow.model
 
-    if snow_model == 'multilayer':
+    if snow_model == "multilayer":
         multilayer_energy_balance(model)
-    elif snow_model == 'cryolayers':
+    elif snow_model == "cryolayers":
         cryo_layer_energy_balance(model)
 
 
@@ -152,9 +148,8 @@ def multilayer_energy_balance(model):
     ) = solve_energy_balance(model, roi)
 
     # Calculate melt
-    melties_roi = (
-        ((s.surface.temp[roi] + surf_temp_change) > constants.T0)
-        & (s.snow.ice_content[0, roi] > 0)
+    melties_roi = ((s.surface.temp[roi] + surf_temp_change) > constants.T0) & (
+        s.snow.ice_content[0, roi] > 0
     )
     if melties_roi.any():
         melties = model.roi_mask_to_global(melties_roi)
@@ -187,13 +182,15 @@ def multilayer_energy_balance(model):
                     + s.surface.lat_heat_flux[partial_melties]
                     + s.surface.advective_heat_flux[partial_melties]
                     - s.surface.heat_flux[partial_melties]
-                ) / constants.LATENT_HEAT_OF_FUSION * model.timestep
+                )
+                / constants.LATENT_HEAT_OF_FUSION
+                * model.timestep
             ).clip(min=0)
 
-            surf_temp_change[partial_melties_roi] = 0.
-            surf_moisture_flux_change[partial_melties_roi] = 0.
-            surf_heat_flux_change[partial_melties_roi] = 0.
-            sens_heat_flux_change[partial_melties_roi] = 0.
+            surf_temp_change[partial_melties_roi] = 0.0
+            surf_moisture_flux_change[partial_melties_roi] = 0.0
+            surf_heat_flux_change[partial_melties_roi] = 0.0
+            sens_heat_flux_change[partial_melties_roi] = 0.0
 
     # Update surface temperature and fluxes
     s.surface.temp[roi] += surf_temp_change
@@ -231,7 +228,7 @@ def cryo_layer_energy_balance(model):
 
     s.surface.temp[roi] = s.meteo.temp[roi]
 
-    snowies_roi = s.snow.swe[roi] > 0.
+    snowies_roi = s.snow.swe[roi] > 0.0
     melties_roi = snowies_roi & (s.meteo.temp[roi] >= constants.T0)
     frosties_roi = snowies_roi & (s.meteo.temp[roi] < constants.T0)
     snowies = model.roi_mask_to_global(snowies_roi)
@@ -243,8 +240,8 @@ def cryo_layer_energy_balance(model):
     calc_moisture_availability(model, roi)
     calc_latent_heat(model, roi)
 
-    s.snow.melt[roi] = 0.
-    s.snow.refreezing[roi] = 0.
+    s.snow.melt[roi] = 0.0
+    s.snow.refreezing[roi] = 0.0
 
     s.surface.heat_flux[snowies] = model.config.snow.cryolayers.surface_heat_flux
     s.surface.heat_flux[snow_freeies] = np.nan
@@ -253,13 +250,11 @@ def cryo_layer_energy_balance(model):
     s.surface.temp[melties] = constants.T0
     available_melt_time = np.zeros(roi.shape)
     en_bal = np.full(roi.shape, np.nan)
-    available_melt_time[melties] = model.timestep  # contains the time (in seconds) available for melt in this time step for each pixel
+    available_melt_time[melties] = model.timestep  # contains the time (in seconds) available for melt in this time step for each pixel # fmt: skip
 
     for layer_num in range(model.snow.num_cryo_layers):
         possible_melties = model.roi_mask_to_global(
-            melties_roi
-            & (s.snow.thickness[layer_num, roi] > 0)
-            & (available_melt_time[roi] > 0)
+            melties_roi & (s.snow.thickness[layer_num, roi] > 0) & (available_melt_time[roi] > 0)
         )
 
         en_bal[possible_melties] = energy_balance_remainder(
@@ -268,7 +263,7 @@ def cryo_layer_energy_balance(model):
             s.surface.temp[possible_melties],
         )
 
-        layer_melties = model.roi_mask_to_global(possible_melties[roi] & (en_bal[roi] > 0.))
+        layer_melties = model.roi_mask_to_global(possible_melties[roi] & (en_bal[roi] > 0.0))
 
         layer_we = (
             s.snow.ice_content[layer_num, :]
@@ -278,22 +273,18 @@ def cryo_layer_energy_balance(model):
 
         layer_melt_time = np.zeros(roi.shape)
         layer_melt_time[layer_melties] = (  # time needed to melt the entire layer
-            constants.LATENT_HEAT_OF_FUSION
-            * layer_we[layer_melties]
-            / en_bal[layer_melties]
+            constants.LATENT_HEAT_OF_FUSION * layer_we[layer_melties] / en_bal[layer_melties]
         )
         total_melties = model.roi_mask_to_global(
-            layer_melties[roi]
-            & (layer_melt_time[roi] < available_melt_time[roi])
+            layer_melties[roi] & (layer_melt_time[roi] < available_melt_time[roi])
         )
         partial_melties = model.roi_mask_to_global(
-            layer_melties[roi]
-            & (layer_melt_time[roi] >= available_melt_time[roi])
+            layer_melties[roi] & (layer_melt_time[roi] >= available_melt_time[roi])
         )
 
         # Process pixels where the entire layer melts (and energy is left to melt the lower layers)
         s.snow.melt[total_melties] += s.snow.ice_content[layer_num, total_melties]
-        s.snow.cold_content[layer_num, total_melties] = 0.
+        s.snow.cold_content[layer_num, total_melties] = 0.0
 
         # Process pixels where the available energy cannot melt the entire layer
         layer_melt = (  # actual melt and cold content reduction
@@ -302,11 +293,11 @@ def cryo_layer_energy_balance(model):
             / constants.LATENT_HEAT_OF_FUSION
         )
         s.snow.cold_content[layer_num, partial_melties] -= layer_melt
-        actual_layer_melt = -1 * np.minimum(s.snow.cold_content[layer_num, partial_melties], 0.)  # actual melt not used for reducing the cold content
+        actual_layer_melt = -1 * np.minimum( s.snow.cold_content[layer_num, partial_melties], 0.0)  # actual melt not used for reducing the cold content # fmt: skip
         s.snow.melt[partial_melties] += actual_layer_melt
-        s.snow.cold_content[layer_num, partial_melties] = (
-            s.snow.cold_content[layer_num, partial_melties].clip(min=0)
-        )
+        s.snow.cold_content[layer_num, partial_melties] = s.snow.cold_content[
+            layer_num, partial_melties
+        ].clip(min=0)
 
         available_melt_time[melties] -= layer_melt_time[melties]
 
@@ -314,9 +305,7 @@ def cryo_layer_energy_balance(model):
     en_bal[frosties] = energy_balance_remainder(model, frosties, constants.T0)
     refreezing_factor = model.config.snow.cryolayers.refreezing_factor
     available_cc = (
-        -1
-        * en_bal * model.timestep / constants.LATENT_HEAT_OF_FUSION
-        * refreezing_factor
+        -1 * en_bal * model.timestep / constants.LATENT_HEAT_OF_FUSION * refreezing_factor
     ).clip(min=0)  # kg m-2
     cold_holding_capacity = model.config.snow.cryolayers.cold_holding_capacity
     for layer_num in range(model.snow.num_cryo_layers):
@@ -325,9 +314,7 @@ def cryo_layer_energy_balance(model):
             continue
 
         cold_conties = model.global_mask(
-            frosties_roi
-            & (s.snow.thickness[layer_num, roi] > 0)
-            & (available_cc[roi] > 0)
+            frosties_roi & (s.snow.thickness[layer_num, roi] > 0) & (available_cc[roi] > 0)
         )
 
         refreeze_amount = np.minimum(
@@ -414,7 +401,7 @@ def stability_factor(
     """
     # Replace zero wind speeds (would lead to a divide by zero) with a plausible value
     wind_speed = wind_speed.copy()
-    wind_speed[wind_speed == 0.] = 0.5
+    wind_speed[wind_speed == 0.0] = 0.5
 
     # Bulk Richardson number (eq. (24))
     richardson = (
@@ -426,27 +413,35 @@ def stability_factor(
 
     # Surface momentum roughness length (eq. (23))
     momentum_roughness_length = (
-        snow_roughness_length**snow_cover_fraction
-        * snow_free_roughness_length**(1 - snow_cover_fraction)
+        snow_roughness_length** snow_cover_fraction
+        * snow_free_roughness_length ** (1 - snow_cover_fraction)
     )
 
     pos = richardson >= 0
 
     # eq. (26)
     c = (
-        3 * stability_adjustment_parameter**2 * constants.VON_KARMAN**2
+        3
+        * stability_adjustment_parameter**2
+        * constants.VON_KARMAN**2
         * np.sqrt(wind_measurement_height / momentum_roughness_length[~pos])
-        / (np.log(wind_measurement_height / momentum_roughness_length[~pos]))**2
+        / (np.log(wind_measurement_height / momentum_roughness_length[~pos])) ** 2
     )
 
     # eq. (25)
     stability_factor = np.empty(pos.shape)
-    stability_factor[pos] = 1 / (1 + 3 * stability_adjustment_parameter * richardson[pos] * np.sqrt(
-        1 + stability_adjustment_parameter * richardson[pos]))
+    stability_factor[pos] = 1 / (
+        1
+        + 3
+        * stability_adjustment_parameter
+        * richardson[pos]
+        * np.sqrt(1 + stability_adjustment_parameter * richardson[pos])
+    )
     stability_factor[~pos] = 1 - 3 * stability_adjustment_parameter * richardson[~pos] / (
-        1 + c * np.sqrt(-richardson[~pos]))
+        1 + c * np.sqrt(-richardson[~pos])
+    )
 
-    stability_factor[np.isnan(stability_factor)] = 1.
+    stability_factor[np.isnan(stability_factor)] = 1.0
 
     return stability_factor
 
@@ -475,7 +470,7 @@ def calc_turbulent_exchange_coefficient(model):
 
     if model.config.snow.measurement_height_adjustment:
         temp_measurement_height -= s.snow.depth[roi]
-        temp_measurement_height = np.maximum(temp_measurement_height, 1.)  # as implemented in FSM
+        temp_measurement_height = np.maximum(temp_measurement_height, 1.0)  # as implemented in FSM
 
     heat_moisture_roughness_length = 0.1 * s.surface.roughness_length[roi]
     coeff = constants.VON_KARMAN**2 / (
@@ -518,12 +513,9 @@ def calc_radiation_balance(model, pos):
     snow_emissivity = 0.99
 
     s.meteo.sw_out[pos] = s.surface.albedo[pos] * s.meteo.sw_in[pos]
-    s.meteo.lw_out[pos] = snow_emissivity * constants.STEFAN_BOLTZMANN * s.surface.temp[pos]**4
+    s.meteo.lw_out[pos] = snow_emissivity * constants.STEFAN_BOLTZMANN * s.surface.temp[pos] ** 4
     s.meteo.net_radiation[pos] = (
-        s.meteo.sw_in[pos]
-        - s.meteo.sw_out[pos]
-        + s.meteo.lw_in[pos]
-        - s.meteo.lw_out[pos]
+        s.meteo.sw_in[pos] - s.meteo.sw_out[pos] + s.meteo.lw_in[pos] - s.meteo.lw_out[pos]
     )
 
 
@@ -574,8 +566,8 @@ def calc_moisture_availability(model, pos):
         s.surface.conductance[pos]
         + s.surface.turbulent_exchange_coeff[pos] * s.meteo.wind_speed[pos]
     )
-    moisture_availability[s.surface.sat_spec_hum[pos] < s.meteo.spec_hum[pos]] = 1.
-    moisture_availability[s.snow.swe[pos] > 0] = 1.
+    moisture_availability[s.surface.sat_spec_hum[pos] < s.meteo.spec_hum[pos]] = 1.0
+    moisture_availability[s.snow.swe[pos] > 0] = 1.0
     s.surface.moisture_availability[pos] = moisture_availability
 
 
@@ -623,7 +615,8 @@ def calc_surface_flux(model, pos):
     """
     s = model.state
     s.surface.heat_flux[pos] = (
-        2 * s.surface.therm_cond[pos]
+        2
+        * s.surface.therm_cond[pos]
         * (s.surface.temp[pos] - s.surface.layer_temp[pos])
         / s.surface.thickness[pos]
     )
@@ -664,9 +657,7 @@ def calc_turbulent_fluxes(model, pos, sensible=True, latent=True):
 
     if sensible:
         s.surface.sens_heat_flux[pos] = (
-            constants.SPEC_HEAT_CAP_DRY_AIR
-            * rhoa_CH_Ua
-            * (s.meteo.temp[pos] - s.surface.temp[pos])
+            constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua * (s.meteo.temp[pos] - s.surface.temp[pos])
         )
 
     if latent:
@@ -703,7 +694,8 @@ def calc_advective_heat(model, pos):
             constants.SPEC_HEAT_CAP_WATER
             * (s.meteo.temp[pos] - s.surface.temp[pos])
             * s.meteo.rainfall[pos]
-        ) + (  # snowfall on snow
+        )
+        + (  # snowfall on snow
             constants.SPEC_HEAT_CAP_ICE
             * (s.meteo.wet_bulb_temp[pos] - s.surface.temp[pos])
             * s.meteo.snowfall[pos]
@@ -744,8 +736,10 @@ def solve_energy_balance(model, pos):
         * s.meteo.wind_speed[pos]
     )
 
-    dQsat_by_dTs = s.surface.lat_heat[pos] * s.surface.sat_spec_hum[pos] / (  # eq. (37) (K-1)
-        constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[pos]**2
+    dQsat_by_dTs = (  # eq. (37) (K-1)
+        s.surface.lat_heat[pos]
+        * s.surface.sat_spec_hum[pos]
+        / (constants.SPEC_GAS_CONSTANT_WATER_VAPOR * s.surface.temp[pos] ** 2)
     )
 
     surf_temp_change = (  # eq. (38) plus heat advected by precipitation
@@ -756,40 +750,34 @@ def solve_energy_balance(model, pos):
             + s.surface.advective_heat_flux[pos]
             - s.surface.heat_flux[pos]
             - constants.LATENT_HEAT_OF_FUSION * (s.snow.melt[pos] / model.timestep)
-        ) / (
+        )
+        / (
             (
                 constants.SPEC_HEAT_CAP_DRY_AIR
-                + s.surface.lat_heat[pos]
-                * s.surface.moisture_availability[pos]
-                * dQsat_by_dTs
-            ) * rhoa_CH_Ua
+                + s.surface.lat_heat[pos] * s.surface.moisture_availability[pos] * dQsat_by_dTs
+            )
+            * rhoa_CH_Ua
             + 2 * s.surface.therm_cond[pos] / s.surface.thickness[pos]
-            + 4 * constants.STEFAN_BOLTZMANN * s.surface.temp[pos]**3
+            + 4 * constants.STEFAN_BOLTZMANN * s.surface.temp[pos] ** 3
         )
     )
 
     surf_moisture_flux_change = (  # eq. (33) (kg m-2 s-1)
-        s.surface.moisture_availability[pos]
-        * rhoa_CH_Ua
-        * dQsat_by_dTs
-        * surf_temp_change
+        s.surface.moisture_availability[pos] * rhoa_CH_Ua * dQsat_by_dTs * surf_temp_change
     )
 
     surf_heat_flux_change = (  # eq. (34) (W m-2)
-        2 * s.surface.therm_cond[pos]
-        * surf_temp_change / s.surface.thickness[pos]
+        2 * s.surface.therm_cond[pos] * surf_temp_change / s.surface.thickness[pos]
     )
 
     sens_heat_flux_change = (  # eq. (35) (W m-2)
-        constants.SPEC_HEAT_CAP_DRY_AIR
-        * rhoa_CH_Ua
-        * surf_temp_change
+        constants.SPEC_HEAT_CAP_DRY_AIR * rhoa_CH_Ua * surf_temp_change
     )
 
-    surf_temp_change[np.isnan(surf_temp_change)] = 0.
-    surf_moisture_flux_change[np.isnan(surf_moisture_flux_change)] = 0.
-    surf_heat_flux_change[np.isnan(surf_heat_flux_change)] = 0.
-    sens_heat_flux_change[np.isnan(sens_heat_flux_change)] = 0.
+    surf_temp_change[np.isnan(surf_temp_change)] = 0.0
+    surf_moisture_flux_change[np.isnan(surf_moisture_flux_change)] = 0.0
+    surf_heat_flux_change[np.isnan(surf_heat_flux_change)] = 0.0
+    sens_heat_flux_change[np.isnan(sens_heat_flux_change)] = 0.0
 
     return (
         surf_temp_change,
@@ -871,22 +859,22 @@ def iterate_surface_temperature(model, frosties):
     s = model.state
     method = model.config.snow.cryolayers.surface_temperature_iteration_method
 
-    if method == 'legacy':
+    if method == "legacy":
         roi = model.grid.roi
         en_bal = np.zeros(roi.shape)
         iteraties = frosties
         max_temp = constants.T0
-        min_temp = s.meteo.temp[frosties].min() - 3.
+        min_temp = s.meteo.temp[frosties].min() - 3.0
         temp_inc = -0.25
         for surf_temp_iter in np.arange(max_temp, min_temp - 1e-6, temp_inc):
             en_bal[iteraties] = energy_balance_remainder(model, iteraties, surf_temp_iter)
-            iteraties = model.roi_mask_to_global(frosties[roi] & (en_bal[roi] < 0.))
-    elif method == 'secant':
+            iteraties = model.roi_mask_to_global(frosties[roi] & (en_bal[roi] < 0.0))
+    elif method == "secant":
         tol = 1e-2
 
         iteraties = frosties.copy()
         iteraties_idxs = np.where(iteraties.flat)[0]
-        x0 = np.full(len(iteraties_idxs), constants.T0 - 10.)
+        x0 = np.full(len(iteraties_idxs), constants.T0 - 10.0)
         x1 = np.full(len(iteraties_idxs), constants.T0)
         y0 = energy_balance_remainder(model, iteraties, x0)
         y1 = energy_balance_remainder(model, iteraties, x1)

@@ -53,14 +53,14 @@ class OpenAmundsen:
         """
         config = self.config
 
-        self._require_soil = config.snow.model == 'multilayer'
-        self._require_energy_balance = config.snow.melt.method == 'energy_balance'
+        self._require_soil = config.snow.model == "multilayer"
+        self._require_energy_balance = config.snow.melt.method == "energy_balance"
         self._require_temperature_index = not self._require_energy_balance
         self._require_canopy = config.canopy.enabled
         self._require_evapotranspiration = config.evapotranspiration.enabled
         self._require_land_cover = self._require_canopy or self._require_evapotranspiration
         self._require_soil_texture = self._require_evapotranspiration
-        self._require_interpolation = config.input_data.meteo.format in ('csv', 'netcdf', 'memory')
+        self._require_interpolation = config.input_data.meteo.format in ("csv", "netcdf", "memory")
         self._require_snow_management = (
             conf.SNOW_MANAGEMENT_AVAILABLE and config.snow_management.enabled
         )
@@ -72,9 +72,9 @@ class OpenAmundsen:
         self._initialize_grid()
         self._initialize_state_variable_management()
 
-        if config.snow.model == 'multilayer':
+        if config.snow.model == "multilayer":
             self.snow = modules.snow.MultilayerSnowModel(self)
-        elif config.snow.model == 'cryolayers':
+        elif config.snow.model == "cryolayers":
             self.snow = modules.snow.CryoLayerSnowModel(self)
         else:
             raise NotImplementedError
@@ -94,56 +94,62 @@ class OpenAmundsen:
             )
             self.glaciers = modules.glacier.GlacierModel(self)
 
-        if config.meteo.interpolation.wind.method == 'liston':
+        if config.meteo.interpolation.wind.method == "liston":
             self.state.base.add_variable(
-                'scaled_curvature',
-                '1',
-                'Topographic curvature scaled to [-0.5, 0.5]',
+                "scaled_curvature",
+                "1",
+                "Topographic curvature scaled to [-0.5, 0.5]",
                 retain=True,
             )
 
         # Create snow redistribution factor state variables
         for precip_corr in config.meteo.precipitation_correction:
-            if precip_corr['method'] == 'srf':
-                self.state.base.add_variable('srf', '1', 'Snow redistribution factor', retain=True)
+            if precip_corr["method"] == "srf":
+                self.state.base.add_variable("srf", "1", "Snow redistribution factor", retain=True)
                 break  # multiple SRFs are not allowed
 
         if self._require_snow_management:
             import openamundsen_snowmanagement
+
             self.snow_management = openamundsen_snowmanagement.SnowManagementModel(self)
 
         self._create_state_variables()
 
         self._read_input_data()
 
-        if config.input_data.meteo.format in ('netcdf', 'csv'):
+        if config.input_data.meteo.format in ("netcdf", "csv"):
             meteo = self._read_meteo_data()
-        elif config.input_data.meteo.format == 'memory':
+        elif config.input_data.meteo.format == "memory":
             if meteo is None:
-                raise errors.MeteoDataError('A meteo dataset must be passed to '
-                                            'OpenAmundsen.initialize() if the meteo input format '
-                                            'is set to "memory"')
+                raise errors.MeteoDataError(
+                    "A meteo dataset must be passed to "
+                    "OpenAmundsen.initialize() if the meteo input format "
+                    'is set to "memory"'
+                )
 
             if not forcing.is_valid_point_dataset(meteo, dates=self.dates):
-                raise errors.MeteoDataError('Not a valid point forcing dataset')
+                raise errors.MeteoDataError("Not a valid point forcing dataset")
 
             meteo = meteo.copy(deep=True)
-        elif config.input_data.meteo.format == 'callback':
+        elif config.input_data.meteo.format == "callback":
             if meteo_callback is None:
-                raise errors.MeteoDataError('meteo_callback must be passed to '
-                                            'OpenAmundsen.initialize() if the meteo input format '
-                                            'is set to "callback"')
+                raise errors.MeteoDataError(
+                    "meteo_callback must be passed to "
+                    "OpenAmundsen.initialize() if the meteo input format "
+                    'is set to "callback"'
+                )
             elif not callable(meteo_callback):
-                raise errors.MeteoDataError('meteo_callback must be callable (i.e., a function '
-                                            ' or method)')
+                raise errors.MeteoDataError(
+                    "meteo_callback must be callable (i.e., a function or method)"
+                )
 
             self._meteo_callback = meteo_callback
 
             # Create a dummy point forcing dataset with 0 stations
             dummyds = forcing.make_empty_point_dataset(
                 self.dates,
-                'dummy',
-                'dummy',
+                "dummy",
+                "dummy",
                 np.nan,
                 np.nan,
                 np.nan,
@@ -151,8 +157,8 @@ class OpenAmundsen:
             meteo = forcing.combine_point_datasets([dummyds]).drop_isel(station=0)
 
         if (
-            config.meteo.interpolation.cloudiness.method == 'prescribed'
-            and 'cloud_fraction' not in meteo
+            config.meteo.interpolation.cloudiness.method == "prescribed"
+            and "cloud_fraction" not in meteo
         ):
             raise errors.MeteoDataError(
                 'Cloud cover data must be provided for cloudiness method "prescribed"'
@@ -161,7 +167,7 @@ class OpenAmundsen:
         self.meteo = forcing.prepare_point_coordinates(meteo, self.grid, self.config.crs)
         oameteo.correct_station_precipitation(self)
 
-        self._has_wind_gusts = 'wind_speed_gust' in self.meteo
+        self._has_wind_gusts = "wind_speed_gust" in self.meteo
 
         # Extend ROI with the station positions
         if config.extend_roi_with_stations:
@@ -176,15 +182,16 @@ class OpenAmundsen:
 
         self._calculate_terrain_parameters()
 
-        config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary
+        config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary # fmt: skip
         self._initialize_point_outputs()
         self._initialize_gridded_outputs()
 
         self._initialize_state_variables()
 
         if self.config.liveview.enabled:
-            logger.info('Creating live view window')
+            logger.info("Creating live view window")
             from openamundsen import liveview
+
             lv = liveview.LiveView(self.config.liveview, self.state, self.grid.roi)
             lv.create_window()
             self.liveview = lv
@@ -194,14 +201,14 @@ class OpenAmundsen:
         Start the model run. Before calling this method, the model must be
         properly initialized by calling `initialize()`.
         """
-        logger.info('Starting model run')
+        logger.info("Starting model run")
         start_time = time.time()
 
         for _ in range(len(self.dates)):
             self.run_single()
 
         time_diff = pd.Timedelta(seconds=(time.time() - start_time))
-        logger.success('Model run finished. Runtime: ' + str(time_diff))
+        logger.success("Model run finished. Runtime: " + str(time_diff))
 
     def run_single(self):
         """
@@ -211,13 +218,13 @@ class OpenAmundsen:
         if self.date_idx is None:
             self.date_idx = 0
         elif self.date_idx == len(self.dates) - 1:
-            raise errors.RuntimeError('Model run already finished')
+            raise errors.RuntimeError("Model run already finished")
         else:
             self.date_idx += 1
 
         self.date = self.dates[self.date_idx]
 
-        logger.info(f'Processing time step {self.date:%Y-%m-%d %H:%M}')
+        logger.info(f"Processing time step {self.date:%Y-%m-%d %H:%M}")
 
         if self.config.reset_state_variables:
             self.state.reset()
@@ -225,7 +232,7 @@ class OpenAmundsen:
         if self._require_interpolation:
             oameteo.interpolate_station_data(self)
 
-        if self.config.input_data.meteo.format == 'callback':
+        if self.config.input_data.meteo.format == "callback":
             self._meteo_callback(self)
 
         self._process_meteo_data()
@@ -234,7 +241,7 @@ class OpenAmundsen:
         self.gridded_output.update()
 
         if self.config.liveview.enabled:
-            logger.debug('Updating live view window')
+            logger.debug("Updating live view window")
             self.liveview.update(self.date)
 
     def global_mask(self, mask, global_mask=None, global_idxs=None):
@@ -245,7 +252,7 @@ class OpenAmundsen:
                 global_idxs = np.flatnonzero(global_mask)
 
         if mask.shape[-1] != len(global_idxs):
-            raise Exception('Local mask does not match global mask size')
+            raise Exception("Local mask does not match global mask size")
 
         if mask.ndim == 1:
             global_mask = np.zeros(self.grid.shape, dtype=bool)
@@ -270,14 +277,14 @@ class OpenAmundsen:
         configuration (start date, end date, and time step).
         """
         dates = pd.date_range(
-            start=self.config['start_date'],
-            end=self.config['end_date'],
-            freq=self.config['timestep'],
+            start=self.config["start_date"],
+            end=self.config["end_date"],
+            freq=self.config["timestep"],
         )
         self.dates = dates
 
         # Store timestep in seconds in the `timestep` attribute
-        self.timestep = util.offset_to_timedelta(self.config['timestep']).total_seconds()
+        self.timestep = util.offset_to_timedelta(self.config["timestep"]).total_seconds()
 
         if self.config.simulation_timezone is None:
             hour_shift = 0
@@ -345,12 +352,19 @@ class OpenAmundsen:
         """
         # Remove all handlers and re-add default handler, filtering out openAMUNDSEN messages
         logger.remove()
-        logger.add(sys.stderr, filter=lambda record: not record['name'].startswith('openamundsen.'))
+        logger.add(sys.stderr, filter=lambda record: not record["name"].startswith("openamundsen."))
 
         # Add handler for openAMUNDSEN messages
-        log_format = ('<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | ' +
-                      '<level>{message}</level>')
-        logger.add(sys.stderr, format=log_format, filter='openamundsen', level=self.config.log_level)
+        log_format = (
+            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
+            + "<level>{message}</level>"
+        )
+        logger.add(
+            sys.stderr,
+            format=log_format,
+            filter="openamundsen",
+            level=self.config.log_level,
+        )
 
     def _initialize_grid(self):
         """
@@ -358,11 +372,11 @@ class OpenAmundsen:
         parameters) for the OpenAmundsen instance by reading the DEM file associated to the
         model run.
         """
-        logger.info('Initializing model grid')
+        logger.info("Initializing model grid")
 
-        dem_file = util.raster_filename('dem', self.config)
+        dem_file = util.raster_filename("dem", self.config)
         meta = fileio.read_raster_metadata(dem_file, crs=self.config.crs)
-        logger.info(f'Grid has dimensions {meta["rows"]}x{meta["cols"]}')
+        logger.info(f"Grid has dimensions {meta['rows']}x{meta['cols']}")
 
         grid = util.ModelGrid(meta)
         grid.prepare_coordinates()
@@ -412,20 +426,20 @@ class OpenAmundsen:
         self.gridded_output = fileio.GriddedOutputManager(self)
 
     def _calculate_terrain_parameters(self):
-        logger.info('Calculating terrain parameters')
+        logger.info("Calculating terrain parameters")
         slope, aspect = terrain.slope_aspect(self.state.base.dem, self.grid.resolution)
         normal_vec = terrain.normal_vector(self.state.base.dem, self.grid.resolution)
         self.state.base.slope[:] = slope
         self.state.base.aspect[:] = aspect
         self.state.base.normal_vec[:] = normal_vec
 
-        if self.config.meteo.interpolation.wind.method == 'liston':
+        if self.config.meteo.interpolation.wind.method == "liston":
             # Calculate topographic curvature and normalize to a [-0.5, 0.5] range following Liston
             # et al. (2007)
             curv = terrain.curvature(
                 self.state.base.dem,
                 self.grid.resolution,
-                'liston',
+                "liston",
                 L=self.config.meteo.interpolation.wind.curvature_length_scale,
             )
             self.state.base.scaled_curvature[:] = util.normalize_array(curv, -0.5, 0.5)
@@ -436,9 +450,9 @@ class OpenAmundsen:
         DEM, ROI (if available), and other files depending on the activated
         submodules.
         """
-        dem_file = util.raster_filename('dem', self.config)
-        roi_file = util.raster_filename('roi', self.config)
-        svf_file = util.raster_filename('svf', self.config)
+        dem_file = util.raster_filename("dem", self.config)
+        roi_file = util.raster_filename("roi", self.config)
+        svf_file = util.raster_filename("svf", self.config)
 
         self._read_extended_grids()
 
@@ -455,7 +469,7 @@ class OpenAmundsen:
             ]
         else:
             if dem_file.exists():
-                logger.info(f'Reading DEM ({dem_file})')
+                logger.info(f"Reading DEM ({dem_file})")
                 self.state.base.dem[:] = fileio.read_raster_file(
                     dem_file,
                     check_meta=self.grid,
@@ -463,10 +477,10 @@ class OpenAmundsen:
                     dtype=float,
                 )
             else:
-                raise FileNotFoundError(f'DEM file not found: {dem_file}')
+                raise FileNotFoundError(f"DEM file not found: {dem_file}")
 
             if svf_file.exists():
-                logger.info(f'Reading sky view factor ({svf_file})')
+                logger.info(f"Reading sky view factor ({svf_file})")
                 self.state.base.svf[:] = fileio.read_raster_file(
                     svf_file,
                     check_meta=self.grid,
@@ -474,18 +488,18 @@ class OpenAmundsen:
                     dtype=float,
                 )
             else:
-                logger.info('Calculating sky view factor')
+                logger.info("Calculating sky view factor")
                 svf = terrain.sky_view_factor(
                     self.state.base.dem,
                     self.grid.resolution,
                     num_sweeps=self.config.meteo.radiation.num_shadow_sweeps,
                 )
                 self.state.base.svf[:] = svf
-                logger.debug(f'Writing sky view factor file ({svf_file})')
+                logger.debug(f"Writing sky view factor file ({svf_file})")
                 fileio.write_raster_file(svf_file, svf, self.grid.transform, decimal_precision=3)
 
         if roi_file.exists():
-            logger.info(f'Reading ROI ({roi_file})')
+            logger.info(f"Reading ROI ({roi_file})")
             self.grid.roi[:] = fileio.read_raster_file(
                 roi_file,
                 check_meta=self.grid,
@@ -493,24 +507,23 @@ class OpenAmundsen:
                 dtype=bool,
             )
         else:
-            logger.debug('No ROI file available, setting ROI to entire grid area')
+            logger.debug("No ROI file available, setting ROI to entire grid area")
             self.grid.roi[:] = True
 
         dem_nan_pos = np.isnan(self.state.base.dem) & self.grid.roi
         if np.any(dem_nan_pos):
-            logger.debug(f'Excluding {dem_nan_pos.sum()} pixels where DEM is NaN '
-                              'from the ROI')
+            logger.debug(f"Excluding {dem_nan_pos.sum()} pixels where DEM is NaN from the ROI")
             self.grid.roi[dem_nan_pos] = False
 
         # Read snow redistribution factor files
         for precip_corr in self.config.meteo.precipitation_correction:
-            if precip_corr['method'] == 'srf':
-                if 'file' in precip_corr:
-                    srf_file = precip_corr['file']
+            if precip_corr["method"] == "srf":
+                if "file" in precip_corr:
+                    srf_file = precip_corr["file"]
                 else:
-                    srf_file = util.raster_filename('srf', self.config)
+                    srf_file = util.raster_filename("srf", self.config)
 
-                logger.info(f'Reading snow redistribution factor ({srf_file})')
+                logger.info(f"Reading snow redistribution factor ({srf_file})")
                 self.state.base.srf[:] = fileio.read_raster_file(
                     srf_file,
                     check_meta=self.grid,
@@ -521,10 +534,10 @@ class OpenAmundsen:
 
         # Read land cover file
         if self._require_land_cover:
-            land_cover_file = util.raster_filename('lc', self.config)
+            land_cover_file = util.raster_filename("lc", self.config)
 
             if land_cover_file.exists():
-                logger.info(f'Reading land cover ({land_cover_file})')
+                logger.info(f"Reading land cover ({land_cover_file})")
                 self.state.land_cover.land_cover[:] = fileio.read_raster_file(
                     land_cover_file,
                     check_meta=self.grid,
@@ -532,14 +545,14 @@ class OpenAmundsen:
                     dtype=int,
                 )
             else:
-                raise FileNotFoundError(f'Land cover file not found: {land_cover_file}')
+                raise FileNotFoundError(f"Land cover file not found: {land_cover_file}")
 
         # Read soil texture file
         if self._require_soil_texture:
-            soil_texture_file = util.raster_filename('soil', self.config)
+            soil_texture_file = util.raster_filename("soil", self.config)
 
             if soil_texture_file.exists():
-                logger.info(f'Reading soil texture ({soil_texture_file})')
+                logger.info(f"Reading soil texture ({soil_texture_file})")
                 self.state.evapotranspiration.soil_texture[:] = fileio.read_raster_file(
                     soil_texture_file,
                     check_meta=self.grid,
@@ -547,20 +560,20 @@ class OpenAmundsen:
                     dtype=int,
                 )
             else:
-                raise FileNotFoundError(f'Soil texture file not found: {soil_texture_file}')
+                raise FileNotFoundError(f"Soil texture file not found: {soil_texture_file}")
 
         # Read glaciers file
         if self._require_glaciers:
-            glaciers_file = util.raster_filename('glaciers', self.config)
+            glaciers_file = util.raster_filename("glaciers", self.config)
 
             if glaciers_file.exists():
-                logger.info(f'Reading glaciers ({glaciers_file})')
+                logger.info(f"Reading glaciers ({glaciers_file})")
                 self.state.glaciers.glacier[:] = fileio.read_raster_file(
                     glaciers_file,
                     check_meta=self.grid,
                 )
             else:
-                raise FileNotFoundError(f'Glaciers file not found: {glaciers_file}')
+                raise FileNotFoundError(f"Glaciers file not found: {glaciers_file}")
 
         self.grid.prepare_roi_coordinates()
 
@@ -568,13 +581,13 @@ class OpenAmundsen:
         """
         Try to read the extended DEM if available, and read/calculate the extended SVF.
         """
-        extended_dem_file = util.raster_filename('extended-dem', self.config)
-        extended_svf_file = util.raster_filename('extended-svf', self.config)
+        extended_dem_file = util.raster_filename("extended-dem", self.config)
+        extended_svf_file = util.raster_filename("extended-svf", self.config)
 
         if not extended_dem_file.exists():
             return False
 
-        logger.info(f'Reading extended DEM ({extended_dem_file})')
+        logger.info(f"Reading extended DEM ({extended_dem_file})")
         ext_meta = fileio.read_raster_metadata(extended_dem_file, crs=self.config.crs)
         ext_dem = fileio.read_raster_file(
             extended_dem_file,
@@ -582,31 +595,31 @@ class OpenAmundsen:
             dtype=float,
         )
         grid_transform = self.grid.transform
-        ext_transform = ext_meta['transform']
-        grid_ul_xy = rasterio.transform.xy(grid_transform, 0, 0, offset='ul')
+        ext_transform = ext_meta["transform"]
+        grid_ul_xy = rasterio.transform.xy(grid_transform, 0, 0, offset="ul")
         grid_lr_xy = rasterio.transform.xy(
             grid_transform,
             self.grid.rows - 1,
             self.grid.cols - 1,
-            offset='lr',
+            offset="lr",
         )
-        ext_ul_xy = rasterio.transform.xy(ext_transform, 0, 0, offset='ul')
+        ext_ul_xy = rasterio.transform.xy(ext_transform, 0, 0, offset="ul")
         ext_lr_xy = rasterio.transform.xy(
             ext_transform,
-            ext_meta['rows'] - 1,
-            ext_meta['cols'] - 1,
-            offset='lr',
+            ext_meta["rows"] - 1,
+            ext_meta["cols"] - 1,
+            offset="lr",
         )
         ext_offset_ul = rasterio.transform.rowcol(ext_transform, *grid_ul_xy, op=float)
         if not (float.is_integer(ext_offset_ul[0]) and float.is_integer(ext_offset_ul[1])):
-            raise errors.RasterFileError('Extended DEM is not aligned correctly')
+            raise errors.RasterFileError("Extended DEM is not aligned correctly")
         if not (
             grid_ul_xy[0] >= ext_ul_xy[0]
             and grid_ul_xy[1] <= ext_ul_xy[1]
             and grid_lr_xy[0] <= ext_lr_xy[0]
             and grid_lr_xy[1] >= ext_lr_xy[1]
         ):
-            raise errors.RasterFileError('Extended DEM does not fully cover the model grid')
+            raise errors.RasterFileError("Extended DEM does not fully cover the model grid")
 
         if extended_svf_file.exists():
             ext_svf = fileio.read_raster_file(
@@ -615,15 +628,15 @@ class OpenAmundsen:
                 dtype=float,
             )
             if ext_svf.shape != ext_dem.shape:
-                raise errors.RasterFileError('Extended DEM and SVF have differing dimensions')
+                raise errors.RasterFileError("Extended DEM and SVF have differing dimensions")
         else:
-            logger.info('Calculating extended sky view factor')
+            logger.info("Calculating extended sky view factor")
             ext_svf = terrain.sky_view_factor(
                 ext_dem,
                 self.grid.resolution,
                 num_sweeps=self.config.meteo.radiation.num_shadow_sweeps,
             )
-            logger.debug(f'Writing extended sky view factor file ({extended_svf_file})')
+            logger.debug(f"Writing extended sky view factor file ({extended_svf_file})")
             fileio.write_raster_file(extended_svf_file, ext_svf, ext_transform, decimal_precision=3)
 
         row_offset = int(ext_offset_ul[0])
@@ -647,12 +660,12 @@ class OpenAmundsen:
         them in the `meteo` variable.
         """
         bounds = self.config.input_data.meteo.bounds
-        if bounds == 'grid':
+        if bounds == "grid":
             x_min = self.grid.x_min
             y_min = self.grid.y_min
             x_max = self.grid.x_max
             y_max = self.grid.y_max
-        elif bounds == 'global':
+        elif bounds == "global":
             x_min = -np.inf
             y_min = -np.inf
             x_max = np.inf
@@ -660,12 +673,12 @@ class OpenAmundsen:
         elif isinstance(bounds, list):
             x_min, y_min, x_max, y_max = bounds
 
-        if self.config.input_data.meteo.format == 'csv':
+        if self.config.input_data.meteo.format == "csv":
             if self.config.input_data.meteo.crs is None:
                 meteo_crs = self.config.crs
             else:
                 meteo_crs = self.config.input_data.meteo.crs
-        elif self.config.input_data.meteo.format == 'netcdf':
+        elif self.config.input_data.meteo.format == "netcdf":
             meteo_crs = None  # no CRS required for NetCDF input
 
         ds = fileio.read_meteo_data(
@@ -679,7 +692,7 @@ class OpenAmundsen:
             exclude=self.config.input_data.meteo.exclude,
             include=self.config.input_data.meteo.include,
             filters=self.config.input_data.meteo.filters,
-            freq=self.config['timestep'],
+            freq=self.config["timestep"],
             aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
         )
 
@@ -689,7 +702,7 @@ class OpenAmundsen:
         """
         Calculate derived meteorological variables from the interpolated fields.
         """
-        logger.debug('Calculating derived meteorological variables')
+        logger.debug("Calculating derived meteorological variables")
 
         m = self.state.meteo
         roi = self.grid.roi
@@ -720,9 +733,9 @@ class OpenAmundsen:
 
         # Calculate precipitation phase
         precip_phase_method = self.config.meteo.precipitation_phase.method
-        if precip_phase_method == 'temp':
+        if precip_phase_method == "temp":
             pp_temp = m.temp
-        elif precip_phase_method == 'wet_bulb_temp':
+        elif precip_phase_method == "wet_bulb_temp":
             pp_temp = m.wet_bulb_temp
 
         snowfall_frac = oameteo.precipitation_phase(
@@ -734,7 +747,7 @@ class OpenAmundsen:
         m.rainfall[roi] = (1 - snowfall_frac) * m.precip[roi]
 
         # Redistribute snow
-        if 'srf' in self.state.base:
+        if "srf" in self.state.base:
             m.snowfall[roi] *= self.state.base.srf[roi]
             m.precip[roi] = m.snowfall[roi] + m.rainfall[roi]
 
@@ -840,8 +853,9 @@ class OpenAmundsen:
 
 def Model(*args, **kwargs):
     import warnings
+
     warnings.warn(
-        'Using oa.Model is deprecated, please use oa.OpenAmundsen instead',
+        "Using oa.Model is deprecated, please use oa.OpenAmundsen instead",
         DeprecationWarning,
         stacklevel=2,
     )

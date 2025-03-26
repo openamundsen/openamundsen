@@ -104,10 +104,11 @@ def _soil_properties(
     num_soil_layers = thickness.shape[0]
 
     # Calculate kappa (eq. (40))
-    k = 1.  # dimensionless constant depending on the nature of the soil
+    k = 1.0  # dimensionless constant depending on the nature of the soil
     kappa = k * (
         (c.ICE_DENSITY / c.WATER_DENSITY)
-        * c.LATENT_HEAT_OF_FUSION / (c.T0 * c.GRAVITATIONAL_ACCELERATION)
+        * c.LATENT_HEAT_OF_FUSION
+        / (c.T0 * c.GRAVITATIONAL_ACCELERATION)
     )
 
     for idx_num in prange(num_pixels):
@@ -118,20 +119,17 @@ def _soil_properties(
                 # Temperature above which all soil moisture is unfrozen (eq. (43))
                 temp_max_frozen = (
                     c.T0
-                    - sat_water_pressure[i, j] / kappa
-                    * (
-                        vol_moisture_content_sat[i, j] / vol_moisture_content[k, i, j]
-                    )**clapp_hornberger[i, j]
+                    - sat_water_pressure[i, j]
+                    / kappa
+                    * (vol_moisture_content_sat[i, j] / vol_moisture_content[k, i, j])
+                    ** clapp_hornberger[i, j]
                 )
 
                 if temp[k, i, j] < temp_max_frozen:
                     # Maximum unfrozen water that can exist at current soil temperature (eq. (39))
-                    max_vol_unfrozen_moisture_content = (
-                        vol_moisture_content_sat[i, j]
-                        * (
-                            -kappa * (temp[k, i, j] - c.T0) / sat_water_pressure[i, j]
-                        )**(-1 / clapp_hornberger[i, j])
-                    )
+                    max_vol_unfrozen_moisture_content = vol_moisture_content_sat[i, j] * (
+                        -kappa * (temp[k, i, j] - c.T0) / sat_water_pressure[i, j]
+                    ) ** (-1 / clapp_hornberger[i, j])
 
                     # Actual amount of unfrozen water (limited by the total water content of the soil)
                     # (eqs. (41), (44))
@@ -142,27 +140,30 @@ def _soil_properties(
 
                     # Change of unfrozen water concentration by temperature (eq. (45))
                     dTheta_u_by_dT = (
-                        kappa * vol_moisture_content_sat[i, j]
+                        kappa
+                        * vol_moisture_content_sat[i, j]
                         / (clapp_hornberger[i, j] * sat_water_pressure[i, j])
-                        * (
-                            -kappa * (temp[k, i, j] - c.T0)
-                            / sat_water_pressure[i, j]
-                        )**(-1 / clapp_hornberger[i, j] - 1)
+                        * (-kappa * (temp[k, i, j] - c.T0) / sat_water_pressure[i, j])
+                        ** (-1 / clapp_hornberger[i, j] - 1)
                     )
                 else:
                     vol_unfrozen_moisture_content = vol_moisture_content[k, i, j]
-                    dTheta_u_by_dT = 0.
+                    dTheta_u_by_dT = 0.0
 
                 vol_frozen_moisture_content = (
                     (vol_moisture_content[k, i, j] - vol_unfrozen_moisture_content)
-                    * c.WATER_DENSITY / c.ICE_DENSITY
+                    * c.WATER_DENSITY
+                    / c.ICE_DENSITY
                 )
 
                 # Frozen/unfrozen moisture content (eqs. (48)-(49))
-                frac_unfrozen_moisture_content[k, i, j] = vol_unfrozen_moisture_content / vol_moisture_content_sat[i, j]
+                frac_unfrozen_moisture_content[k, i, j] = (
+                    vol_unfrozen_moisture_content / vol_moisture_content_sat[i, j]
+                )
                 frac_frozen_moisture_content[k, i, j] = (
                     (c.ICE_DENSITY / c.WATER_DENSITY)
-                    * vol_frozen_moisture_content / vol_moisture_content_sat[i, j]
+                    * vol_frozen_moisture_content
+                    / vol_moisture_content_sat[i, j]
                 )
 
                 # Volumetric heat capacity (eq. (37))
@@ -170,11 +171,12 @@ def _soil_properties(
                     vol_heat_cap_dry[i, j]
                     + c.WATER_DENSITY * c.SPEC_HEAT_CAP_WATER * vol_unfrozen_moisture_content
                     + c.ICE_DENSITY * c.SPEC_HEAT_CAP_ICE * vol_frozen_moisture_content
-                    + c.WATER_DENSITY * (
-                        (c.SPEC_HEAT_CAP_WATER - c.SPEC_HEAT_CAP_ICE)
-                        * temp[k, i, j]
+                    + c.WATER_DENSITY
+                    * (
+                        (c.SPEC_HEAT_CAP_WATER - c.SPEC_HEAT_CAP_ICE) * temp[k, i, j]
                         + c.LATENT_HEAT_OF_FUSION
-                    ) * dTheta_u_by_dT
+                    )
+                    * dTheta_u_by_dT
                 )
 
                 # Areal heat capacity
@@ -184,23 +186,26 @@ def _soil_properties(
                 # ice mass ratio (eq. (74))
                 liquid_water_sat_conc = vol_moisture_content_sat[i, j] * (
                     frac_unfrozen_moisture_content[k, i, j]
-                    / (frac_unfrozen_moisture_content[k, i, j] + frac_frozen_moisture_content[k, i, j])
+                    / (
+                        frac_unfrozen_moisture_content[k, i, j]
+                        + frac_frozen_moisture_content[k, i, j]
+                    )
                 )
 
                 # Thermal conductivity of saturated soil (eq. (75))
                 therm_cond_sat = (
                     therm_cond_dry[i, j]
                     * c.THERM_COND_WATER**liquid_water_sat_conc
-                    * c.THERM_COND_ICE**(vol_moisture_content_sat[i, j] - liquid_water_sat_conc)
-                    / c.THERM_COND_AIR**vol_moisture_content_sat[i, j]
+                    * c.THERM_COND_ICE ** (vol_moisture_content_sat[i, j] - liquid_water_sat_conc)
+                    / c.THERM_COND_AIR ** vol_moisture_content_sat[i, j]
                 )
 
                 # Effective thermal conductivity (eq. (71))
                 therm_cond[k, i, j] = (
-                    (therm_cond_sat - therm_cond_dry[i, j])
-                    * vol_moisture_content[k, i, j] / vol_moisture_content_sat[i, j]
-                    + therm_cond_dry[i, j]
-                )
+                    therm_cond_sat - therm_cond_dry[i, j]
+                ) * vol_moisture_content[k, i, j] / vol_moisture_content_sat[i, j] + therm_cond_dry[
+                    i, j
+                ]
             else:  # vol_moisture_content[k, i, j] == 0
                 heat_cap[k, i, j] = vol_heat_cap_dry[i, j] * thickness[k, i, j]
                 therm_cond[k, i, j] = therm_cond_dry[i, j]
@@ -327,11 +332,10 @@ def _soil_heat_flux(
         if ns == 0:
             soil_heat_flux[i, j] = surf_heat_flux[i, j]
         else:
-            surf_moisture_conductance_bottom = 2. / (
+            surf_moisture_conductance_bottom = 2.0 / (
                 snow_thickness[ns - 1, i, j] / therm_cond_snow[ns - 1, i, j]
                 + soil_thickness[0, i, j] / therm_cond_soil[0, i, j]
             )
-            soil_heat_flux[i, j] = (
-                surf_moisture_conductance_bottom
-                * (snow_temp[ns - 1, i, j] - soil_temp[0, i, j])
+            soil_heat_flux[i, j] = surf_moisture_conductance_bottom * (
+                snow_temp[ns - 1, i, j] - soil_temp[0, i, j]
             )

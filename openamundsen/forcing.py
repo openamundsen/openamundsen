@@ -6,31 +6,31 @@ import xarray as xr
 
 
 _POINT_DATASET_META_VARS = [
-    'station_name',
-    'lon',
-    'lat',
-    'alt',
+    "station_name",
+    "lon",
+    "lat",
+    "alt",
 ]
 _POINT_DATASET_ALLOWED_METEO_VARS = list(constants.METEO_VAR_METADATA.keys())
 _POINT_DATASET_GRID_VARS = [
-    'x',
-    'y',
-    'col',
-    'row',
-    'within_grid_extent',
-    'within_roi',
+    "x",
+    "y",
+    "col",
+    "row",
+    "within_grid_extent",
+    "within_roi",
 ]
 _POINT_DATASET_MINIMAL_VARS = _POINT_DATASET_META_VARS + constants.MINIMUM_REQUIRED_METEO_VARS
 
 
 def make_point_dataset(
-        data=None,
-        dates=None,
-        point_id=None,
-        name=None,
-        lon=None,
-        lat=None,
-        alt=None,
+    data=None,
+    dates=None,
+    point_id=None,
+    name=None,
+    lon=None,
+    lat=None,
+    alt=None,
 ):
     """
     Create a dataset containing the meteorological forcing data for a single
@@ -76,39 +76,39 @@ def make_point_dataset(
             dates = pd.DatetimeIndex([])
     elif isinstance(data, xr.Dataset):
         data = data.copy(deep=True)  # required because of the potential precipitation-altering
-        dates = data.indexes['time']
+        dates = data.indexes["time"]
     elif isinstance(data, pd.DataFrame):
         data = data.copy()
-        data.index.name = 'time'
+        data.index.name = "time"
         dates = data.index
         data = data.to_xarray()
     else:
-        raise TypeError(f'Unsupported type: {type(data)}')
+        raise TypeError(f"Unsupported type: {type(data)}")
 
     if point_id is None:
-        if data is None or 'station_id' not in data.attrs:
-            raise TypeError('Point ID neither in data nor passed as keyword argument')
-        point_id = data.attrs['station_id']
+        if data is None or "station_id" not in data.attrs:
+            raise TypeError("Point ID neither in data nor passed as keyword argument")
+        point_id = data.attrs["station_id"]
 
     if name is None:
         try:
-            name = data.attrs['station_name']
+            name = data.attrs["station_name"]
         except KeyError:
             name = point_id
 
     if lon is None:
-        if 'lon' not in data.variables:
-            raise TypeError('Longitude neither in data nor passed as keyword argument')
+        if "lon" not in data.variables:
+            raise TypeError("Longitude neither in data nor passed as keyword argument")
         lon = float(data.lon)
 
     if lat is None:
-        if 'lat' not in data.variables:
-            raise TypeError('Latitude neither in data nor passed as keyword argument')
+        if "lat" not in data.variables:
+            raise TypeError("Latitude neither in data nor passed as keyword argument")
         lat = float(data.lat)
 
     if alt is None:
-        if 'alt' not in data.variables:
-            raise TypeError('Altitude neither in data nor passed as keyword argument')
+        if "alt" not in data.variables:
+            raise TypeError("Altitude neither in data nor passed as keyword argument")
         alt = float(data.alt)
 
     meteo_vars = list(set(data.data_vars) & set(_POINT_DATASET_ALLOWED_METEO_VARS))
@@ -126,33 +126,32 @@ def make_point_dataset(
     for var in meteo_vars:
         meta = constants.METEO_VAR_METADATA[var]
 
-        if var == 'precip':
+        if var == "precip":
             # Convert precipitation rates to sums first if required
-            if 'units' in data['precip'].attrs and data['precip'].units == 'kg m-2 s-1':
+            if "units" in data["precip"].attrs and data["precip"].units == "kg m-2 s-1":
                 try:
                     freq = pd.infer_freq(dates)
                     dt = util.offset_to_timedelta(freq).total_seconds()
                 except ValueError:  # infer_freq() needs at least 3 dates
                     dt = np.nan
 
-                data['precip'] *= dt
-                data['precip'].attrs['units'] = 'kg m-2'
-        elif var == 'cloud_fraction':
+                data["precip"] *= dt
+                data["precip"].attrs["units"] = "kg m-2"
+        elif var == "cloud_fraction":
             # Convert cloud cover fraction to percent if required: either if the units are
             # explicitly set to "1" or if no units are set but the maximum cloud fraction value is
             # <= 1. (As the cloud_fraction model variable has units "1" but for the forcing data
             # units "%" are expected, this could happen easily.)
-            if (
-                data['cloud_fraction'].attrs.get('units') == '1'
-                or (len(data) > 10 and data['cloud_fraction'].max() <= 1)
+            if data["cloud_fraction"].attrs.get("units") == "1" or (
+                len(data) > 10 and data["cloud_fraction"].max() <= 1
             ):
-                data['cloud_fraction'] *= 100
-                data['cloud_fraction'].attrs['units'] = '%'
+                data["cloud_fraction"] *= 100
+                data["cloud_fraction"].attrs["units"] = "%"
 
-        units = meta['units']
-        if 'units' in data[var].attrs and data[var].units != units:
+        units = meta["units"]
+        if "units" in data[var].attrs and data[var].units != units:
             raise errors.MeteoDataError(
-                f'{var} has wrong units: expected {units}, got {ds[var].units}'
+                f"{var} has wrong units: expected {units}, got {ds[var].units}"
             )
 
         ds[var].values[:] = data[var].values
@@ -198,9 +197,9 @@ def make_empty_point_dataset(dates, point_id, name, lon, lat, alt, meteo_vars=No
     ds : xr.Dataset
     """
     data = {
-        'lon': ([], float(lon)),
-        'lat': ([], float(lat)),
-        'alt': ([], float(alt)),
+        "lon": ([], float(lon)),
+        "lat": ([], float(lat)),
+        "alt": ([], float(alt)),
     }
 
     if meteo_vars is None:
@@ -209,17 +208,17 @@ def make_empty_point_dataset(dates, point_id, name, lon, lat, alt, meteo_vars=No
     for var in meteo_vars:
         meta = constants.METEO_VAR_METADATA[var]
         data[var] = (
-            ['time'],
+            ["time"],
             np.full(len(dates), np.nan),
             meta,
         )
 
     ds = xr.Dataset(
         data,
-        coords={'time': (['time'], dates)},
+        coords={"time": (["time"], dates)},
         attrs={
-            'station_id': point_id,
-            'station_name': name,
+            "station_id": point_id,
+            "station_name": name,
         },
     )
 
@@ -260,21 +259,21 @@ def combine_point_datasets(datasets, add_minimum_required_vars=True):
                 ds[var] = xr.DataArray(
                     data=np.full(ds.time.shape, np.nan),
                     coords=ds.coords,
-                    dims=('time',),
+                    dims=("time",),
                 )
 
             ds[var].attrs = {
-                'standard_name': meta['standard_name'],
-                'units': meta['units'],
+                "standard_name": meta["standard_name"],
+                "units": meta["units"],
             }
 
-        ds.coords['station'] = ds.attrs['station_id']
-        ds['station_name'] = ds.attrs['station_name']
+        ds.coords["station"] = ds.attrs["station_id"]
+        ds["station_name"] = ds.attrs["station_name"]
         ds.attrs = {}
 
         datasets_processed.append(ds)
 
-    return xr.combine_nested(datasets_processed, concat_dim='station')
+    return xr.combine_nested(datasets_processed, concat_dim="station")
 
 
 def prepare_point_coordinates(ds, grid, crs):
@@ -309,19 +308,19 @@ def prepare_point_coordinates(ds, grid, crs):
     x_var = ds.lon.copy()
     x_var.values = x
     x_var.attrs = {
-        'standard_name': 'projection_x_coordinate',
-        'units': 'm',
+        "standard_name": "projection_x_coordinate",
+        "units": "m",
     }
 
     y_var = ds.lat.copy()
     y_var.values = y
     y_var.attrs = {
-        'standard_name': 'projection_y_coordinate',
-        'units': 'm',
+        "standard_name": "projection_y_coordinate",
+        "units": "m",
     }
 
-    ds['x'] = x_var
-    ds['y'] = y_var
+    ds["x"] = x_var
+    ds["y"] = y_var
 
     bool_var = ds.x.copy().astype(bool)
     bool_var[:] = False
@@ -341,20 +340,17 @@ def prepare_point_coordinates(ds, grid, crs):
     col_var = int_var.copy()
     row_var.values[:] = rows
     col_var.values[:] = cols
-    ds['col'] = col_var
-    ds['row'] = row_var
+    ds["col"] = col_var
+    ds["row"] = row_var
 
-    ds['within_grid_extent'] = (
-        (col_var >= 0)
-        & (col_var < grid.cols)
-        & (row_var >= 0)
-        & (row_var < grid.rows)
+    ds["within_grid_extent"] = (
+        (col_var >= 0) & (col_var < grid.cols) & (row_var >= 0) & (row_var < grid.rows)
     )
 
     within_roi_var = bool_var.copy()
-    ds['within_roi'] = within_roi_var
+    ds["within_roi"] = within_roi_var
 
-    for station in ds.indexes['station']:
+    for station in ds.indexes["station"]:
         dss = ds.sel(station=station)
 
         if dss.within_grid_extent:
@@ -381,7 +377,7 @@ def is_valid_point_dataset(ds, dates=None):
     """
     Test if the passed variable is a valid point forcing dataset.
     """
-    if set(ds.dims) != set(['station', 'time']):
+    if set(ds.dims) != set(["station", "time"]):
         return False
 
     for v in _POINT_DATASET_MINIMAL_VARS:
@@ -389,7 +385,7 @@ def is_valid_point_dataset(ds, dates=None):
             return False
 
     if dates is not None:
-        if not pd.DatetimeIndex(dates).equals(ds.indexes['time']):
+        if not pd.DatetimeIndex(dates).equals(ds.indexes["time"]):
             return False
 
     return True

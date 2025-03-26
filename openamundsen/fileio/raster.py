@@ -30,17 +30,17 @@ def read_raster_metadata(filename, crs=None):
 
     with rasterio.open(filename) as ds:
         if not (ds.res[0] == ds.res[1] == abs(ds.res[0])):
-            raise RasterFileError('Raster file must have equal x and y resolution')
+            raise RasterFileError("Raster file must have equal x and y resolution")
 
-        meta['rows'] = ds.meta['height']
-        meta['cols'] = ds.meta['width']
-        meta['shape'] = (meta['rows'], meta['cols'])
-        meta['resolution'] = ds.res[0]
-        meta['crs'] = ds.crs
-        meta['transform'] = ds.meta['transform']
+        meta["rows"] = ds.meta["height"]
+        meta["cols"] = ds.meta["width"]
+        meta["shape"] = (meta["rows"], meta["cols"])
+        meta["resolution"] = ds.res[0]
+        meta["crs"] = ds.crs
+        meta["transform"] = ds.meta["transform"]
 
-        if meta['crs'] is None and crs is not None:
-            meta['crs'] = rasterio.crs.CRS.from_string(crs)
+        if meta["crs"] is None and crs is not None:
+            meta["crs"] = rasterio.crs.CRS.from_string(crs)
 
     return meta
 
@@ -74,10 +74,10 @@ def read_raster_file(filename, check_meta=None, fill_value=None, dtype=None):
         # compare only rows, cols, resolution and transform and not additional attributes
         # possibly stored in the check_meta object (such as x and y coordinates, CRS, etc.)
         cmp_keys = [
-            'rows',
-            'cols',
-            'resolution',
-            'transform',
+            "rows",
+            "cols",
+            "resolution",
+            "transform",
         ]
 
         meta = read_raster_metadata(filename)
@@ -86,7 +86,7 @@ def read_raster_file(filename, check_meta=None, fill_value=None, dtype=None):
         d2 = {k: check_meta[k] for k in cmp_keys}
 
         if d1 != d2:
-            raise RasterFileError(f'Metadata mismatch for {filename}')
+            raise RasterFileError(f"Metadata mismatch for {filename}")
 
     with rasterio.open(filename) as ds:
         data = ds.read(1, masked=(fill_value is not None))
@@ -118,16 +118,16 @@ def write_raster_file(filename, data, transform, **kwargs):
         Additional keyword arguments to be passed over to `rasterio.open`.
     """
     meta = {
-        'driver': 'AAIGrid',
-        'dtype': data.dtype,
-        'nodata': None,
-        'width': data.shape[1],
-        'height': data.shape[0],
-        'count': 1,
-        'crs': None,
-        'transform': transform,
+        "driver": "AAIGrid",
+        "dtype": data.dtype,
+        "nodata": None,
+        "width": data.shape[1],
+        "height": data.shape[0],
+        "count": 1,
+        "crs": None,
+        "transform": transform,
     }
     meta.update(kwargs)
 
-    with rasterio.open(filename, 'w', **meta) as ds:
+    with rasterio.open(filename, "w", **meta) as ds:
         ds.write(data, 1)

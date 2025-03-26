@@ -108,7 +108,7 @@ def temp_change(
         temp_change = tridiag.solve_tridiag(a, b, c, d)
 
     if replace_nan:
-        temp_change[np.isnan(temp_change)] = 0.
+        temp_change[np.isnan(temp_change)] = 0.0
 
     return temp_change
 
@@ -168,13 +168,18 @@ def temp_change_array(
     # Calculate thermal conductivity between layers
     therm_cond_between = np.full(T.shape, np.nan)
     for k in range(N - 1):
-        therm_cond_between[k, :] = 2 / (dx[k, :] / therm_cond[k, :] + dx[k + 1, :] / therm_cond[k + 1, :])
-    therm_cond_between[N - 1, :] = 2 / (dx[N - 1, :] / therm_cond[N - 1, :] + dx_bottom / therm_cond_bottom)
+        therm_cond_between[k, :] = 2 / (
+            dx[k, :] / therm_cond[k, :] + dx[k + 1, :] / therm_cond[k + 1, :]
+        )
+    therm_cond_between[N - 1, :] = 2 / (
+        dx[N - 1, :] / therm_cond[N - 1, :] + dx_bottom / therm_cond_bottom
+    )
 
     if N == 1:
         temp_change = np.atleast_2d(
             (top_heat_flux + therm_cond_between[0, :] * (T_bottom - T[0, :]))
-            * dt / (heat_cap[0, :] + therm_cond_between[0, :] * dt)
+            * dt
+            / (heat_cap[0, :] + therm_cond_between[0, :] * dt)
         )
     else:
         a = np.zeros(T.shape)  # below-diagonal matrix elements
@@ -189,7 +194,9 @@ def temp_change_array(
 
         for k in range(1, N - 1):
             a[k, :] = c[k - 1, :]
-            b[k, :] = heat_cap[k, :] + (therm_cond_between[k - 1, :] + therm_cond_between[k, :]) * dt
+            b[k, :] = (
+                heat_cap[k, :] + (therm_cond_between[k - 1, :] + therm_cond_between[k, :]) * dt
+            )
             c[k, :] = -therm_cond_between[k, :] * dt
             d[k, :] = (
                 therm_cond_between[k - 1, :] * (T[k - 1, :] - T[k, :]) * dt
@@ -208,6 +215,6 @@ def temp_change_array(
         temp_change = tridiag.solve_tridiag_array(a, b, c, d)
 
     if replace_nan:
-        temp_change[np.isnan(temp_change)] = 0.
+        temp_change[np.isnan(temp_change)] = 0.0
 
     return temp_change

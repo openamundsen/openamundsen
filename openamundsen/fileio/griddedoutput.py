@@ -9,6 +9,7 @@ import xarray as xr
 
 try:
     import dask.array
+
     _DASK_AVAILABLE = True
 except ImportError:
     _DASK_AVAILABLE = False
@@ -52,6 +53,7 @@ class OutputField:
     num_aggregations : int, default 0
         Current number of aggregations (required for calculating a running mean).
     """
+
     var: str
     output_name: str
     agg: str
@@ -74,52 +76,55 @@ class GriddedOutputManager:
     model : OpenAmundsen
         openAMUNDSEN model instance.
     """
+
     def __init__(self, model):
         config = model.config.output_data.grids
         fields = []
 
         for field_cfg in config.variables:
             try:
-                output_name = field_cfg['name']
+                output_name = field_cfg["name"]
             except KeyError:
                 output_name = None
 
             try:
-                freq = field_cfg['freq']
+                freq = field_cfg["freq"]
             except KeyError:
                 freq = model.dates.freqstr
 
             try:
-                agg = field_cfg['agg']
+                agg = field_cfg["agg"]
             except KeyError:
                 agg = None
 
-            if 'dates' in field_cfg:
-                write_dates = pd.to_datetime(field_cfg['dates'])
+            if "dates" in field_cfg:
+                write_dates = pd.to_datetime(field_cfg["dates"])
             else:
                 write_dates = _freq_write_dates(model.dates, freq, agg is not None)
 
             write_dates = write_dates[
-                (write_dates >= model.dates[0])
-                & (write_dates <= model.dates[-1])
+                (write_dates >= model.dates[0]) & (write_dates <= model.dates[-1])
             ]
             if len(write_dates) == 0:
-                logger.debug(f'Discarding grid output variable {field_cfg["var"]}'
-                             ' (nothing to be written)')
+                logger.debug(
+                    f'Discarding grid output variable {field_cfg["var"]} (nothing to be written)'
+                )
                 continue
 
             if output_name is None:
-                output_name = field_cfg.var.split('.')[-1]
+                output_name = field_cfg.var.split(".")[-1]
 
             if output_name in [f.output_name for f in fields]:
-                raise errors.ConfigurationError(f'Duplicate grid output name: {output_name}')
+                raise errors.ConfigurationError(f"Duplicate grid output name: {output_name}")
 
-            fields.append(OutputField(
-                var=field_cfg['var'],
-                output_name=output_name,
-                agg=agg,
-                write_dates=write_dates,
-            ))
+            fields.append(
+                OutputField(
+                    var=field_cfg["var"],
+                    output_name=output_name,
+                    agg=agg,
+                    write_dates=write_dates,
+                )
+            )
 
         self.model = model
         self.fields = fields
@@ -137,13 +142,13 @@ class GriddedOutputManager:
         if len(self.fields) == 0:
             return
 
-        logger.debug('Updating field outputs')
+        logger.debug("Updating field outputs")
 
         date = self.model.date
         roi = self.model.grid.roi
 
-        if self.format == 'netcdf':
-            nc_file = self.model.config.results_dir / 'output_grids.nc'
+        if self.format == "netcdf":
+            nc_file = self.model.config.results_dir / "output_grids.nc"
             append = self.model.config.output_data.grids.append
 
             if not self.nc_file_created:
@@ -151,29 +156,29 @@ class GriddedOutputManager:
 
                 if append:
                     # Convert time values to encoded times (e.g. X hours since YYYY-MM-DD)
-                    self._time_dims = [d for d in list(ds.dims) if d.startswith('time')]
+                    self._time_dims = [d for d in list(ds.dims) if d.startswith("time")]
                     self._encoded_times = {}
                     for coord_name in list(ds.coords):
-                        if not coord_name.startswith('time'):
+                        if not coord_name.startswith("time"):
                             continue
 
                         encoded_times, _, _ = xr.coding.times.encode_cf_datetime(
                             ds.coords[coord_name],
-                            units=ds[self._time_dims[0]].encoding['units'],
-                            calendar=ds[self._time_dims[0]].encoding['calendar'],
+                            units=ds[self._time_dims[0]].encoding["units"],
+                            calendar=ds[self._time_dims[0]].encoding["calendar"],
                         )
                         # (taking units and calendar from the first time variable works because all
                         # time variables have the same encoding)
                         self._encoded_times[coord_name] = encoded_times
 
                     ds = ds.drop_sel({v: ds[v] for v in self._time_dims})
-                    ds.encoding['unlimited_dims'] = self._time_dims
+                    ds.encoding["unlimited_dims"] = self._time_dims
 
                 ds.to_netcdf(nc_file)
                 self.nc_file_created = True
 
-            ds = netCDF4.Dataset(nc_file, 'r+')
-        elif self.format == 'memory':
+            ds = netCDF4.Dataset(nc_file, "r+")
+        elif self.format == "memory":
             if self.data is None:
                 self.data = self._create_dataset(in_memory=True)
 
@@ -202,16 +207,20 @@ class GriddedOutputManager:
 
                 data_cur = self.model.state[field.var]
 
-                if field.agg == 'sum':
+                if field.agg == "sum":
                     if field.data.ndim == 2:
                         field.data[roi] += data_cur[roi]
                     else:
                         field.data[:, roi] += data_cur[:, roi]
-                elif field.agg == 'mean':
+                elif field.agg == "mean":
                     if field.data.ndim == 2:
-                        field.data[roi] += (data_cur[roi] - field.data[roi]) / (field.num_aggregations + 1)
+                        field.data[roi] += (data_cur[roi] - field.data[roi]) / (
+                            field.num_aggregations + 1
+                        )
                     else:
-                        field.data[:, roi] += (data_cur[:, roi] - field.data[:, roi]) / (field.num_aggregations + 1)
+                        field.data[:, roi] += (data_cur[:, roi] - field.data[:, roi]) / (
+                            field.num_aggregations + 1
+                        )
 
                 field.num_aggregations += 1
 
@@ -223,34 +232,34 @@ class GriddedOutputManager:
                 else:
                     data = field.data
 
-                if self.format == 'netcdf':
+                if self.format == "netcdf":
                     ds[field.output_name][date_idx, :, :] = data
 
                     if append:
                         field_time_dim = ds[field.output_name].dimensions[0]
                         ds[field_time_dim][date_idx] = self._encoded_times[field_time_dim][date_idx]
 
-                        bounds_var = f'{field_time_dim}_bounds'
+                        bounds_var = f"{field_time_dim}_bounds"
                         if bounds_var in self._encoded_times:
                             ds[bounds_var][date_idx, :] = self._encoded_times[bounds_var][date_idx]
-                elif self.format in ('ascii', 'geotiff'):
-                    if self.format == 'ascii':
-                        ext = 'asc'
-                        rio_meta = {'driver': 'AAIGrid'}
+                elif self.format in ("ascii", "geotiff"):
+                    if self.format == "ascii":
+                        ext = "asc"
+                        rio_meta = {"driver": "AAIGrid"}
                         # (do not add CRS information when using AAIGrid output to avoid writing
                         # .prj files)
-                    elif self.format == 'geotiff':
-                        ext = 'tif'
+                    elif self.format == "geotiff":
+                        ext = "tif"
                         rio_meta = {
-                            'driver': 'GTiff',
-                            'crs': self.model.grid.crs,
+                            "driver": "GTiff",
+                            "crs": self.model.grid.crs,
                         }
 
                         if self.model.config.output_data.grids.compress:
-                            rio_meta['compress'] = 'lzw'
+                            rio_meta["compress"] = "lzw"
 
                     if field.agg is None:
-                        date_str = f'{date:%Y-%m-%dT%H%M}'
+                        date_str = f"{date:%Y-%m-%dT%H%M}"
                     else:
                         # Find the start date of the current output interval for the output file
                         # name
@@ -258,13 +267,16 @@ class GriddedOutputManager:
                             start_date = self.model.dates[0]
                         else:
                             start_date = field.write_dates[date_idx - 1] + pd.Timedelta(
-                                seconds=self.model.timestep)
+                                seconds=self.model.timestep
+                            )
 
-                        date_str = f'{start_date:%Y-%m-%dT%H%M}_{date:%Y-%m-%dT%H%M}'
+                        date_str = f"{start_date:%Y-%m-%dT%H%M}_{date:%Y-%m-%dT%H%M}"
 
                     if data.ndim == 2:
-                        filename = self.model.config.results_dir / f'{field.output_name}_{date_str}.{ext}'
-                        logger.debug(f'Writing field {field.var} to {filename}')
+                        filename = (
+                            self.model.config.results_dir / f"{field.output_name}_{date_str}.{ext}"
+                        )
+                        logger.debug(f"Writing field {field.var} to {filename}")
                         fileio.write_raster_file(
                             filename,
                             data,
@@ -276,17 +288,18 @@ class GriddedOutputManager:
                         for layer_num in range(data.shape[0]):
                             filename = (
                                 self.model.config.results_dir
-                                / f'{field.output_name}_{layer_num}_{date_str}.{ext}'
+                                / f"{field.output_name}_{layer_num}_{date_str}.{ext}"
                             )
-                            logger.debug(f'Writing field {field.var} (layer {layer_num})'
-                                                    ' to {filename}')
+                            logger.debug(
+                                f"Writing field {field.var} (layer {layer_num}) to {filename}"
+                            )
                             fileio.write_raster_file(
                                 filename,
                                 data[layer_num, :, :],
                                 self.model.grid.transform,
                                 **rio_meta,
                             )
-                elif self.format == 'memory':
+                elif self.format == "memory":
                     self.data[field.output_name].values[date_idx, :, :] = data
                 else:
                     raise NotImplementedError
@@ -294,7 +307,7 @@ class GriddedOutputManager:
                 field.data = None
                 field.num_aggregations = 0
 
-        if self.format == 'netcdf':
+        if self.format == "netcdf":
             ds.close()
 
     def _create_dataset(self, in_memory=False):
@@ -320,11 +333,11 @@ class GriddedOutputManager:
             key = _field_key(field)
             if key not in time_var_names:
                 num_time_vars += 1
-                time_var_names[key] = f'time{num_time_vars}'
+                time_var_names[key] = f"time{num_time_vars}"
 
         if num_time_vars == 1:
             key = next(iter(time_var_names))
-            time_var_names[key] = 'time'
+            time_var_names[key] = "time"
 
         times = {}  # dict for storing times and boundaries (for aggregated variables) of the time variables
         field_time_vars = []  # contains for each field the name of the respective NetCDF time variable
@@ -356,14 +369,14 @@ class GriddedOutputManager:
             time_attrs = {}
 
             if time_bounds is not None:
-                bound_var_name = f'{time_var}_bounds'
-                time_attrs['bounds'] = bound_var_name
+                bound_var_name = f"{time_var}_bounds"
+                time_attrs["bounds"] = bound_var_name
                 coords[bound_var_name] = (
-                    [time_var, 'nbnd'],
+                    [time_var, "nbnd"],
                     time_bounds,
                     {
-                        'long_name': 'time interval endpoints',
-                    }
+                        "long_name": "time interval endpoints",
+                    },
                 )
 
             coords[time_var] = (
@@ -372,25 +385,25 @@ class GriddedOutputManager:
                 time_attrs,
             )
 
-        coords['x'] = (
-            ['x'],
+        coords["x"] = (
+            ["x"],
             x_coords,
             {
-                'standard_name': 'projection_x_coordinate',
-                'long_name': 'x coordinate of projection',
-                'units': 'm',
+                "standard_name": "projection_x_coordinate",
+                "long_name": "x coordinate of projection",
+                "units": "m",
             },
         )
-        coords['y'] = (
-            ['y'],
+        coords["y"] = (
+            ["y"],
             y_coords,
             {
-                'standard_name': 'projection_y_coordinate',
-                'long_name': 'y coordinate of projection',
-                'units': 'm',
+                "standard_name": "projection_y_coordinate",
+                "long_name": "y coordinate of projection",
+                "units": "m",
             },
         )
-        coords['crs'] = (
+        coords["crs"] = (
             [],
             np.array(0),
             pyproj.crs.CRS(self.model.grid.crs).to_cf(),
@@ -401,7 +414,7 @@ class GriddedOutputManager:
         else:
             full = dask.array.full
 
-        if self.format != 'memory' and not _DASK_AVAILABLE:
+        if self.format != "memory" and not _DASK_AVAILABLE:
             dataset_size = 0
             for field in self.fields:
                 meta = self.model.state.meta(field.var)
@@ -417,9 +430,9 @@ class GriddedOutputManager:
             dataset_size_gib = dataset_size / 1024**3
             if dataset_size_gib > 4:
                 logger.warning(
-                    f'Creating large in-memory dataset ({dataset_size_gib:.1f} GiB) for gridded '
-                    'outputs. If you run into memory issues consider installing Dask '
-                    '(pip install dask) to enable memory-efficient dataset creation.'
+                    f"Creating large in-memory dataset ({dataset_size_gib:.1f} GiB) for gridded "
+                    "outputs. If you run into memory issues consider installing Dask "
+                    "(pip install dask) to enable memory-efficient dataset creation."
                 )
 
         # Define data variables
@@ -429,37 +442,41 @@ class GriddedOutputManager:
             meta = self.model.state.meta(field.var)
             attrs = {}
 
-            for attr in ('standard_name', 'long_name', 'units'):
+            for attr in ("standard_name", "long_name", "units"):
                 attr_val = getattr(meta, attr)
                 if attr_val is not None:
                     attrs[attr] = attr_val
 
-            attrs['grid_mapping'] = 'crs'
+            attrs["grid_mapping"] = "crs"
 
             dtype, fill_value = self._field_dtype_and_fill_value(field)
-            attrs['_FillValue'] = fill_value
+            attrs["_FillValue"] = fill_value
 
             if meta.dim3 == 0:  # 2-dimensional variable
                 data[field.output_name] = (
-                    [field_time_var, 'y', 'x'],
-                    full((len(field.write_dates), len(y_coords), len(x_coords)), fill_value, dtype=dtype),
+                    [field_time_var, "y", "x"],
+                    full(
+                        (len(field.write_dates), len(y_coords), len(x_coords)),
+                        fill_value,
+                        dtype=dtype,
+                    ),
                     attrs,
                 )
             else:  # 3-dimensional variable
                 category = self.model.state.parse(field.var)[0]
-                coord_name = f'{category}_layer'
+                coord_name = f"{category}_layer"
 
                 if category in three_dim_coords:
                     if three_dim_coords[coord_name] != meta.dim3:
                         # We assume that all 3-dimensional variables within a category have the
                         # same shape (e.g. "soil.temp" must have the same shape as "soil.therm_cond");
                         # varying numbers of layers within a category are not supported
-                        raise Exception('Inconsistent length of third variable dimension')
+                        raise Exception("Inconsistent length of third variable dimension")
                 else:
                     three_dim_coords[coord_name] = meta.dim3
 
                 data[field.output_name] = (
-                    [field_time_var, coord_name, 'y', 'x'],
+                    [field_time_var, coord_name, "y", "x"],
                     full(
                         (len(field.write_dates), meta.dim3, len(y_coords), len(x_coords)),
                         fill_value,
@@ -473,29 +490,28 @@ class GriddedOutputManager:
             coords[coord_name] = ([coord_name], np.arange(coord_len))
 
         ds = xr.Dataset(data, coords=coords)
-        ds.attrs['Conventions'] = 'CF-1.7'
+        ds.attrs["Conventions"] = "CF-1.7"
 
         _, datetime_units, calendar = xr.coding.times.encode_cf_datetime(self.model.dates)
         for time_var in times:
-            ds[time_var].attrs['standard_name'] = 'time'
+            ds[time_var].attrs["standard_name"] = "time"
 
             # Set time units manually because otherwise the units of the time and the time bounds
             # variables might be different which is not recommended by CF standards
-            ds[time_var].encoding['units'] = datetime_units
-            ds[time_var].encoding['calendar'] = calendar
+            ds[time_var].encoding["units"] = datetime_units
+            ds[time_var].encoding["calendar"] = calendar
 
             # Store time variables as doubles for CF compliance
-            ds[time_var].encoding['dtype'] = np.float64
-            if f'{time_var}_bounds' in ds:
-                ds[f'{time_var}_bounds'].encoding['dtype'] = np.float64
+            ds[time_var].encoding["dtype"] = np.float64
+            if f"{time_var}_bounds" in ds:
+                ds[f"{time_var}_bounds"].encoding["dtype"] = np.float64
 
         if self.model.config.output_data.grids.compress:
             for data_var in ds.data_vars:
-                ds[data_var].encoding['zlib'] = True
-                ds[data_var].encoding['complevel'] = 1
+                ds[data_var].encoding["zlib"] = True
+                ds[data_var].encoding["complevel"] = 1
 
         return ds
-
 
     def _field_dtype_and_fill_value(self, field: OutputField):
         """
@@ -514,7 +530,7 @@ class GriddedOutputManager:
         """
         if (
             np.issubdtype(self.model.state.meta(field.var).dtype, np.integer)
-            and field.agg != 'mean'
+            and field.agg != "mean"
         ):
             dtype = np.int32
             fill_value = np.iinfo(dtype).min
@@ -597,8 +613,10 @@ def _freq_write_dates(dates, out_freq, agg):
             raise ValueError
     except ValueError:
         allowed_offsets_str = ", ".join([o().__class__.__name__ for o in _ALLOWED_OFFSETS])
-        raise errors.ConfigurationError(f'Unsupported output frequency: {out_freq}. '
-                                        f'Supported offsets: {allowed_offsets_str}')
+        raise errors.ConfigurationError(
+            f"Unsupported output frequency: {out_freq}. "
+            f"Supported offsets: {allowed_offsets_str}"
+        )
 
     if not _is_anchored(out_offset):
         # For non-anchored offsets (e.g., '3h', 'D'), the output frequency must be a multiple of
@@ -606,15 +624,17 @@ def _freq_write_dates(dates, out_freq, agg):
         out_freq_td = util.offset_to_timedelta(out_freq)
 
         if out_freq_td < model_freq_td:
-            raise ValueError('Output frequency must not be smaller than the model timestep')
+            raise ValueError("Output frequency must not be smaller than the model timestep")
         elif not (out_freq_td.total_seconds() / model_freq_td.total_seconds()).is_integer():
-            raise ValueError('Output frequency must be a multiple of the model timestep')
+            raise ValueError("Output frequency must be a multiple of the model timestep")
 
     if agg:
         if _is_anchored(out_offset):  # e.g. 'ME', 'YE'
             if model_freq_td.total_seconds() > constants.HOURS_PER_DAY * constants.SECONDS_PER_HOUR:
-                raise NotImplementedError('Aggregation of gridded outputs with anchored offsets '
-                                          'not supported for timesteps > 1d')
+                raise NotImplementedError(
+                    "Aggregation of gridded outputs with anchored offsets "
+                    "not supported for timesteps > 1d"
+                )
 
             period_end_dates = (
                 pd.period_range(
@@ -622,14 +642,14 @@ def _freq_write_dates(dates, out_freq, agg):
                     end=dates[-1],
                     freq=out_offset,
                 )
-                .asfreq(model_freq, how='end')
+                .asfreq(model_freq, how="end")
                 .to_timestamp()
             )
 
             d0 = dates[dates <= period_end_dates[0]][-1]
             write_dates = period_end_dates + (d0 - period_end_dates[0])
 
-            if period_end_dates[0] - write_dates[0] > pd.Timedelta('1d'):
+            if period_end_dates[0] - write_dates[0] > pd.Timedelta("1d"):
                 write_dates = write_dates.delete(0)
 
             # Keep the last output interval only if it is fully covered (e.g., do not write half
@@ -649,10 +669,15 @@ def _freq_write_dates(dates, out_freq, agg):
             freq=out_offset,
         )
 
-        if any([isinstance(out_offset, o) for o in (
-                pd.tseries.offsets.YearEnd,
-                pd.tseries.offsets.MonthEnd,
-        )]) and model_freq_td < pd.Timedelta(days=1):
+        if any(
+            [
+                isinstance(out_offset, o)
+                for o in (
+                    pd.tseries.offsets.YearEnd,
+                    pd.tseries.offsets.MonthEnd,
+                )
+            ]
+        ) and model_freq_td < pd.Timedelta(days=1):
             write_dates += pd.Timedelta(days=1) - model_freq_td
 
     return write_dates

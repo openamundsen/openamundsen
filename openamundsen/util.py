@@ -13,7 +13,7 @@ from typing import Union
 
 class ConfigurationYAML(ruamel.yaml.YAML):
     def __init__(self):
-        super().__init__(typ='rt')  # .indent() works only with the roundtrip dumper
+        super().__init__(typ="rt")  # .indent() works only with the roundtrip dumper
         self.default_flow_style = False
         self.indent(mapping=2, sequence=4, offset=2)
 
@@ -86,11 +86,11 @@ def raster_filename(kind, config):
     -------
     file : pathlib.Path
     """
-    dir = config['input_data']['grids']['dir']
-    domain = config['domain']
-    resolution = config['resolution']
-    extension = 'asc'
-    return Path(f'{dir}/{kind}_{domain}_{resolution}.{extension}')
+    dir = config["input_data"]["grids"]["dir"]
+    domain = config["domain"]
+    resolution = config["resolution"]
+    extension = "asc"
+    return Path(f"{dir}/{kind}_{domain}_{resolution}.{extension}")
 
 
 def transform_coords(x, y, src_crs, dst_crs):
@@ -126,6 +126,7 @@ class ModelGrid(Munch):
     """
     Container for storing model grid related variables.
     """
+
     def prepare_coordinates(self):
         """
         Prepare a range of variables related to the grid coordinates:
@@ -175,19 +176,21 @@ class ModelGrid(Munch):
         self.center_lon = center_lon
         self.center_lat = center_lat
 
-        self.extended_grid = Munch(dict(
-            available=False,
-            rows=None,
-            cols=None,
-            row_offset=None,
-            col_offset=None,
-            row_slice=None,
-            col_slice=None,
-            dem=None,
-            svf=None,
-            normal_vec=None,
-            shadows=None,
-        ))
+        self.extended_grid = Munch(
+            dict(
+                available=False,
+                rows=None,
+                cols=None,
+                row_offset=None,
+                col_offset=None,
+                row_slice=None,
+                col_slice=None,
+                dem=None,
+                svf=None,
+                normal_vec=None,
+                shadows=None,
+            )
+        )
         # ("shadows" required because the shadows are calculated in
         # clear_sky_shortwave_irradiance(), but are required again later in shortwave_irradiance()
         # for calculating the clear sky irradiance for the extended-grid stations)
@@ -198,7 +201,7 @@ class ModelGrid(Munch):
         """
         Update the roi_points and roi_idxs variables using the ROI field.
         """
-        if 'roi' not in self:
+        if "roi" not in self:
             self.roi = np.ones((self.rows, self.cols), dtype=bool)
 
         roi_xs = self.X[self.roi]
@@ -219,16 +222,16 @@ def to_offset(offset: Union[str, pd.offsets.BaseOffset]) -> pd.offsets.BaseOffse
     # Furthermore, we parse the offsets "ME" and "YE" (which have been introduced in pandas 2.2.0)
     # here manually in order to make them work also with earlier pandas versions.
     if isinstance(offset, str):
-        if offset.endswith('H'):
-            offset = offset[:-1] + 'h'
-        elif offset.endswith('M'):
-            offset = offset[:-1] + 'ME'
-        elif offset.endswith('Y'):
-            offset = offset[:-1] + 'YE'
+        if offset.endswith("H"):
+            offset = offset[:-1] + "h"
+        elif offset.endswith("M"):
+            offset = offset[:-1] + "ME"
+        elif offset.endswith("Y"):
+            offset = offset[:-1] + "YE"
 
-        if offset == 'ME':
+        if offset == "ME":
             offset = pd.offsets.MonthEnd()
-        elif offset == 'YE':
+        elif offset == "YE":
             offset = pd.offsets.YearEnd()
 
     return pandas.tseries.frequencies.to_offset(offset)

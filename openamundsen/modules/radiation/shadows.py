@@ -39,7 +39,7 @@ def shadows(dem, res, sun_vec, num_sweeps=1):
     inv_sun_vec = -sun_vec / np.max(np.abs(sun_vec[:2]))
 
     normal_sun_vec = np.zeros(3)
-    normal_sun_vec[2] = np.sqrt(sun_vec[0]**2 + sun_vec[1]**2)
+    normal_sun_vec[2] = np.sqrt(sun_vec[0] ** 2 + sun_vec[1] ** 2)
     normal_sun_vec[0] = -sun_vec[0] * sun_vec[2] / normal_sun_vec[2]
     normal_sun_vec[1] = -sun_vec[1] * sun_vec[2] / normal_sun_vec[2]
 
@@ -79,11 +79,13 @@ def shadows(dem, res, sun_vec, num_sweeps=1):
             if jdx < 0 or jdx >= dem.shape[1] or idy < 0 or idy >= dem.shape[0]:
                 break
 
-            vec_to_orig = np.array([
-                dx * res,
-                dy * res,
-                dem[idy, jdx],
-            ])
+            vec_to_orig = np.array(
+                [
+                    dx * res,
+                    dy * res,
+                    dem[idy, jdx],
+                ]
+            )
             z_proj = np.dot(vec_to_orig, normal_sun_vec)
 
             if z_proj < max_z_proj:

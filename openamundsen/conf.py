@@ -10,12 +10,13 @@ import re
 
 try:
     import openamundsen_snowmanagement
+
     SNOW_MANAGEMENT_AVAILABLE = True
-    SNOW_MANAGEMENT_DATA_DIR = Path(openamundsen_snowmanagement.__file__).parent / 'data'
+    SNOW_MANAGEMENT_DATA_DIR = Path(openamundsen_snowmanagement.__file__).parent / "data"
 except ImportError:
     SNOW_MANAGEMENT_AVAILABLE = False
 
-DATA_DIR = Path(__file__).parent / 'data'
+DATA_DIR = Path(__file__).parent / "data"
 
 
 class ConfigurationValidator(cerberus.Validator):
@@ -37,37 +38,37 @@ class ConfigurationValidator(cerberus.Validator):
         # (which is now deprecated in favor of "h") has been frequently used in earlier versions of
         # openAMUNDSEN, we replace it here manually with its lowercase version in order to avoid
         # deprecation warnings.
-        if timestep.endswith('H'):
-            timestep = timestep[:-1] + 'h'
+        if timestep.endswith("H"):
+            timestep = timestep[:-1] + "h"
         return timestep
 
     def _normalize_coerce_snowmodel(self, model):
         # Snow model name 'layers' is deprecated -> change to 'multilayer'
-        if model == 'layers':
-            return 'multilayer'
+        if model == "layers":
+            return "multilayer"
 
         return model
 
     def _normalize_coerce_meteo_interpolation(self, d):
         # 'wind_speed' is deprecated -> change to 'wind'
-        if 'wind_speed' in d:
-            d['wind'] = d.pop('wind_speed')
+        if "wind_speed" in d:
+            d["wind"] = d.pop("wind_speed")
 
         return d
 
     def _normalize_coerce_cloudiness(self, d):
         # 'day_method' is deprecated -> change to 'method'
-        if 'day_method' in d:
-            if 'method' not in d:
-                d['method'] = d.pop('day_method')
+        if "day_method" in d:
+            if "method" not in d:
+                d["method"] = d.pop("day_method")
             else:
                 raise ConfigurationError(
-                    'cloudiness.day_method is deprecated. Please use cloudiness.method instead.'
+                    "cloudiness.day_method is deprecated. Please use cloudiness.method instead."
                 )
 
         # 'night_method' is deprecated -> change to 'clear_sky_fraction_night_method'
-        if 'night_method' in d:
-            d['clear_sky_fraction_night_method'] = d.pop('night_method')
+        if "night_method" in d:
+            d["clear_sky_fraction_night_method"] = d.pop("night_method")
 
         return d
 
@@ -83,9 +84,9 @@ class ConfigurationEncoder(json.JSONEncoder):
 def _parse_end_date(end_date, timestep):
     # If end_date is specified without an hour value, the end hour should be inferred
     # (i.e., set to the latest time step of the end day).
-    if type(end_date) is datetime.date:  # do not use isinstance() because we want to catch only datetime.date and not its subclasses (datetime.datetime, pd.Timestamp etc.)
+    if type(end_date) is datetime.date:  # do not use isinstance() because we want to catch only datetime.date and not its subclasses (datetime.datetime, pd.Timestamp etc.) # fmt: skip
         infer_end_hour = True
-    elif isinstance(end_date, str) and re.match(r'^\d\d\d\d-\d\d-\d\d$', end_date.strip()):
+    elif isinstance(end_date, str) and re.match(r"^\d\d\d\d-\d\d-\d\d$", end_date.strip()):
         infer_end_hour = True
     else:
         infer_end_hour = False
@@ -108,6 +109,7 @@ class Configuration(Munch):
     so that attributes are accessible both using dict notation
     (`config['start_date']`) as well as dot notation (`config.end_date`).
     """
+
     @classmethod
     def from_dict(cls, d):
         return cls.fromDict(d)
@@ -130,17 +132,17 @@ def read_config(filename):
 
 def parse_config(config):
     _init_schemas()
-    v = ConfigurationValidator(cerberus.schema_registry.get('openamundsen_config'))
+    v = ConfigurationValidator(cerberus.schema_registry.get("openamundsen_config"))
     valid = v.validate(config)
 
     if not valid:
-        raise ConfigurationError('Invalid configuration\n\n' + util.to_yaml(v.errors))
+        raise ConfigurationError("Invalid configuration\n\n" + util.to_yaml(v.errors))
 
     full_config = Configuration.fromDict(v.document)
-    full_config['end_date'] = _parse_end_date(full_config['end_date'], full_config['timestep'])
+    full_config["end_date"] = _parse_end_date(full_config["end_date"], full_config["timestep"])
 
-    full_config['land_cover']['classes'] = _merge_land_cover_params(
-        full_config['land_cover']['classes']
+    full_config["land_cover"]["classes"] = _merge_land_cover_params(
+        full_config["land_cover"]["classes"]
     )
 
     validate_config(full_config)
@@ -155,30 +157,30 @@ def _init_schemas():
     schema_reg = cerberus.schema_registry
     schemas = schema_reg.all()
 
-    if 'openamundsen_config' not in schemas:
-        config_schema = util.read_yaml_file(f'{DATA_DIR}/configschema.yml')
+    if "openamundsen_config" not in schemas:
+        config_schema = util.read_yaml_file(f"{DATA_DIR}/configschema.yml")
 
         if SNOW_MANAGEMENT_AVAILABLE:
-            sm_schema = util.read_yaml_file(f'{SNOW_MANAGEMENT_DATA_DIR}/configschema.yml')
+            sm_schema = util.read_yaml_file(f"{SNOW_MANAGEMENT_DATA_DIR}/configschema.yml")
             config_schema.update(sm_schema)
 
-        schema_reg.add('openamundsen_config', config_schema)
+        schema_reg.add("openamundsen_config", config_schema)
 
-        lcc_schema = util.read_yaml_file(f'{DATA_DIR}/land_cover_class_schema.yml')
-        schema_reg.add('openamundsen_land_cover_class', lcc_schema)
+        lcc_schema = util.read_yaml_file(f"{DATA_DIR}/land_cover_class_schema.yml")
+        schema_reg.add("openamundsen_land_cover_class", lcc_schema)
 
 
 def _merge_land_cover_params(class_params):
     """
     Merge the manually set land cover class parameters with the default parameters.
     """
-    default_config = read_config(f'{DATA_DIR}/land_cover_class_params.yml')
+    default_config = read_config(f"{DATA_DIR}/land_cover_class_params.yml")
 
     dict_schema = {
-        'classes': {
-            'type': 'dict',
-            'valuesrules': {
-                'schema': 'openamundsen_land_cover_class',
+        "classes": {
+            "type": "dict",
+            "valuesrules": {
+                "schema": "openamundsen_land_cover_class",
             },
         },
     }
@@ -186,9 +188,9 @@ def _merge_land_cover_params(class_params):
     valid = v.validate(default_config)
 
     if not valid:
-        raise ConfigurationError('Invalid land cover configuration\n\n' + util.to_yaml(v.errors))
+        raise ConfigurationError("Invalid land cover configuration\n\n" + util.to_yaml(v.errors))
 
-    default_class_params = Configuration.fromDict(v.document)['classes']
+    default_class_params = Configuration.fromDict(v.document)["classes"]
     merged_params = default_class_params.copy()
 
     for lcc, lcc_params in class_params.items():
@@ -206,7 +208,7 @@ def validate_config(config):
     Perform some additional validations which are too complicated with Cerberus.
     """
     if config.start_date > config.end_date:
-        raise ConfigurationError('End date must be after start date')
+        raise ConfigurationError("End date must be after start date")
 
     # Check if timestep matches start/end dates
     dates = pd.date_range(
@@ -215,7 +217,7 @@ def validate_config(config):
         freq=config.timestep,
     )
     if dates[-1] != config.end_date:
-        raise ConfigurationError('Start/end date is not compatible with timestep')
+        raise ConfigurationError("Start/end date is not compatible with timestep")
 
     # Check if write_freq is compatible with timestep - as long as the time step is <= 1d,
     # write_freq can be an offset like 'ME' or 'YE', but for larger timesteps it is not guaranteed
@@ -228,62 +230,71 @@ def validate_config(config):
         try:
             write_freq_td = pd.Timedelta(write_freq)
             if write_freq_td.total_seconds() % timestep_td.total_seconds() != 0:
-                raise ConfigurationError('write_freq must be a multiple of timestep')
+                raise ConfigurationError("write_freq must be a multiple of timestep")
         except ValueError:
-            raise ConfigurationError('write_freq must be a multiple of timestep')
+            raise ConfigurationError("write_freq must be a multiple of timestep")
 
-    if config.input_data.meteo.format == 'netcdf' and config.input_data.meteo.crs is not None:
-        print('Warning: Ignoring CRS specification for meteo input data '
-              '(CRS not required when using NetCDF format)')
+    if config.input_data.meteo.format == "netcdf" and config.input_data.meteo.crs is not None:
+        print(
+            "Warning: Ignoring CRS specification for meteo input data "
+            "(CRS not required when using NetCDF format)"
+        )
 
-    if config.input_data.meteo.format == 'memory':
+    if config.input_data.meteo.format == "memory":
         if (
-            config.input_data.meteo.bounds != 'grid'
+            config.input_data.meteo.bounds != "grid"
             or len(config.input_data.meteo.exclude) > 0
             or len(config.input_data.meteo.include) > 0
         ):
-            print('Warning: "bounds", "exclude" and "include" are currently ignored for '
-                  'format "memory"')
+            print(
+                'Warning: "bounds", "exclude" and "include" are currently ignored for '
+                'format "memory"'
+            )
 
-    if config.snow.model == 'multilayer' and config.snow.melt.method != 'energy_balance':
-        raise ConfigurationError(f'Melt method "{config.snow.melt.method}" not supported for the '
-                                 f'snow model "{config.snow.model}"')
+    if config.snow.model == "multilayer" and config.snow.melt.method != "energy_balance":
+        raise ConfigurationError(
+            f'Melt method "{config.snow.melt.method}" not supported for the '
+            f'snow model "{config.snow.model}"'
+        )
 
-    if config.snow.melt.method == 'temperature_index':
+    if config.snow.melt.method == "temperature_index":
         if config.snow.melt.degree_day_factor is None:
-            raise ConfigurationError('Missing field: snow.melt.degree_day_factor')
-    elif config.snow.melt.method == 'enhanced_temperature_index':
+            raise ConfigurationError("Missing field: snow.melt.degree_day_factor")
+    elif config.snow.melt.method == "enhanced_temperature_index":
         if config.snow.melt.degree_day_factor is None:
-            raise ConfigurationError('Missing field: snow.melt.degree_day_factor')
+            raise ConfigurationError("Missing field: snow.melt.degree_day_factor")
         if config.snow.melt.albedo_factor is None:
-            raise ConfigurationError('Missing field: snow.melt.albedo_factor')
+            raise ConfigurationError("Missing field: snow.melt.albedo_factor")
 
     if abs(config.meteo.precipitation_phase.threshold_temp) < 20:
-        print('Warning: precipitation phase threshold temperature seems to be in °C, converting to K')
+        print(
+            "Warning: precipitation phase threshold temperature seems to be in °C, converting to K"
+        )
         config.meteo.precipitation_phase.threshold_temp += constants.T0
 
     ac = config.snow.albedo
-    if ac.method == 'usaco':
+    if ac.method == "usaco":
         print('Warning: albedo method "usaco" is deprecated, please use "snow_age"')
-        ac.method = 'snow_age'
+        ac.method = "snow_age"
         ac.cold_snow_decay_timescale = 1 / ac.k_neg * constants.HOURS_PER_DAY
         ac.melting_snow_decay_timescale = 1 / ac.k_pos * constants.HOURS_PER_DAY
-        ac.decay_timescale_determination_temperature = 'air'
+        ac.decay_timescale_determination_temperature = "air"
         ac.refresh_snowfall = ac.significant_snowfall
-        ac.refresh_method = 'binary'
-    elif ac.method == 'fsm':
+        ac.refresh_method = "binary"
+    elif ac.method == "fsm":
         print('Warning: albedo method "fsm" is deprecated, please use "snow_age"')
-        ac.method = 'snow_age'
-        ac.decay_timescale_determination_temperature = 'surface'
-        ac.refresh_method = 'continuous'
+        ac.method = "snow_age"
+        ac.decay_timescale_determination_temperature = "surface"
+        ac.refresh_method = "continuous"
 
     if (
         config.glaciers.enabled
-        and config.glaciers.model == 'delta_h'
-        and config.snow.model != 'cryolayers'
+        and config.glaciers.model == "delta_h"
+        and config.snow.model != "cryolayers"
     ):
-        raise ConfigurationError('Glacier model "delta_h" can currently only be used with '
-                                 'snow model "cryolayers"')
+        raise ConfigurationError(
+            'Glacier model "delta_h" can currently only be used with snow model "cryolayers"'
+        )
 
     if SNOW_MANAGEMENT_AVAILABLE:
         openamundsen_snowmanagement.validate_config(config)

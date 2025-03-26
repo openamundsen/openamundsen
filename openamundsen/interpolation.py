@@ -34,19 +34,19 @@ def _idw(x_points, y_points, z_points, x_targets, y_targets, power, smoothing):
         dist_is_0 = False
 
         for k in range(num_points):
-            dist = np.sqrt((x - x_points[k]) ** 2 + (y - y_points[k]) ** 2 + smoothing ** 2)
+            dist = np.sqrt((x - x_points[k]) ** 2 + (y - y_points[k]) ** 2 + smoothing**2)
 
             if dist == 0.0:
                 data[target_num] = z_points[k]
                 dist_is_0 = True
                 break
 
-            w += 1.0 / dist ** power
+            w += 1.0 / dist**power
 
         if not dist_is_0:
             for k in range(num_points):
-                dist = np.sqrt((x - x_points[k]) ** 2 + (y - y_points[k]) ** 2 + smoothing ** 2)
-                total += z_points[k] / dist ** power
+                dist = np.sqrt((x - x_points[k]) ** 2 + (y - y_points[k]) ** 2 + smoothing**2)
+                total += z_points[k] / dist**power
 
             data[target_num] = total / w
 

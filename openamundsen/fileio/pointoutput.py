@@ -22,12 +22,13 @@ class PointOutputVariable:
         Output name (by default the variable name, e.g. "temp" for the variable
         "meteo.temp")
     """
+
     var_name: str
     output_name: str = None
 
     def __post_init__(self):
         if self.output_name is None:
-            self.output_name = self.var_name.split('.')[-1]
+            self.output_name = self.var_name.split(".")[-1]
 
 
 @dataclass
@@ -61,6 +62,7 @@ class OutputPoint:
     row : int
         Row index of the point within the model grid.
     """
+
     name: str
     lon: float
     lat: float
@@ -72,49 +74,49 @@ class OutputPoint:
 
 
 _default_output_vars = [
-    PointOutputVariable('meteo.temp'),
-    PointOutputVariable('meteo.precip'),
-    PointOutputVariable('meteo.snowfall'),
-    PointOutputVariable('meteo.rainfall'),
-    PointOutputVariable('meteo.rel_hum'),
-    PointOutputVariable('meteo.wind_speed'),
-    PointOutputVariable('meteo.sw_in'),
-    PointOutputVariable('meteo.sw_out'),
-    PointOutputVariable('meteo.lw_in'),
-    PointOutputVariable('meteo.lw_out'),
-    PointOutputVariable('meteo.sw_in_clearsky'),
-    PointOutputVariable('meteo.dir_in_clearsky'),
-    PointOutputVariable('meteo.diff_in_clearsky'),
-    PointOutputVariable('meteo.cloud_factor'),
-    PointOutputVariable('meteo.cloud_fraction'),
-    PointOutputVariable('meteo.wet_bulb_temp'),
-    PointOutputVariable('meteo.dew_point_temp'),
-    PointOutputVariable('meteo.atmos_press'),
-    PointOutputVariable('meteo.sat_vap_press'),
-    PointOutputVariable('meteo.vap_press'),
-    PointOutputVariable('meteo.spec_hum'),
-
-    PointOutputVariable('surface.temp', 'surface_temp'),
-    PointOutputVariable('surface.heat_flux', 'surface_heat_flux'),
-    PointOutputVariable('surface.sens_heat_flux'),
-    PointOutputVariable('surface.lat_heat_flux'),
-    PointOutputVariable('surface.advective_heat_flux'),
-    PointOutputVariable('surface.albedo', 'surface_albedo'),
-
-    PointOutputVariable('soil.temp', 'soil_temp'),
-    PointOutputVariable('soil.heat_flux', 'soil_heat_flux'),
-
-    PointOutputVariable('snow.swe', 'swe'),
-    PointOutputVariable('snow.depth', 'snow_depth'),
-    PointOutputVariable('snow.temp', 'snow_temp'),
-    PointOutputVariable('snow.thickness', 'snow_thickness'),
-    PointOutputVariable('snow.density', 'snow_density'),
-    PointOutputVariable('snow.ice_content'),
-    PointOutputVariable('snow.liquid_water_content'),
-    PointOutputVariable('snow.melt'),
-    PointOutputVariable('snow.runoff'),
-    PointOutputVariable('snow.sublimation'),
-    PointOutputVariable('snow.refreezing'),
+    PointOutputVariable("meteo.temp"),
+    PointOutputVariable("meteo.precip"),
+    PointOutputVariable("meteo.snowfall"),
+    PointOutputVariable("meteo.rainfall"),
+    PointOutputVariable("meteo.rel_hum"),
+    PointOutputVariable("meteo.wind_speed"),
+    PointOutputVariable("meteo.sw_in"),
+    PointOutputVariable("meteo.sw_out"),
+    PointOutputVariable("meteo.lw_in"),
+    PointOutputVariable("meteo.lw_out"),
+    PointOutputVariable("meteo.sw_in_clearsky"),
+    PointOutputVariable("meteo.dir_in_clearsky"),
+    PointOutputVariable("meteo.diff_in_clearsky"),
+    PointOutputVariable("meteo.cloud_factor"),
+    PointOutputVariable("meteo.cloud_fraction"),
+    PointOutputVariable("meteo.wet_bulb_temp"),
+    PointOutputVariable("meteo.dew_point_temp"),
+    PointOutputVariable("meteo.atmos_press"),
+    PointOutputVariable("meteo.sat_vap_press"),
+    PointOutputVariable("meteo.vap_press"),
+    PointOutputVariable("meteo.spec_hum"),
+    #
+    PointOutputVariable("surface.temp", "surface_temp"),
+    PointOutputVariable("surface.heat_flux", "surface_heat_flux"),
+    PointOutputVariable("surface.sens_heat_flux"),
+    PointOutputVariable("surface.lat_heat_flux"),
+    PointOutputVariable("surface.advective_heat_flux"),
+    PointOutputVariable("surface.albedo", "surface_albedo"),
+    #
+    PointOutputVariable("soil.temp", "soil_temp"),
+    PointOutputVariable("soil.heat_flux", "soil_heat_flux"),
+    #
+    PointOutputVariable("snow.swe", "swe"),
+    PointOutputVariable("snow.depth", "snow_depth"),
+    PointOutputVariable("snow.temp", "snow_temp"),
+    PointOutputVariable("snow.thickness", "snow_thickness"),
+    PointOutputVariable("snow.density", "snow_density"),
+    PointOutputVariable("snow.ice_content"),
+    PointOutputVariable("snow.liquid_water_content"),
+    PointOutputVariable("snow.melt"),
+    PointOutputVariable("snow.runoff"),
+    PointOutputVariable("snow.sublimation"),
+    PointOutputVariable("snow.refreezing"),
 ]
 
 
@@ -129,13 +131,14 @@ class PointOutputManager:
     model : OpenAmundsen
         openAMUNDSEN model instance.
     """
+
     def __init__(self, model):
         vars = []
         points = []
         config = model.config.output_data.timeseries
 
         # Initialize write dates
-        if config.format == 'memory':
+        if config.format == "memory":
             write_dates = []
         else:
             write_dates = pd.date_range(
@@ -144,8 +147,7 @@ class PointOutputManager:
                 freq=util.to_offset(config.write_freq),
             )
             write_dates = write_dates[
-                (write_dates >= model.config.start_date)
-                & (write_dates <= model.config.end_date)
+                (write_dates >= model.config.start_date) & (write_dates <= model.config.end_date)
             ]
 
             # Add last timestep of the model run if it is not included anyway
@@ -162,8 +164,8 @@ class PointOutputManager:
         for var_cfg in config.variables:
             vars.append(
                 PointOutputVariable(
-                    var_name=var_cfg['var'],
-                    output_name=var_cfg['name'] if 'name' in var_cfg else None
+                    var_name=var_cfg["var"],
+                    output_name=var_cfg["name"] if "name" in var_cfg else None,
                 )
             )
 
@@ -172,75 +174,84 @@ class PointOutputManager:
             try:
                 _ = model.state[var.var_name]
             except (AttributeError, KeyError):
-                raise errors.ConfigurationError(f'Invalid time series output variable: {var.var_name}')
+                raise errors.ConfigurationError(
+                    f"Invalid time series output variable: {var.var_name}"
+                )
 
         # Check if there are any duplicate output names
         if len(set([v.output_name for v in vars])) < len(vars):
-            raise errors.ConfigurationError('Duplicate output names in time series output configuration.\n'
-                                            f'List of variables:\n{pprint.pformat(vars)}')
+            raise errors.ConfigurationError(
+                "Duplicate output names in time series output configuration.\n"
+                f"List of variables:\n{pprint.pformat(vars)}"
+            )
 
         # Add default output points (= stations within ROI)
         if config.add_default_points:
             stations = model.meteo.sel(station=model.meteo.within_roi)
-            df = stations[['lon', 'lat', 'alt', 'x', 'y', 'col', 'row']].to_dataframe()
+            df = stations[["lon", "lat", "alt", "x", "y", "col", "row"]].to_dataframe()
 
             for point in df.itertuples():
-                points.append(OutputPoint(
-                    name=point.Index,
-                    lon=point.lon,
-                    lat=point.lat,
-                    alt=model.state.base.dem[point.row, point.col],
-                    x=point.x,
-                    y=point.y,
-                    col=point.col,
-                    row=point.row,
-                ))
+                points.append(
+                    OutputPoint(
+                        name=point.Index,
+                        lon=point.lon,
+                        lat=point.lat,
+                        alt=model.state.base.dem[point.row, point.col],
+                        x=point.x,
+                        y=point.y,
+                        col=point.col,
+                        row=point.row,
+                    )
+                )
 
         # Add additional output points
         for point_num, point in enumerate(config.points):
-            if 'name' in point:
-                point_name = point['name']
+            if "name" in point:
+                point_name = point["name"]
             else:
-                point_name = f'point{point_num + 1}'
+                point_name = f"point{point_num + 1}"
 
             # Check if point name is already in use
             if point_name in [p.name for p in points]:
-                raise errors.ConfigurationError(f'Duplicate point name: {point_name}')
+                raise errors.ConfigurationError(f"Duplicate point name: {point_name}")
 
             lon, lat = util.transform_coords(
-                point['x'],
-                point['y'],
+                point["x"],
+                point["y"],
                 model.config.crs,
                 constants.CRS_WGS84,
             )
 
             row, col = rasterio.transform.rowcol(
                 model.grid.transform,
-                point['x'],
-                point['y'],
+                point["x"],
+                point["y"],
             )
             row = int(row)
             col = int(col)
 
             # Check if point is within the grid boundaries
             if row < 0 or row >= model.grid.rows or col < 0 or col >= model.grid.cols:
-                raise errors.ConfigurationError('Output point is outside of the grid boundaries: '
-                                                f'{dict(point)}')
+                raise errors.ConfigurationError(
+                    f"Output point is outside of the grid boundaries: {dict(point)}"
+                )
 
             # Check if point is within the ROI (if not, still allow it but raise a warning)
             if not model.grid.roi[row, col]:
-                logger.warning(f'Output point is outside of the ROI: {dict(point)}')
+                logger.warning(f"Output point is outside of the ROI: {dict(point)}")
 
-            points.append(OutputPoint(
-                name=point_name,
-                lon=lon,
-                lat=lat,
-                alt=model.state.base.dem[row, col],
-                x=point['x'],
-                y=point['y'],
-                col=col,
-                row=row,
-            ))
+            points.append(
+                OutputPoint(
+                    name=point_name,
+                    lon=lon,
+                    lat=lat,
+                    alt=model.state.base.dem[row, col],
+                    x=point["x"],
+                    y=point["y"],
+                    col=col,
+                    row=row,
+                )
+            )
 
         self.model = model
         self.vars = vars
@@ -276,34 +287,34 @@ class PointOutputManager:
                 dtype = np.float32
                 fill_value = np.nan
 
-            attrs['_FillValue'] = fill_value
+            attrs["_FillValue"] = fill_value
 
-            for attr in ('standard_name', 'long_name', 'units'):
+            for attr in ("standard_name", "long_name", "units"):
                 attr_val = getattr(meta, attr)
                 if attr_val is not None:
                     attrs[attr] = attr_val
 
             if meta.dim3 == 0:  # 2-dimensional variable
                 var_def = (
-                    ['time', 'point'],
+                    ["time", "point"],
                     np.full((len(dates), len(self.points)), fill_value, dtype=dtype),
                     attrs,
                 )
             else:  # 3-dimensional variable
                 category = self.model.state.parse(var.var_name)[0]
-                coord_name = f'{category}_layer'
+                coord_name = f"{category}_layer"
 
                 if category in three_dim_coords:
                     if three_dim_coords[coord_name] != meta.dim3:
                         # We assume that all 3-dimensional variables within a category have the
                         # same shape (e.g. "soil.temp" must have the same shape as "soil.therm_cond");
                         # varying numbers of layers within a category are not supported
-                        raise Exception('Inconsistent length of third variable dimension')
+                        raise Exception("Inconsistent length of third variable dimension")
                 else:
                     three_dim_coords[coord_name] = meta.dim3
 
                 var_def = (
-                    ['time', coord_name, 'point'],
+                    ["time", coord_name, "point"],
                     np.full((len(dates), meta.dim3, len(self.points)), fill_value, dtype=dtype),
                     attrs,
                 )
@@ -311,13 +322,13 @@ class PointOutputManager:
             data[var.output_name] = var_def
 
         coords = {
-            'time': (['time'], dates),
-            'point': (['point'], [p.name for p in self.points]),
-            'lon': (['point'], [p.lon for p in self.points]),
-            'lat': (['point'], [p.lat for p in self.points]),
-            'alt': (['point'], [p.alt for p in self.points]),
-            'x': (['point'], [p.x for p in self.points]),
-            'y': (['point'], [p.y for p in self.points]),
+            "time": (["time"], dates),
+            "point": (["point"], [p.name for p in self.points]),
+            "lon": (["point"], [p.lon for p in self.points]),
+            "lat": (["point"], [p.lat for p in self.points]),
+            "alt": (["point"], [p.alt for p in self.points]),
+            "x": (["point"], [p.x for p in self.points]),
+            "y": (["point"], [p.y for p in self.points]),
         }
 
         # Add 3-dimensional coordinates
@@ -336,7 +347,7 @@ class PointOutputManager:
         -------
         dates : pd.DatetimeIndex
         """
-        if self.format == 'memory':
+        if self.format == "memory":
             dates = self.model.dates
         else:
             idxs = np.flatnonzero(self.write_dates >= self.model.date)
@@ -348,8 +359,7 @@ class PointOutputManager:
             else:
                 prev_write_date = self.write_dates[idxs[-1]]
                 dates = self.model.dates[
-                    (self.model.dates > prev_write_date)
-                    & (self.model.dates <= next_write_date)
+                    (self.model.dates > prev_write_date) & (self.model.dates <= next_write_date)
                 ]
 
         return dates
@@ -359,7 +369,7 @@ class PointOutputManager:
         Update the point output data for the current time step, i.e., write the
         output variable values for all point locations to the internal dataset.
         """
-        logger.debug('Updating point outputs')
+        logger.debug("Updating point outputs")
 
         if self.data is None:
             self.data = self._create_dataset(self._current_chunk_dates())
@@ -388,11 +398,11 @@ class PointOutputManager:
         # Write data to file
         # If we are at the first write date, simple write the file (i.e. overwrite possibly
         # existing files), otherwise merge the already written dataset with the in-memory one.
-        if self.format != 'memory' and date == ds.indexes['time'][-1]:
-            logger.debug('Writing point outputs')
+        if self.format != "memory" and date == ds.indexes["time"][-1]:
+            logger.debug("Writing point outputs")
 
-            if self.format == 'netcdf':
-                filename = self.model.config.results_dir / 'output_timeseries.nc'
+            if self.format == "netcdf":
+                filename = self.model.config.results_dir / "output_timeseries.nc"
 
                 if date == self.write_dates[0]:
                     ds.to_netcdf(filename)
@@ -401,12 +411,12 @@ class PointOutputManager:
                         # Handle an issue introduced in xarray v2022.06.0 - without this line, the
                         # time index somehow loses the time information and keeps only the date part
                         # (triggered by test_point_output.py::test_write_freq)
-                        old_ds['time'] = old_ds.indexes['time']
+                        old_ds["time"] = old_ds.indexes["time"]
 
-                        ds_merge = xr.concat([old_ds, ds], 'time')
+                        ds_merge = xr.concat([old_ds, ds], "time")
 
                     ds_merge.to_netcdf(filename)
-            elif self.format == 'csv':
+            elif self.format == "csv":
                 ds_out = ds.copy()
 
                 # If there are 3-dimensional variables, convert them to 2-dimensional variables
@@ -418,24 +428,26 @@ class PointOutputManager:
 
                     if meta.dim3 > 0:
                         for i in range(meta.dim3):
-                            ds_out[f'{var.output_name}{i}'] = ds[var.output_name].loc[:, i, :]
+                            ds_out[f"{var.output_name}{i}"] = ds[var.output_name].loc[:, i, :]
 
                         ds_out = ds_out.drop_vars(var.output_name)
 
                 for point in self.points:
-                    filename = self.model.config.results_dir / f'point_{point.name}.csv'
+                    filename = self.model.config.results_dir / f"point_{point.name}.csv"
 
                     ds_out_point = ds_out.sel(point=point.name)
 
                     # Drop all coordinate variables except "time" (i.e. "lon", "lat", etc.)
                     # so that they are not in the resulting dataframe when calling to_dataframe()
-                    ds_out_point = ds_out_point.drop_vars(list(set(list(ds_out_point.coords)) - set(['time'])))
+                    ds_out_point = ds_out_point.drop_vars(
+                        list(set(list(ds_out_point.coords)) - set(["time"]))
+                    )
 
                     df = ds_out_point.to_dataframe()
 
                     if date == self.write_dates[0]:
                         df.to_csv(filename)
                     else:
-                        df.to_csv(filename, mode='a', header=False)
+                        df.to_csv(filename, mode="a", header=False)
 
             self.data = None

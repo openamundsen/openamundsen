@@ -22,9 +22,11 @@ def atmospheric_pressure(elev):
         Atmospheric pressure (Pa).
     """
     return c.STANDARD_ATMOSPHERE * (
-        1 - c.GRAVITATIONAL_ACCELERATION * np.asarray(elev)
+        1
+        - c.GRAVITATIONAL_ACCELERATION
+        * np.asarray(elev)
         / (c.SPEC_HEAT_CAP_DRY_AIR * c.STANDARD_SEA_LEVEL_TEMPERATURE)
-    )**(c.SPEC_HEAT_CAP_DRY_AIR * c.MOLAR_MASS_DRY_AIR / c.UNIVERSAL_GAS_CONSTANT)
+    ) ** (c.SPEC_HEAT_CAP_DRY_AIR * c.MOLAR_MASS_DRY_AIR / c.UNIVERSAL_GAS_CONSTANT)
 
 
 def pressure_to_altitude(pressure):
@@ -45,8 +47,9 @@ def pressure_to_altitude(pressure):
     """
     exp = c.SPEC_HEAT_CAP_DRY_AIR * c.MOLAR_MASS_DRY_AIR / c.UNIVERSAL_GAS_CONSTANT
     return (
-        (1 - (np.asarray(pressure) / c.STANDARD_ATMOSPHERE)**(1 / exp))
-        * c.SPEC_HEAT_CAP_DRY_AIR * c.STANDARD_SEA_LEVEL_TEMPERATURE
+        (1 - (np.asarray(pressure) / c.STANDARD_ATMOSPHERE) ** (1 / exp))
+        * c.SPEC_HEAT_CAP_DRY_AIR
+        * c.STANDARD_SEA_LEVEL_TEMPERATURE
         / c.GRAVITATIONAL_ACCELERATION
     )
 
@@ -114,11 +117,11 @@ def saturation_vapor_pressure(temp, over=None):
         ca = np.where(pos, VAPOR_PRESSURE_COEFFS_WATER[0], VAPOR_PRESSURE_COEFFS_ICE[0])
         cb = np.where(pos, VAPOR_PRESSURE_COEFFS_WATER[1], VAPOR_PRESSURE_COEFFS_ICE[1])
         cc = np.where(pos, VAPOR_PRESSURE_COEFFS_WATER[2], VAPOR_PRESSURE_COEFFS_ICE[2])
-    elif over == 'water':
+    elif over == "water":
         ca = VAPOR_PRESSURE_COEFFS_WATER[0]
         cb = VAPOR_PRESSURE_COEFFS_WATER[1]
         cc = VAPOR_PRESSURE_COEFFS_WATER[2]
-    elif over == 'ice':
+    elif over == "ice":
         ca = VAPOR_PRESSURE_COEFFS_ICE[0]
         cb = VAPOR_PRESSURE_COEFFS_ICE[1]
         cc = VAPOR_PRESSURE_COEFFS_ICE[2]
@@ -361,7 +364,7 @@ def dew_point_temperature(temp, rel_hum):
         Dew point temperature (K).
     """
     ca, cb, cc = VAPOR_PRESSURE_COEFFS_WATER
-    vap_press_water = vapor_pressure(temp, rel_hum, 'water')
+    vap_press_water = vapor_pressure(temp, rel_hum, "water")
     td_c = cc * np.log(vap_press_water / ca) / (cb - np.log(vap_press_water / ca))
     return td_c + c.T0
 
@@ -468,8 +471,7 @@ def cloud_fraction_from_humidity(
     rel_hum700 = 100 * vap_press700 / sat_vap_press700  # RH in 700 hPa
 
     cloud_frac = (  # eq. (1) in [1], eq. (20) in [2]
-        saturation_cloud_fraction
-        * np.exp((rel_hum700 - 100) / (100 - e_folding_humidity))
+        saturation_cloud_fraction * np.exp((rel_hum700 - 100) / (100 - e_folding_humidity))
     )
     return cloud_frac.clip(0, 1)
 
@@ -526,7 +528,7 @@ def cloud_fraction_from_cloud_factor(cloud_factor):
     """
     a = -0.415
     b = -0.233
-    c = 1.
+    c = 1.0
     cloud_fraction = (-b - np.sqrt(b**2 - 4 * a * (c - np.asarray(cloud_factor)))) / (2 * a)
     return cloud_fraction.clip(0, 1)
 
@@ -556,7 +558,7 @@ def clear_sky_emissivity(prec_wat):
     return 1 - (1 + prec_wat_cm) * np.exp(-np.sqrt(1.2 + 3 * prec_wat_cm))
 
 
-def precipitation_phase(temp, threshold_temp=c.T0, temp_range=0., method='linear'):
+def precipitation_phase(temp, threshold_temp=c.T0, temp_range=0.0, method="linear"):
     """
     Calculate precipitation phase.
 
@@ -584,18 +586,18 @@ def precipitation_phase(temp, threshold_temp=c.T0, temp_range=0., method='linear
         Fraction of precipitation falling as snow (0-1).
     """
 
-    if method != 'linear':
+    if method != "linear":
         raise NotImplementedError
 
     temp = np.asarray(temp)
 
     if temp_range < 0:
-        raise ValueError('temp_range must be positive')
+        raise ValueError("temp_range must be positive")
     elif temp_range == 0:
-        snowfall_frac = (temp < threshold_temp) * 1.
+        snowfall_frac = (temp < threshold_temp) * 1.0
     else:
-        t1 = threshold_temp - temp_range / 2.
-        t2 = threshold_temp + temp_range / 2.
+        t1 = threshold_temp - temp_range / 2.0
+        t2 = threshold_temp + temp_range / 2.0
         snowfall_frac = (1 - (temp - t1) / (t2 - t1)).clip(0, 1)
 
     return snowfall_frac
@@ -626,8 +628,7 @@ def log_wind_profile(ref_wind_speed, ref_height, height, roughness_length):
         Wind speed at the new height (m s-1).
     """
     return ref_wind_speed * (
-        np.log(height / roughness_length)
-        / np.log(ref_height / roughness_length)
+        np.log(height / roughness_length) / np.log(ref_height / roughness_length)
     )
 
 

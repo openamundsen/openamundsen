@@ -12,14 +12,33 @@ class MultilayerSnowModel(SnowModel):
         s = model.state.snow
         num_snow_layers = len(model.config.snow.min_thickness)
 
-        s.add_variable('num_layers', '1', 'Number of snow layers', dtype=int, retain=True)
-        s.add_variable('thickness', 'm', 'Snow thickness', dim3=num_snow_layers, retain=True)
-        s.add_variable('density', 'kg m-3', 'Snow density', 'snow_density', dim3=num_snow_layers)
-        s.add_variable('ice_content', 'kg m-2', 'Ice content of snow', dim3=num_snow_layers, retain=True)
-        s.add_variable('liquid_water_content', 'kg m-2', 'Liquid water content of snow', 'liquid_water_content_of_snow_layer', dim3=num_snow_layers, retain=True)
-        s.add_variable('temp', 'K', 'Snow temperature', dim3=num_snow_layers, retain=True)
-        s.add_variable('therm_cond', 'W m-1 K-1', 'Thermal conductivity of snow', dim3=num_snow_layers, retain=True)
-        s.add_variable('heat_cap', 'J K-1 m-2', 'Areal heat capacity of snow', dim3=num_snow_layers)
+        s.add_variable("num_layers", "1", "Number of snow layers", dtype=int, retain=True)
+        s.add_variable("thickness", "m", "Snow thickness", dim3=num_snow_layers, retain=True)
+        s.add_variable("density", "kg m-3", "Snow density", "snow_density", dim3=num_snow_layers)
+        s.add_variable(
+            "ice_content",
+            "kg m-2",
+            "Ice content of snow",
+            dim3=num_snow_layers,
+            retain=True,
+        )
+        s.add_variable(
+            "liquid_water_content",
+            "kg m-2",
+            "Liquid water content of snow",
+            "liquid_water_content_of_snow_layer",
+            dim3=num_snow_layers,
+            retain=True,
+        )
+        s.add_variable("temp", "K", "Snow temperature", dim3=num_snow_layers, retain=True)
+        s.add_variable(
+            "therm_cond",
+            "W m-1 K-1",
+            "Thermal conductivity of snow",
+            dim3=num_snow_layers,
+            retain=True,
+        )
+        s.add_variable("heat_cap", "J K-1 m-2", "Areal heat capacity of snow", dim3=num_snow_layers)
 
     def initialize(self):
         roi = self.model.grid.roi
@@ -88,11 +107,11 @@ class MultilayerSnowModel(SnowModel):
         s = model.state
         roi = model.grid.roi
 
-        s.snow.sublimation[roi] = 0.
+        s.snow.sublimation[roi] = 0.0
         pos_roi = (s.snow.ice_content[0, roi] > 0) | (s.surface.temp[roi] < constants.T0)
         pos = model.roi_mask_to_global(pos_roi)
         pot_sublim = -1 * s.surface.moisture_flux[pos] * model.timestep
-        pot_sublim[np.isnan(pot_sublim)] = 0.
+        pot_sublim[np.isnan(pot_sublim)] = 0.0
         s.snow.sublimation[pos] = np.minimum(pot_sublim, s.snow.ice_content[:, pos].sum(axis=0))
 
         # First resublimation
@@ -152,12 +171,12 @@ class MultilayerSnowModel(SnowModel):
         snow.snow_properties(self.model)
 
     def add_snow(
-            self,
-            pos,
-            ice_content,
-            liquid_water_content=0,
-            density=None,
-            albedo=None,
+        self,
+        pos,
+        ice_content,
+        liquid_water_content=0,
+        density=None,
+        albedo=None,
     ):
         """
         Add snow to the top of the snowpack.
@@ -165,7 +184,7 @@ class MultilayerSnowModel(SnowModel):
         model = self.model
         s = model.state
 
-        ice_content = np.nan_to_num(ice_content, nan=0., copy=True)
+        ice_content = np.nan_to_num(ice_content, nan=0.0, copy=True)
 
         pos_init = (s.snow.num_layers[pos] == 0) & (ice_content > 0)
         pos_init_global = model.global_mask(pos_init, pos)
@@ -244,7 +263,7 @@ def _melt(
         i, j = roi_idxs[idx_num]
 
         ice_content_change = melt[i, j]
-        actual_melt = 0.  # actual melt without cold content reduction
+        actual_melt = 0.0  # actual melt without cold content reduction
 
         for k in range(num_layers[i, j]):
             cold_content = heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
@@ -255,16 +274,16 @@ def _melt(
             if ice_content_change > 0:
                 if ice_content_change > ice_content[k, i, j]:  # layer melts completely
                     ice_content_change -= ice_content[k, i, j]
-                    thickness[k, i, j] = 0.
+                    thickness[k, i, j] = 0.0
                     liquid_water_content[k, i, j] += ice_content[k, i, j]
                     actual_melt += ice_content[k, i, j]
-                    ice_content[k, i, j] = 0.
+                    ice_content[k, i, j] = 0.0
                 else:  # layer melts partially
-                    thickness[k, i, j] *= (1 - ice_content_change / ice_content[k, i, j])
+                    thickness[k, i, j] *= 1 - ice_content_change / ice_content[k, i, j]
                     ice_content[k, i, j] -= ice_content_change
                     liquid_water_content[k, i, j] += ice_content_change
                     actual_melt += ice_content_change
-                    ice_content_change = 0.
+                    ice_content_change = 0.0
 
         melt[i, j] = actual_melt
 
@@ -312,18 +331,18 @@ def _sublimation(
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
 
-        ice_content_change = max(sublimation[i, j], 0.)
+        ice_content_change = max(sublimation[i, j], 0.0)
 
         if ice_content_change > 0:
             for k in range(num_layers[i, j]):
                 if ice_content_change > ice_content[k, i, j]:  # complete sublimation of layer
                     ice_content_change -= ice_content[k, i, j]
-                    thickness[k, i, j] = 0.
-                    ice_content[k, i, j] = 0.
+                    thickness[k, i, j] = 0.0
+                    ice_content[k, i, j] = 0.0
                 else:  # partial sublimation
-                    thickness[k, i, j] *= (1 - ice_content_change / ice_content[k, i, j])
+                    thickness[k, i, j] *= 1 - ice_content_change / ice_content[k, i, j]
                     ice_content[k, i, j] -= ice_content_change
-                    ice_content_change = 0.
+                    ice_content_change = 0.0
 
 
 @njit(cache=True, parallel=True)
@@ -389,11 +408,11 @@ def _runoff(
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
 
-        refreezing[i, j] = 0.
+        refreezing[i, j] = 0.0
 
         runoff[i, j] = rainfall[i, j]
         if np.isnan(runoff[i, j]):
-            runoff[i, j] = 0.
+            runoff[i, j] = 0.0
 
         for k in range(num_layers[i, j]):
             liquid_water_content[k, i, j] += runoff[i, j]
@@ -402,7 +421,7 @@ def _runoff(
                 runoff[i, j] = liquid_water_content[k, i, j] - max_liquid_water_content[k, i, j]
                 liquid_water_content[k, i, j] = max_liquid_water_content[k, i, j]
             else:
-                runoff[i, j] = 0.
+                runoff[i, j] = 0.0
 
             # Refreeze liquid water
             cold_content = heat_cap[k, i, j] * (c.T0 - temp[k, i, j])
@@ -559,9 +578,9 @@ def _update_layers(
         i, j = roi_idxs[idx_num]
 
         num_layers[i, j] = 0
-        thickness[:, i, j] = 0.
-        ice_content[:, i, j] = 0.
-        liquid_water_content[:, i, j] = 0.
+        thickness[:, i, j] = 0.0
+        ice_content[:, i, j] = 0.0
+        liquid_water_content[:, i, j] = 0.0
         temp[:, i, j] = c.T0
         density[:, i, j] = np.nan
         internal_energy = np.zeros(max_num_layers)
@@ -582,7 +601,7 @@ def _update_layers(
             # TODO should this be done at some other location?
             for k in range(max_num_layers):
                 if thickness[k, i, j] < 1e-6:
-                    thickness[k, i, j] = 0.
+                    thickness[k, i, j] = 0.0
 
             ns = (thickness[:, i, j] > 0).sum()  # new number of layers
             new_thickness = thickness[0, i, j]
@@ -591,13 +610,15 @@ def _update_layers(
             # TODO optimize this loop
             for k_old in range(num_layers_prev[i, j]):
                 while True:  # TODO replace with normal loop
-                    weight = min(new_thickness / thickness_prev[k_old, i, j], 1.)
+                    weight = min(new_thickness / thickness_prev[k_old, i, j], 1.0)
 
                     ice_content[k_new, i, j] += weight * ice_content_prev[k_old, i, j]
-                    liquid_water_content[k_new, i, j] += weight * liquid_water_content_prev[k_old, i, j]
+                    liquid_water_content[k_new, i, j] += (
+                        weight * liquid_water_content_prev[k_old, i, j]
+                    )
                     internal_energy[k_new] += weight * energy_prev[k_old, i, j]
 
-                    if weight == 1.:
+                    if weight == 1.0:
                         new_thickness -= thickness_prev[k_old, i, j]
                         break
 
@@ -625,6 +646,5 @@ def _update_layers(
 
             # Update density
             density[:ns, i, j] = (
-                (liquid_water_content[:ns, i, j] + ice_content[:ns, i, j])
-                / thickness[:ns, i, j]
-            )
+                liquid_water_content[:ns, i, j] + ice_content[:ns, i, j]
+            ) / thickness[:ns, i, j]

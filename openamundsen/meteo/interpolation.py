@@ -34,11 +34,11 @@ def _param_station_data(ds, param, date):
     else:
         param_as_list = param
 
-    ds_param = ds[param_as_list + ['x', 'y', 'alt']].sel(time=date).dropna(dim='station')
+    ds_param = ds[param_as_list + ["x", "y", "alt"]].sel(time=date).dropna(dim="station")
     data = ds_param[param]
-    xs = ds_param['x'].values
-    ys = ds_param['y'].values
-    zs = ds_param['alt'].values
+    xs = ds_param["x"].values
+    ys = ds_param["y"].values
+    zs = ds_param["alt"].values
 
     if isinstance(param, str):
         data_vals = data.values
@@ -93,12 +93,12 @@ def _apply_linear_trend(data, elevs, trend, direction):
     data_trend : ndarray
         De-/retrended data points.
     """
-    if direction == 'detrend':
+    if direction == "detrend":
         return data - trend * elevs
-    elif direction == 'retrend':
+    elif direction == "retrend":
         return data + trend * elevs
     else:
-        raise NotImplementedError(f'Unsupported direction: {direction}')
+        raise NotImplementedError(f"Unsupported direction: {direction}")
 
 
 def _interpolate_with_trend(
@@ -155,16 +155,16 @@ def _interpolate_with_trend(
        System for High-Resolution Terrestrial Modeling (MicroMet). Journal of
        Hydrometeorology, 7(2), 217–234. https://doi.org/10.1175/JHM486.1
     """
-    if trend_method in ('regression', 'fixed', 'fractional'):
-        if trend_method == 'regression':
+    if trend_method in ("regression", "fixed", "fractional"):
+        if trend_method == "regression":
             # When using the regression method, the passed lapse rate is overwritten
             lapse_rate, _ = _linear_fit(zs, data)
-        elif trend_method == 'fixed':
+        elif trend_method == "fixed":
             pass  # do nothing, i.e., use the passed lapse rate as is
-        elif trend_method == 'fractional':
+        elif trend_method == "fractional":
             lapse_rate *= np.nanmean(data)
 
-        data_detrended = _apply_linear_trend(data, zs, lapse_rate, 'detrend')
+        data_detrended = _apply_linear_trend(data, zs, lapse_rate, "detrend")
         data_detrended_interpol = interpolation.idw(
             xs,
             ys,
@@ -172,8 +172,13 @@ def _interpolate_with_trend(
             target_xs,
             target_ys,
         )
-        data_interpol = _apply_linear_trend(data_detrended_interpol, target_zs, lapse_rate, 'retrend')
-    elif trend_method == 'adjustment_factor':
+        data_interpol = _apply_linear_trend(
+            data_detrended_interpol,
+            target_zs,
+            lapse_rate,
+            "retrend",
+        )
+    elif trend_method == "adjustment_factor":
         data_interpol_notrend = interpolation.idw(xs, ys, data, target_xs, target_ys)
         zs_interpol = interpolation.idw(xs, ys, zs, target_xs, target_ys)
         z_diffs = target_zs - zs_interpol
@@ -193,7 +198,7 @@ def interpolate_station_data(model):
     model : OpenAmundsen
         openAMUNDSEN model instance.
     """
-    logger.debug('Interpolating station data')
+    logger.debug("Interpolating station data")
 
     date = model.date
     roi = model.grid.roi
@@ -201,8 +206,10 @@ def interpolate_station_data(model):
     target_ys = model.grid.roi_points[:, 1]
     target_zs = model.state.base.dem[roi]
 
-    for param in ('temp', 'precip'):
-        param_config = model.config['meteo']['interpolation'][constants.INTERPOLATION_CONFIG_PARAM_MAPPINGS[param]]
+    for param in ("temp", "precip"):
+        param_config = model.config["meteo"]["interpolation"][
+            constants.INTERPOLATION_CONFIG_PARAM_MAPPINGS[param]
+        ]
         data, xs, ys, zs = _param_station_data(model.meteo, param, date)
 
         model.state.meteo[param][roi] = interpolate_param(
@@ -220,9 +227,11 @@ def interpolate_station_data(model):
 
     # For relative humidity dew point temperature is interpolated, so we also need station
     # temperatures and the interpolated temperature field
-    param = 'rel_hum'
-    param_config = model.config['meteo']['interpolation'][constants.INTERPOLATION_CONFIG_PARAM_MAPPINGS[param]]
-    data, xs, ys, zs = _param_station_data(model.meteo, [param, 'temp'], date)
+    param = "rel_hum"
+    param_config = model.config["meteo"]["interpolation"][
+        constants.INTERPOLATION_CONFIG_PARAM_MAPPINGS[param]
+    ]
+    data, xs, ys, zs = _param_station_data(model.meteo, [param, "temp"], date)
     rel_hums = data[0, :]
     temps = data[1, :]
     model.state.meteo[param][roi] = interpolate_param(
@@ -237,14 +246,14 @@ def interpolate_station_data(model):
         target_ys,
         target_zs,
         temps=temps,
-        target_temps=model.state.meteo['temp'][roi],
+        target_temps=model.state.meteo["temp"][roi],
     )
 
-    wind_config = model.config['meteo']['interpolation']['wind']
-    if wind_config['method'] == 'idw':
-        data, xs, ys, zs = _param_station_data(model.meteo, 'wind_speed', date)
-        model.state.meteo['wind_speed'][roi] = interpolate_param(
-            'wind_speed',
+    wind_config = model.config["meteo"]["interpolation"]["wind"]
+    if wind_config["method"] == "idw":
+        data, xs, ys, zs = _param_station_data(model.meteo, "wind_speed", date)
+        model.state.meteo["wind_speed"][roi] = interpolate_param(
+            "wind_speed",
             model.date,
             wind_config,
             data,
@@ -257,9 +266,9 @@ def interpolate_station_data(model):
         )
 
         if model._has_wind_gusts:
-            data, xs, ys, zs = _param_station_data(model.meteo, 'wind_speed_gust', date)
-            model.state.meteo['wind_speed_gust'][roi] = interpolate_param(
-                'wind_speed',
+            data, xs, ys, zs = _param_station_data(model.meteo, "wind_speed_gust", date)
+            model.state.meteo["wind_speed_gust"][roi] = interpolate_param(
+                "wind_speed",
                 model.date,
                 wind_config,
                 data,
@@ -270,8 +279,8 @@ def interpolate_station_data(model):
                 target_ys,
                 target_zs,
             )
-    elif wind_config['method'] == 'liston':
-        data, xs, ys, zs = _param_station_data(model.meteo, ['wind_speed', 'wind_dir'], date)
+    elif wind_config["method"] == "liston":
+        data, xs, ys, zs = _param_station_data(model.meteo, ["wind_speed", "wind_dir"], date)
         wind_speeds = data[0, :]
         wind_dirs = data[1, :]
         wind_speed_corr, wind_dir_corr = _liston_wind_correction(
@@ -291,12 +300,16 @@ def interpolate_station_data(model):
         )
         model.state.meteo.wind_speed[roi] = np.clip(
             wind_speed_corr,
-            *constants.ALLOWED_METEO_VAR_RANGES['wind_speed'],
+            *constants.ALLOWED_METEO_VAR_RANGES["wind_speed"],
         )
         model.state.meteo.wind_dir[roi] = wind_dir_corr
 
         if model._has_wind_gusts:
-            data, xs, ys, zs = _param_station_data(model.meteo, ['wind_speed_gust', 'wind_dir'], date)
+            data, xs, ys, zs = _param_station_data(
+                model.meteo,
+                ["wind_speed_gust", "wind_dir"],
+                date,
+            )
             wind_speed_gusts = data[0, :]
             wind_dirs = data[1, :]
             wind_speed_gusts_corr, _ = _liston_wind_correction(
@@ -316,25 +329,25 @@ def interpolate_station_data(model):
             )
             model.state.meteo.wind_speed_gust[roi] = np.clip(
                 wind_speed_gusts_corr,
-                *constants.ALLOWED_METEO_VAR_RANGES['wind_speed_gust'],
+                *constants.ALLOWED_METEO_VAR_RANGES["wind_speed_gust"],
             )
     else:
-        raise NotImplementedError(f'Unsupported method: {wind_config.method}')
+        raise NotImplementedError(f"Unsupported method: {wind_config.method}")
 
 
 def interpolate_param(
-        param,
-        date,
-        param_config,
-        data,
-        xs,
-        ys,
-        zs,
-        target_xs,
-        target_ys,
-        target_zs,
-        temps=None,
-        target_temps=None,
+    param,
+    date,
+    param_config,
+    data,
+    xs,
+    ys,
+    zs,
+    target_xs,
+    target_ys,
+    target_zs,
+    temps=None,
+    target_temps=None,
 ):
     """
     Interpolate a set of data points to a set of target points.
@@ -374,23 +387,23 @@ def interpolate_param(
     # If there are no points to be interpolated, return an all-zero array for precipitation, and an
     # all-nan array for all other parameters
     if data.size == 0:
-        if param == 'precip':
-            fill_value = 0.
+        if param == "precip":
+            fill_value = 0.0
         else:
             fill_value = np.nan
 
         return np.full(target_xs.shape, fill_value)
 
-    if param in ('temp', 'precip', 'rel_hum', 'wind_speed', 'wind_vec'):
-        trend_method = param_config['trend_method']
-        lapse_rate = param_config['lapse_rate'][date.month - 1]
+    if param in ("temp", "precip", "rel_hum", "wind_speed", "wind_vec"):
+        trend_method = param_config["trend_method"]
+        lapse_rate = param_config["lapse_rate"][date.month - 1]
     else:
-        raise NotImplementedError(f'Unsupported parameter: {param}')
+        raise NotImplementedError(f"Unsupported parameter: {param}")
 
     # For relative humidity interpolate dew point temperature and convert back to humidity later
-    if param == 'rel_hum':
+    if param == "rel_hum":
         if temps is None or target_temps is None:
-            raise Exception('Temperature must be provided for humidity interpolation')
+            raise Exception("Temperature must be provided for humidity interpolation")
 
         rel_hums = data
         dew_point_temps = meteo.dew_point_temperature(temps, rel_hums)
@@ -408,15 +421,15 @@ def interpolate_param(
         lapse_rate,
     )
 
-    if param == 'rel_hum':
+    if param == "rel_hum":
         target_dew_point_temps = data_interpol
-        vapor_press = meteo.saturation_vapor_pressure(target_dew_point_temps, 'water')
-        sat_vapor_press = meteo.saturation_vapor_pressure(target_temps, 'water')
+        vapor_press = meteo.saturation_vapor_pressure(target_dew_point_temps, "water")
+        sat_vapor_press = meteo.saturation_vapor_pressure(target_temps, "water")
         data_interpol = 100 * vapor_press / sat_vapor_press
 
     # Restrict interpolated values to the range of the point values if extrapolation is disabled in
     # the parameter config
-    if not param_config['extrapolate'] and len(data) > 0:
+    if not param_config["extrapolate"] and len(data) > 0:
         min_range = np.nanmin(data)
         max_range = np.nanmax(data)
 
@@ -447,7 +460,7 @@ def _liston_wind_correction(
 ):
     wind_us, wind_vs = meteo.wind_to_uv(wind_speeds, wind_dirs)
     wind_u_roi = interpolate_param(
-        'wind_vec',
+        "wind_vec",
         date,
         wind_config,
         wind_us,
@@ -459,7 +472,7 @@ def _liston_wind_correction(
         target_zs,
     )
     wind_v_roi = interpolate_param(
-        'wind_vec',
+        "wind_vec",
         date,
         wind_config,
         wind_vs,

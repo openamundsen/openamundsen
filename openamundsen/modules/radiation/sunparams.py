@@ -20,10 +20,10 @@ def day_angle(doy):
     # TODO
     #   Use 2*pi/365 for normal years and 2*pi/366 for leap years
     #   instead of 365.25?
-    return (2. * np.pi / c.DAYS_PER_YEAR) * (doy - 1)
+    return (2.0 * np.pi / c.DAYS_PER_YEAR) * (doy - 1)
 
 
-def equation_of_time(doy, method='spencer'):
+def equation_of_time(doy, method="spencer"):
     """
     Calculate the equation of time, i.e., the difference in time between solar
     noon at 0 degrees longitude and 12:00 UTC.
@@ -50,14 +50,16 @@ def equation_of_time(doy, method='spencer'):
 
     da = day_angle(doy)
 
-    if method == 'spencer':
+    if method == "spencer":
         eot = (
-            0.0000075 +
-            0.001868 * np.cos(da) - 0.032077 * np.sin(da) -
-            0.014615 * np.cos(2 * da) - 0.040849 * np.sin(2 * da)
+            0.0000075
+            + 0.001868 * np.cos(da)
+            - 0.032077 * np.sin(da)
+            - 0.014615 * np.cos(2 * da)
+            - 0.040849 * np.sin(2 * da)
         )  # in radians
     else:
-        raise NotImplementedError(f'Unsupported method: {method}')
+        raise NotImplementedError(f"Unsupported method: {method}")
 
     eot_m = c.HOURS_PER_DAY * c.MINUTES_PER_HOUR / (2 * np.pi) * eot  # in minutes
     return eot_m
@@ -83,12 +85,16 @@ def declination_angle(doy):
        Energy, 1985, 35(4), pp.367-369.
     """
     pass
-    
+
     day_number = np.deg2rad((360 / c.DAYS_PER_YEAR) * (doy - 79.346))
     declination = (
-        0.3723 + 23.2567 * np.sin(day_number) - 0.7580 * np.cos(day_number)
-        + 0.1149 * np.sin(2 * day_number) + 0.3656 * np.cos(2 * day_number)
-        - 0.1712 * np.sin(3 * day_number) + 0.0201 * np.cos(3 * day_number)
+        0.3723
+        + 23.2567 * np.sin(day_number)
+        - 0.7580 * np.cos(day_number)
+        + 0.1149 * np.sin(2 * day_number)
+        + 0.3656 * np.cos(2 * day_number)
+        - 0.1712 * np.sin(3 * day_number)
+        + 0.0201 * np.cos(3 * day_number)
     )
     return declination
 
@@ -119,7 +125,7 @@ def hour_angle(date, timezone, lon, eot):
         Hour angle in degrees.
     """
     date = pd.to_datetime(date)
-    hour = (date - date.normalize()).total_seconds() / c.SECONDS_PER_HOUR  # fractional hour of the day
+    hour = (date - date.normalize()).total_seconds() / c.SECONDS_PER_HOUR  # fractional hour of the day # fmt: skip
 
     lstm = c.STANDARD_TIMEZONE_WIDTH * timezone  # local standard time meridian
     tc = c.MINUTES_PER_DEGREE_OF_EARTH_ROTATION * (lon - lstm) + eot  # time correction (minutes)
@@ -161,11 +167,13 @@ def sun_vector(lat, ha, dec):
     ha_rad = np.deg2rad(ha)
     dec_rad = np.deg2rad(dec)
 
-    return np.array([
-        -np.sin(ha_rad) * np.cos(dec_rad),
-        np.sin(lat_rad) * np.cos(ha_rad) * np.cos(dec_rad) - np.cos(lat_rad) * np.sin(dec_rad),
-        np.cos(lat_rad) * np.cos(ha_rad) * np.cos(dec_rad) + np.sin(lat_rad) * np.sin(dec_rad),
-    ])
+    return np.array(
+        [
+            -np.sin(ha_rad) * np.cos(dec_rad),
+            np.sin(lat_rad) * np.cos(ha_rad) * np.cos(dec_rad) - np.cos(lat_rad) * np.sin(dec_rad),
+            np.cos(lat_rad) * np.cos(ha_rad) * np.cos(dec_rad) + np.sin(lat_rad) * np.sin(dec_rad),
+        ]
+    )
 
 
 def sun_parameters(date, lon, lat, timezone):
@@ -207,11 +215,11 @@ def sun_parameters(date, lon, lat, timezone):
     zenith_angle = np.rad2deg(np.arccos(sv[2]))
 
     return {
-        'day_angle': da,
-        'hour_angle': ha,
-        'declination_angle': dec,
-        'equation_of_time': eot,
-        'sun_vector': sv,
-        'zenith_angle': zenith_angle,
-        'sun_over_horizon': zenith_angle < 90,
+        "day_angle": da,
+        "hour_angle": ha,
+        "declination_angle": dec,
+        "equation_of_time": eot,
+        "sun_vector": sv,
+        "zenith_angle": zenith_angle,
+        "sun_over_horizon": zenith_angle < 90,
     }

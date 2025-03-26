@@ -42,41 +42,36 @@ def initialize(model):
 
     # Volumetric heat capacity of dry soil
     s.vol_heat_cap_dry[roi] = (
-        (
-            constants.VOL_HEAT_CAP_SAND * cfg.sand_fraction
-            + constants.VOL_HEAT_CAP_CLAY * cfg.clay_fraction
-        ) / (cfg.sand_fraction + cfg.clay_fraction)
-    )
+        constants.VOL_HEAT_CAP_SAND * cfg.sand_fraction
+        + constants.VOL_HEAT_CAP_CLAY * cfg.clay_fraction
+    ) / (cfg.sand_fraction + cfg.clay_fraction)
 
     # Clapp-Hornberger exponent b
     s.clapp_hornberger[roi] = 3.1 + 15.7 * cfg.clay_fraction - 0.3 * cfg.sand_fraction
 
     # Saturated soil water pressure
-    s.sat_water_pressure[roi] = 10**(0.17 - 0.63 * cfg.clay_fraction - 1.58 * cfg.sand_fraction)
+    s.sat_water_pressure[roi] = 10 ** (0.17 - 0.63 * cfg.clay_fraction - 1.58 * cfg.sand_fraction)
 
     # Volumetric soil moisture content at saturation (values from doi:10.1029/wr020i006p00682, table 4)
     s.vol_moisture_content_sat[roi] = 0.505 - 0.037 * cfg.clay_fraction - 0.142 * cfg.sand_fraction
 
     # Volumetric soil moisture content at critical point
-    s.vol_moisture_content_crit[roi] = (
-        s.vol_moisture_content_sat[roi]
-        * (
-            s.sat_water_pressure[roi]
-            / 3.364  # soil suction of 3.364 m
-        )**(1. / s.clapp_hornberger[roi])
-    )
+    s.vol_moisture_content_crit[roi] = s.vol_moisture_content_sat[roi] * (
+        s.sat_water_pressure[roi] / 3.364  # soil suction of 3.364 m
+    ) ** (1.0 / s.clapp_hornberger[roi])
 
     # Thermal conductivity of soil minerals
     s.therm_cond_minerals[roi] = (
         (constants.THERM_COND_CLAY**cfg.clay_fraction)
-        * (constants.THERM_COND_SAND**(1 - cfg.clay_fraction))  # TODO really 1 - clay_fraction and not just sand_fraction?
+        * (
+            constants.THERM_COND_SAND ** (1 - cfg.clay_fraction)
+        )  # TODO really 1 - clay_fraction and not just sand_fraction?
     )
 
     # Thermal conductivity of dry soil
     s.therm_cond_dry[roi] = (
-        (constants.THERM_COND_AIR**s.vol_moisture_content_sat[roi])
-        * s.therm_cond_minerals[roi]**(1 - s.vol_moisture_content_sat[roi])
-    )
+        constants.THERM_COND_AIR ** s.vol_moisture_content_sat[roi]
+    ) * s.therm_cond_minerals[roi] ** (1 - s.vol_moisture_content_sat[roi])
 
     # Volumetric soil moisture content
     s.vol_moisture_content[:, roi] = cfg.init_moisture_content * s.vol_moisture_content_sat[roi]

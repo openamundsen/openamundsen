@@ -19,34 +19,34 @@ class CanopyModel:
         self.model = model
         num_timesteps_per_day = int(c.HOURS_PER_DAY * c.SECONDS_PER_HOUR / model.timestep)
         model.state.meteo.add_variable(
-            'last_24h_temps',
-            'K',
-            'Air temperatures of the previous 24 hours',
+            "last_24h_temps",
+            "K",
+            "Air temperatures of the previous 24 hours",
             dim3=max(num_timesteps_per_day, 1),
             retain=True,
         )
         self._temp_idx = 0  # current index within the last_24h_temps array
 
         model.state.snow.add_variable(
-            'canopy_intercepted_load',
-            'kg m-2',
-            'Canopy snow interception storage',
+            "canopy_intercepted_load",
+            "kg m-2",
+            "Canopy snow interception storage",
             retain=True,
         )
         model.state.snow.add_variable(
-            'canopy_intercepted_snowfall',
-            'kg m-2',
-            'Canopy-intercepted snowfall',
+            "canopy_intercepted_snowfall",
+            "kg m-2",
+            "Canopy-intercepted snowfall",
         )
         model.state.snow.add_variable(
-            'canopy_sublimation',
-            'kg m-2',
-            'Canopy snow sublimation',
+            "canopy_sublimation",
+            "kg m-2",
+            "Canopy snow sublimation",
         )
         model.state.snow.add_variable(
-            'canopy_melt',
-            'kg m-2',
-            'Melt of canopy-intercepted snow',
+            "canopy_melt",
+            "kg m-2",
+            "Melt of canopy-intercepted snow",
         )
 
     def initialize(self):
@@ -59,7 +59,7 @@ class CanopyModel:
         else:
             self.forest_pos = np.full(model.grid.shape, False)
 
-        model.state.snow.canopy_intercepted_load[self.forest_pos] = 0.
+        model.state.snow.canopy_intercepted_load[self.forest_pos] = 0.0
 
     def meteorology(self):
         """
@@ -72,7 +72,9 @@ class CanopyModel:
 
         canopy_frac = (0.55 + 0.29 * np.log(lai_eff)).clip(0, 1)  # eq. (2)
 
-        s.meteo.sw_in[pos] *= np.exp(-model.config.canopy.extinction_coefficient * lai_eff)  # eq. (1)
+        s.meteo.sw_in[pos] *= np.exp(
+            -model.config.canopy.extinction_coefficient * lai_eff
+        )  # eq. (1)
 
         s.meteo.last_24h_temps[self._temp_idx, :, :] = s.meteo.temp
         self._temp_idx += 1
@@ -80,7 +82,7 @@ class CanopyModel:
             self._temp_idx = 0
 
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', 'Mean of empty slice', RuntimeWarning)
+            warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
             mean_24h_temp = np.nanmean(s.meteo.last_24h_temps, axis=0)
 
         pos_finite_temp = pos & np.isfinite(mean_24h_temp)
@@ -100,7 +102,7 @@ class CanopyModel:
 
         s.meteo.lw_in[pos] = (  # eq. (3)
             (1 - canopy_frac) * s.meteo.lw_in[pos]
-            + canopy_frac * c.STEFAN_BOLTZMANN * s.meteo.temp[pos]**4
+            + canopy_frac * c.STEFAN_BOLTZMANN * s.meteo.temp[pos] ** 4
         )
 
         s.meteo.rel_hum[pos] = (  # eq. (6)
@@ -129,7 +131,8 @@ class CanopyModel:
         )
 
         reynolds = (  # Reynolds number (eq. (12))
-            2 * model.config.canopy.spherical_ice_particle_radius
+            2
+            * model.config.canopy.spherical_ice_particle_radius
             * s.meteo.wind_speed[pos]
             / model.config.canopy.kinematic_air_viscosity
         ).clip(0.7, 10)
@@ -143,34 +146,35 @@ class CanopyModel:
         )
 
         # Diffusivity of water vapor in the atmosphere (m2 s-1) (eq. (16))
-        diff_wat_vap = 2.06e-5 * (s.meteo.temp[pos] / 273.)**1.75
+        diff_wat_vap = 2.06e-5 * (s.meteo.temp[pos] / 273.0) ** 1.75
 
         omega = (  # eq. (18)
-            1. / (c.THERM_COND_AIR * s.meteo.temp[pos] * nusselt)
+            1.0
+            / (c.THERM_COND_AIR * s.meteo.temp[pos] * nusselt)
             * (
                 c.LATENT_HEAT_OF_SUBLIMATION
                 * c.MOLAR_MASS_WATER
                 / (c.UNIVERSAL_GAS_CONSTANT * s.meteo.temp[pos])
-                - 1.
+                - 1.0
             )
         )
 
         # Mass loss rate from an ice sphere (kg s-1) (eq. (17))
         mass_loss_rate = (
-            2 * np.pi * model.config.canopy.spherical_ice_particle_radius
-            * (s.meteo.rel_hum[pos] / 100. - 1.)
+            2
+            * np.pi
+            * model.config.canopy.spherical_ice_particle_radius
+            * (s.meteo.rel_hum[pos] / 100.0 - 1.0)
             - absorbed_rad * omega
         ) / (
             c.LATENT_HEAT_OF_SUBLIMATION * omega
-            + 1. / (diff_wat_vap * wat_vap_sat_dens * sherwood)
+            + 1.0 / (diff_wat_vap * wat_vap_sat_dens * sherwood)
         )
-        mass_loss_rate[np.isnan(mass_loss_rate)] = 0.
+        mass_loss_rate[np.isnan(mass_loss_rate)] = 0.0
 
         # Particle mass (kg) (eq. (20))
         particle_mass = (
-            4./3. * np.pi
-            * c.ICE_DENSITY
-            * model.config.canopy.spherical_ice_particle_radius**3
+            4.0 / 3.0 * np.pi * c.ICE_DENSITY * model.config.canopy.spherical_ice_particle_radius**3
         )
 
         # Sublimation loss rate coefficient from an ice sphere (s-1) (eq. (19))
@@ -178,28 +182,22 @@ class CanopyModel:
 
         # Update canopy-intercepted load (kg m-2) (eq. (20))
         max_interception_storage = (
-            model.config.canopy.max_interception_storage_coefficient
-            * s.land_cover.lai_eff[pos]
+            model.config.canopy.max_interception_storage_coefficient * s.land_cover.lai_eff[pos]
         )
-        new_canopy_intercepted_load = (
-            s.snow.canopy_intercepted_load[pos]
-            + 0.7
-            * (max_interception_storage - s.snow.canopy_intercepted_load[pos])
-            * (1 - np.exp(-s.meteo.snowfall[pos] / max_interception_storage))
-        )
+        new_canopy_intercepted_load = s.snow.canopy_intercepted_load[pos] + 0.7 * (
+            max_interception_storage - s.snow.canopy_intercepted_load[pos]
+        ) * (1 - np.exp(-s.meteo.snowfall[pos] / max_interception_storage))
         s.snow.canopy_intercepted_snowfall[pos] = (
-            new_canopy_intercepted_load
-            - s.snow.canopy_intercepted_load[pos]
+            new_canopy_intercepted_load - s.snow.canopy_intercepted_load[pos]
         ).clip(min=0)
         s.snow.canopy_intercepted_load[pos] = new_canopy_intercepted_load
 
         # Canopy exposure coefficient (eq. (23))
         exposure_coeff = np.zeros(new_canopy_intercepted_load.shape)
         pos_int = new_canopy_intercepted_load > 0
-        exposure_coeff[pos_int] = (
-            model.config.canopy.exposure_coefficient_coefficient
-            * (new_canopy_intercepted_load[pos_int] / max_interception_storage[pos_int])**(-0.4)
-        )
+        exposure_coeff[pos_int] = model.config.canopy.exposure_coefficient_coefficient * (
+            new_canopy_intercepted_load[pos_int] / max_interception_storage[pos_int]
+        ) ** (-0.4)
 
         # Canopy sublimation (eq. (22))
         s.snow.canopy_sublimation[pos] = np.minimum(
@@ -221,7 +219,8 @@ class CanopyModel:
             (
                 model.config.canopy.degree_day_factor
                 * (s.meteo.temp[pos] - c.T0).clip(min=0)
-                * model.timestep / (c.SECONDS_PER_HOUR * c.HOURS_PER_DAY)
+                * model.timestep
+                / (c.SECONDS_PER_HOUR * c.HOURS_PER_DAY)
             ),
             s.snow.canopy_intercepted_load[pos],
         )

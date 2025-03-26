@@ -2,7 +2,7 @@ import numpy as np
 from openamundsen.fileio import read_raster_file
 import pytest
 
-RASTER_TEMPLATE = '''
+RASTER_TEMPLATE = """
 ncols        6
 nrows        5
 xllcorner    630800
@@ -14,12 +14,12 @@ nodata_value {val_nodata}
 {val_nodata} {val2} {val2} {val2} {val2} {val2}
 {val1} {val1} {val2} {val2} {val2} {val2}
 {val1} {val_nodata} {val2} {val2} {val2} {val2}
-'''.strip()
+""".strip()
 
 
 def test_fill_value(tmp_path):
-    fn = tmp_path / 'test.asc'
-    with open(fn, 'w') as f:
+    fn = tmp_path / "test.asc"
+    with open(fn, "w") as f:
         f.write(RASTER_TEMPLATE.format(val1=0, val2=1, val_nodata=-9999))
 
     data = read_raster_file(fn)
@@ -39,8 +39,8 @@ def test_fill_value(tmp_path):
 
 
 def test_dtype(tmp_path):
-    fn = tmp_path / 'test.asc'
-    with open(fn, 'w') as f:
+    fn = tmp_path / "test.asc"
+    with open(fn, "w") as f:
         f.write(RASTER_TEMPLATE.format(val1=0, val2=1, val_nodata=-9999))
 
     data = read_raster_file(fn)

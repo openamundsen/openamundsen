@@ -6,13 +6,13 @@ from openamundsen import constants, interpolation, meteo
 # Transfer function coefficents for 10 m wind speeds from [2] (Table 3).
 # Values in the tuples correspond to (a, b, c, max_U).
 KOCHENDORFER_COEFFS = {
-    'us_un': (0.045, 1.21, 0.66, 8),
-    'all_sa': (0.03, 1.04, 0.57, 12),
-    'nor_sa': (0.05, 0.66, 0.23, 12),
-    'us_sa': (0.03, 1.06, 0.63, 12),
-    'us_da': (0.021, 0.74, 0.66, 8),
-    'us_bda': (0.01, 0.48, 0.51, 8),
-    'us_sdfir': (0.004, 0.00, 0.00, 8),
+    "us_un": (0.045, 1.21, 0.66, 8),
+    "all_sa": (0.03, 1.04, 0.57, 12),
+    "nor_sa": (0.05, 0.66, 0.23, 12),
+    "us_sa": (0.03, 1.06, 0.63, 12),
+    "us_da": (0.021, 0.74, 0.66, 8),
+    "us_bda": (0.01, 0.48, 0.51, 8),
+    "us_sdfir": (0.004, 0.00, 0.00, 8),
 }
 
 
@@ -54,14 +54,14 @@ def correct_station_precipitation(model):
         return
 
     m = model.meteo
-    dates = m.indexes['time']
-    xs = m['x'].values
-    ys = m['y'].values
-    zs = m['alt'].values
-    temps = m['temp'].values.T.copy()
-    rel_hums = m['rel_hum'].values.T.copy()
-    wind_speeds = m['wind_speed'].values.T.copy()
-    precips = m['precip'].values.T  # no copy, because this will be modified in place
+    dates = m.indexes["time"]
+    xs = m["x"].values
+    ys = m["y"].values
+    zs = m["alt"].values
+    temps = m["temp"].values.T.copy()
+    rel_hums = m["rel_hum"].values.T.copy()
+    wind_speeds = m["wind_speed"].values.T.copy()
+    precips = m["precip"].values.T  # no copy, because this will be modified in place
 
     # Interpolate missing temperature, humidity and wind speed values
     # TODO this is only really necessary for nonzero precipitation values; could be optimized
@@ -82,9 +82,9 @@ def correct_station_precipitation(model):
 
     # Calculate precipitation phase (if required, calculate wet-bulb temperature first)
     precip_phase_method = model.config.meteo.precipitation_phase.method
-    if precip_phase_method == 'temp':
+    if precip_phase_method == "temp":
         pp_temp = temps
-    elif precip_phase_method == 'wet_bulb_temp':
+    elif precip_phase_method == "wet_bulb_temp":
         atmos_presss = meteo.atmospheric_pressure(zs)
         vap_presss = meteo.vapor_pressure(temps, rel_hums)
         spec_hums = meteo.specific_humidity(atmos_presss, vap_presss)
@@ -116,29 +116,29 @@ def correct_station_precipitation(model):
     pos_mixed = pos_precip & (snowfall_frac > 0) & (snowfall_frac < 1)
 
     for config in precip_corr_configs:
-        method = config['method']
+        method = config["method"]
 
         if method not in (
-            'constant_scf',
-            'wmo',
-            'kochendorfer',
+            "constant_scf",
+            "wmo",
+            "kochendorfer",
         ):
             continue
 
-        logger.info(f'Correcting station precipitation with method: {method}')
+        logger.info(f"Correcting station precipitation with method: {method}")
 
-        if method in ('wmo', 'kochendorfer'):
+        if method in ("wmo", "kochendorfer"):
             if np.all(np.isnan(wind_speeds)):
                 logger.warning(
-                    f'Correction method {method} requires wind speeds. Precipitation values '
-                    'will be left unchanged.'
+                    f"Correction method {method} requires wind speeds. Precipitation values "
+                    "will be left unchanged."
                 )
 
-        if method == 'constant_scf':
-            corr_factors = 1 + snowfall_frac * (config['scf'] - 1)
-        elif method == 'wmo':
-            gauge = config['gauge']
-            cr = np.full(precips.shape, 100.)
+        if method == "constant_scf":
+            corr_factors = 1 + snowfall_frac * (config["scf"] - 1)
+        elif method == "wmo":
+            gauge = config["gauge"]
+            cr = np.full(precips.shape, 100.0)
 
             # Calculate wind speed at gauge height
             wind_speeds_2m = meteo.log_wind_profile(
@@ -154,68 +154,61 @@ def correct_station_precipitation(model):
 
             # Some correction functions from [1] use Tmin and Tmax values; these have been replaced
             # by standard air temperature in the following.
-            if gauge == 'nipher':
+            if gauge == "nipher":
                 cr[pos_snow] = (
-                    100
-                    - 0.44 * wind_speeds_2m[pos_snow]**2
-                    - 1.98 * wind_speeds_2m[pos_snow]
+                    100 - 0.44 * wind_speeds_2m[pos_snow] ** 2 - 1.98 * wind_speeds_2m[pos_snow]
                 )
                 cr[pos_mixed] = (
-                    97.29
-                    - 3.18 * wind_speeds_2m[pos_mixed]
-                    + (0.58 - 0.67) * temps_c[pos_mixed]
+                    97.29 - 3.18 * wind_speeds_2m[pos_mixed] + (0.58 - 0.67) * temps_c[pos_mixed]
                 )
-            elif gauge == 'tretyakov':
+            elif gauge == "tretyakov":
                 cr[pos_snow] = 103.11 - 8.67 * wind_speeds_2m[pos_snow] + 0.30 * temps_c[pos_snow]
                 cr[pos_mixed] = (
-                    96.99
-                    - 4.46 * wind_speeds_2m[pos_mixed]
-                    + (0.88 + 0.22) * temps_c[pos_mixed]
+                    96.99 - 4.46 * wind_speeds_2m[pos_mixed] + (0.88 + 0.22) * temps_c[pos_mixed]
                 )
-            elif gauge == 'us_sh':
-                cr[pos_snow] = np.exp(4.61 - 0.04 * wind_speeds_2m[pos_snow]**1.75)
+            elif gauge == "us_sh":
+                cr[pos_snow] = np.exp(4.61 - 0.04 * wind_speeds_2m[pos_snow] ** 1.75)
                 cr[pos_mixed] = 101.04 - 5.62 * wind_speeds_2m[pos_mixed]
-            elif gauge == 'us_unsh':
-                cr[pos_snow] = np.exp(4.61 - 0.16 * wind_speeds_2m[pos_snow]**1.28)
+            elif gauge == "us_unsh":
+                cr[pos_snow] = np.exp(4.61 - 0.16 * wind_speeds_2m[pos_snow] ** 1.28)
                 cr[pos_mixed] = 100.77 - 8.34 * wind_speeds_2m[pos_mixed]
-            if gauge == 'hellmann':
+            if gauge == "hellmann":
                 cr[pos_snow] = (
-                    100
-                    + 1.13 * wind_speeds_2m[pos_snow]**2
-                    - 19.45 * wind_speeds_2m[pos_snow]
+                    100 + 1.13 * wind_speeds_2m[pos_snow] ** 2 - 19.45 * wind_speeds_2m[pos_snow]
                 )
                 cr[pos_mixed] = (
                     96.63
-                    + 0.41 * wind_speeds_2m[pos_mixed]**2
+                    + 0.41 * wind_speeds_2m[pos_mixed] ** 2
                     - 9.84 * wind_speeds_2m[pos_mixed]
                     + 5.95 * temps_c[pos_mixed]
                 )
             else:
-                raise NotImplementedError(f'Unknown gauge: {gauge}')
+                raise NotImplementedError(f"Unknown gauge: {gauge}")
 
-            corr_factors = 1. / (cr / 100.)
-        elif method == 'kochendorfer':
-            gauge = config['gauge']
-            cr = np.full(precips.shape, 1.)  # CR is here not in percent but a fraction
+            corr_factors = 1.0 / (cr / 100.0)
+        elif method == "kochendorfer":
+            gauge = config["gauge"]
+            cr = np.full(precips.shape, 1.0)  # CR is here not in percent but a fraction
 
             try:
                 coeff_a, coeff_b, coeff_c, max_wind_speed = KOCHENDORFER_COEFFS[gauge]
             except KeyError:
-                raise NotImplementedError(f'Unknown gauge: {gauge}')
+                raise NotImplementedError(f"Unknown gauge: {gauge}")
 
             # Calculate catch ratio following [2] (use eq. (1) from the corrigendum, not eq. (4)
             # from the original paper)
             cr[pos_precip] = np.exp(
-                -coeff_a * wind_speeds[pos_precip].clip(max=max_wind_speed)
+                -coeff_a
+                * wind_speeds[pos_precip].clip(max=max_wind_speed)
                 * (1 - np.arctan(coeff_b * temps_c[pos_precip]) + coeff_c)
             )
 
-            corr_factors = 1. / cr
+            corr_factors = 1.0 / cr
         else:
             raise NotImplementedError
 
         # Replace nan values (i.e. where either temperature or wind speed is nan) by 1
-        corr_factors = np.nan_to_num(corr_factors, nan=1.)
+        corr_factors = np.nan_to_num(corr_factors, nan=1.0)
 
         precips *= corr_factors
 
@@ -244,7 +237,7 @@ def _interpolate_temp_hum_wind(
         num_nan = nan_pos.sum()
         if num_nan > 0 and num_nan < num_stations:
             temps[date_num, nan_pos] = meteo.interpolate_param(
-                'temp',
+                "temp",
                 date,
                 temp_config,
                 temps[date_num, ~nan_pos],
@@ -260,7 +253,7 @@ def _interpolate_temp_hum_wind(
         num_nan = nan_pos.sum()
         if num_nan > 0 and num_nan < num_stations:
             rel_hums[date_num, nan_pos] = meteo.interpolate_param(
-                'rel_hum',
+                "rel_hum",
                 date,
                 hum_config,
                 rel_hums[date_num, ~nan_pos],
@@ -278,7 +271,7 @@ def _interpolate_temp_hum_wind(
         num_nan = nan_pos.sum()
         if num_nan > 0 and num_nan < num_stations:
             wind_speeds[date_num, nan_pos] = meteo.interpolate_param(
-                'wind_speed',
+                "wind_speed",
                 date,
                 temp_config,
                 wind_speeds[date_num, ~nan_pos],

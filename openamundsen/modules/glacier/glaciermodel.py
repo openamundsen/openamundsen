@@ -4,9 +4,9 @@ from openamundsen import constants as c
 from openamundsen.modules.snow import CryoLayerID
 
 
-MIN_ICE_THICKNESS = 10.  # minimum required ice thickness for applying the delta h function (m)
-TERMINUS_MASS_BALANCE_ELEVATION_PERCENTAGE = 10.  # (%)
-TERMINUS_ELEVATION_BUFFER = 50.  # (m)
+MIN_ICE_THICKNESS = 10.0  # minimum required ice thickness for applying the delta h function (m)
+TERMINUS_MASS_BALANCE_ELEVATION_PERCENTAGE = 10.0  # (%)
+TERMINUS_ELEVATION_BUFFER = 50.0  # (m)
 
 
 class GlacierModel:
@@ -20,11 +20,12 @@ class GlacierModel:
        Hydrology and Earth System Sciences, 14(5), 815–829.
        https://doi.org/10.5194/hess-14-815-2010
     """
+
     def __init__(self, model):
         self.model = model
         s = model.state
-        sg = s.add_category('glaciers')
-        sg.add_variable('glacier', long_name='Glacier ID', dtype=int)
+        sg = s.add_category("glaciers")
+        sg.add_variable("glacier", long_name="Glacier ID", dtype=int)
         self.mass_balance_start_we = None
 
     def initialize(self):
@@ -64,13 +65,13 @@ class GlacierModel:
         new_ice_thickness = s.snow.thickness[CryoLayerID.ICE, :].copy()
 
         for gid in self.glacier_ids:
-            gpos = (s.glaciers.glacier == gid) & (old_ice_thickness > 0.)
+            gpos = (s.glaciers.glacier == gid) & (old_ice_thickness > 0.0)
             num_glacier_pixels = gpos.sum()
 
             if not gpos.any():
                 continue
 
-            logger.debug(f'Updating geometry for glacier {gid}')
+            logger.debug(f"Updating geometry for glacier {gid}")
 
             apply_default_delta_h = True
 
@@ -83,7 +84,7 @@ class GlacierModel:
             update_pos = model.global_mask(update_pos_local, gpos)
             if update_pos_local.sum() < 2:
                 # At least 2 pixels are required for calculating the normalized elevation range
-                logger.debug('Less than 2 pixels available, skipping glacier')
+                logger.debug("Less than 2 pixels available, skipping glacier")
                 continue
 
             glacier_elevs = model.state.base.dem[gpos]
@@ -93,9 +94,9 @@ class GlacierModel:
             terminus_elev = glacier_elevs.min()
 
             glacier_elevs_sorted_idxs = np.argsort(glacier_elevs)
-            num_terminus_pixels = int(np.ceil(
-                num_glacier_pixels * (TERMINUS_MASS_BALANCE_ELEVATION_PERCENTAGE / 100.)
-            ))
+            num_terminus_pixels = int(
+                np.ceil(num_glacier_pixels * (TERMINUS_MASS_BALANCE_ELEVATION_PERCENTAGE / 100.0))
+            )
 
             # Calculate the highest elevation of the lowest
             # TERMINUS_MASS_BALANCE_ELEVATION_PERCENTAGE percent of glacier pixels
@@ -109,7 +110,7 @@ class GlacierModel:
             pos = model.global_mask(model.state.base.dem[gpos] <= max_terminus_elev, gpos)
             terminus_mb = mb[pos].min()
 
-            max_allowed_change = min(terminus_mb, 0.)  # MB must be negative
+            max_allowed_change = min(terminus_mb, 0.0)  # MB must be negative
             mass_change = _ice_mass_change(
                 glacier_elevs[update_pos_local],
                 total_mb,
@@ -119,7 +120,7 @@ class GlacierModel:
 
             new_ice_thickness[update_pos] = (
                 old_ice_thickness[update_pos] + (mass_change - firn_mb[update_pos]) / c.ICE_DENSITY
-            ).clip(min=0.)
+            ).clip(min=0.0)
 
         s.snow.thickness[CryoLayerID.ICE, :] = new_ice_thickness
         s.snow.ice_content[CryoLayerID.ICE, :] = new_ice_thickness * c.ICE_DENSITY
@@ -187,11 +188,11 @@ def _ice_mass_change(elevs, total_mb, glacier_area, max_allowed_change):
 
 def _delta_h(h, glacier_area):
     if glacier_area >= 20e6:
-        delta_h = -((h - 0.02)**6 + 0.12 * (h - 0.02))
+        delta_h = -((h - 0.02) ** 6 + 0.12 * (h - 0.02))
     elif glacier_area >= 5e6:
-        delta_h = -((h - 0.05)**4 + 0.19 * (h - 0.05) + 0.01)
+        delta_h = -((h - 0.05) ** 4 + 0.19 * (h - 0.05) + 0.01)
     else:
-        delta_h = -((h - 0.30)**2 + 0.60 * (h - 0.30) + 0.09)
+        delta_h = -((h - 0.30) ** 2 + 0.60 * (h - 0.30) + 0.09)
 
     return delta_h.clip(-1, 0)
 
@@ -199,15 +200,15 @@ def _delta_h(h, glacier_area):
 def _mass_loss_surplus_distribution(mass_loss, elevs):
     min_elev = elevs.min()
     max_elev = elevs.max()
-    min_mass = 0.
+    min_mass = 0.0
 
-    x0 = 0.
+    x0 = 0.0
     x1 = mass_loss / elevs.size * 1.5
     y0 = np.sum(_scale_mass_loss_surplus(mass_loss, elevs, min_elev, max_elev, min_mass, x0))
     y1 = np.sum(_scale_mass_loss_surplus(mass_loss, elevs, min_elev, max_elev, min_mass, x1))
 
     k = (y1 - y0) / (x1 - x0)
-    d = (y0 - k * x0)
+    d = y0 - k * x0
 
     max_mass = (mass_loss - d) / k
     mass_loss_dist = _scale_mass_loss_surplus(

@@ -7,11 +7,11 @@ class LandCover:
     def __init__(self, model):
         self.model = model
 
-        s_lc = model.state.add_category('land_cover')
-        s_lc.add_variable('land_cover', long_name='Land cover class', dtype=int, retain=True)
-        s_lc.add_variable('plant_height', 'm', 'Plant height')
-        s_lc.add_variable('lai', 'm2 m-2', 'Leaf area index')
-        s_lc.add_variable('lai_eff', 'm2 m-2', 'Effective leaf area index')
+        s_lc = model.state.add_category("land_cover")
+        s_lc.add_variable("land_cover", long_name="Land cover class", dtype=int, retain=True)
+        s_lc.add_variable("plant_height", "m", "Plant height")
+        s_lc.add_variable("lai", "m2 m-2", "Leaf area index")
+        s_lc.add_variable("lai_eff", "m2 m-2", "Effective leaf area index")
 
     def initialize(self):
         model = self.model
@@ -27,33 +27,33 @@ class LandCover:
         self.lai_classes = []  # LCCs with valid LAI parameters
         for lcc in lccs:
             try:
-                lcc_params = model.config['land_cover']['classes'][lcc]
+                lcc_params = model.config["land_cover"]["classes"][lcc]
             except KeyError:
-                logger.warning(f'Unknown land cover class: {lcc}')
+                logger.warning(f"Unknown land cover class: {lcc}")
                 continue
 
             self.class_pixels[lcc] = (s.land_cover.land_cover == lcc) & roi
 
-            if lcc_params.get('is_forest', False):
+            if lcc_params.get("is_forest", False):
                 self.forest_classes.append(lcc)
 
-            if 'leaf_area_index' in lcc_params:
+            if "leaf_area_index" in lcc_params:
                 if (
-                    'min' in lcc_params['leaf_area_index']
-                    and 'max' in lcc_params['leaf_area_index']
+                    "min" in lcc_params["leaf_area_index"]
+                    and "max" in lcc_params["leaf_area_index"]
                 ):
                     self.lai_classes.append(lcc)
                 else:
-                    logger.warning(f'Incomplete LAI parameters for land cover class {lcc}')
+                    logger.warning(f"Incomplete LAI parameters for land cover class {lcc}")
 
     def lai(self):
         model = self.model
         s_lc = self.model.state.land_cover
 
         for lcc in self.lai_classes:
-            lcc_params = model.config['land_cover']['classes'][lcc]
-            min_lai = lcc_params['leaf_area_index']['min']
-            max_lai = lcc_params['leaf_area_index']['max']
+            lcc_params = model.config["land_cover"]["classes"][lcc]
+            min_lai = lcc_params["leaf_area_index"]["min"]
+            max_lai = lcc_params["leaf_area_index"]["max"]
             (
                 length_ini,
                 length_dev,
@@ -75,13 +75,14 @@ class LandCover:
             )
 
             s_lc.lai[self.class_pixels[lcc]] = lcc_lai
-            s_lc.lai_eff[self.class_pixels[lcc]] = (
-                lcc_lai + lcc_params['leaf_area_index'].get('effective_add', 0)
+            s_lc.lai_eff[self.class_pixels[lcc]] = lcc_lai + lcc_params["leaf_area_index"].get(
+                "effective_add",
+                0,
             )
 
     def growth_stage_lengths(self, lcc):
-        lcc_params = self.model.config['land_cover']['classes'][lcc]
-        lcc_gsls = lcc_params['growth_stage_lengths']
+        lcc_params = self.model.config["land_cover"]["classes"][lcc]
+        lcc_gsls = lcc_params["growth_stage_lengths"]
 
         if isinstance(lcc_gsls[0], int):
             length_ini, length_dev, length_mid, length_late = lcc_gsls
@@ -94,5 +95,5 @@ class LandCover:
         return (length_ini, length_dev, length_mid, length_late)
 
     def growing_period_day(self, lcc):
-        lcc_params = self.model.config['land_cover']['classes'][lcc]
-        return self.model.date.dayofyear - lcc_params['plant_date'] + 1  # (1-based)
+        lcc_params = self.model.config["land_cover"]["classes"][lcc]
+        return self.model.date.dayofyear - lcc_params["plant_date"] + 1  # (1-based)

@@ -10,8 +10,8 @@ def plot_point_comparison(
     changed_vars,
     num_cols=3,
     plot_height=400,
-    base_color='#1f77b4',
-    dev_color='#d62728',
+    base_color="#1f77b4",
+    dev_color="#d62728",
 ):
     num_rows = int(np.ceil(len(plot_vars) / num_cols))
 
@@ -42,8 +42,8 @@ def plot_point_comparison(
                 go.Scatter(
                     x=data_base.index,
                     y=data_base[dim],
-                    name='base',
-                    mode='lines',
+                    name="base",
+                    mode="lines",
                     line=dict(color=base_color),
                     showlegend=False,
                 ),
@@ -59,8 +59,8 @@ def plot_point_comparison(
                     go.Scatter(
                         x=data_dev.index,
                         y=data_dev[dim],
-                        name='dev',
-                        mode='lines',
+                        name="dev",
+                        mode="lines",
                         line=dict(color=dev_color),
                         showlegend=False,
                     ),
@@ -69,7 +69,7 @@ def plot_point_comparison(
                 )
 
     for plot_num in highlight_subplots:
-        fig['layout']['annotations'][plot_num]['font']['color'] = 'red'
+        fig["layout"]["annotations"][plot_num]["font"]["color"] = "red"
 
     fig.update_layout(height=plot_height * num_rows)
 
@@ -90,8 +90,8 @@ def plot_gridded_comparison(
         dates = ds_base[v].coords[time_dim].to_index()
         num_rows += len(dates)
         for d in dates:
-            titles.append(f'{v} ({d})')
-            titles.append('')  # right column
+            titles.append(f"{v} ({d})")
+            titles.append("")  # right column
 
     fig = make_subplots(
         rows=num_rows,
@@ -126,7 +126,7 @@ def plot_gridded_comparison(
                     zmax=max_val,
                     x=ds_base.x,
                     y=ds_base.y,
-                    colorscale='viridis',
+                    colorscale="viridis",
                     showscale=False,
                 ),
                 row=row,
@@ -141,7 +141,7 @@ def plot_gridded_comparison(
                         zmax=max_val,
                         x=ds_base.x,
                         y=ds_base.y,
-                        colorscale='viridis',
+                        colorscale="viridis",
                         showscale=False,
                     ),
                     row=row,
@@ -160,5 +160,5 @@ def fig_to_html(fig, filename, create_dir=True):
     if create_dir:
         filename.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(filename, 'w') as f:
-        f.write(fig.to_html(include_plotlyjs='cdn'))
+    with open(filename, "w") as f:
+        f.write(fig.to_html(include_plotlyjs="cdn"))

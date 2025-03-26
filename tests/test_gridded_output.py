@@ -11,144 +11,156 @@ import xarray as xr
 
 
 def test_freq_write_dates():
-    dates = pd.date_range(start='2021-01-01 00:00', end='2021-12-31 23:00', freq='h')
+    dates = pd.date_range(start="2021-01-01 00:00", end="2021-12-31 23:00", freq="h")
 
-    assert _freq_write_dates(dates, 'h', False).equals(dates)
+    assert _freq_write_dates(dates, "h", False).equals(dates)
 
-    wd = _freq_write_dates(dates, '3h', False)
+    wd = _freq_write_dates(dates, "3h", False)
     assert np.all(wd.hour.isin([0, 3, 6, 9, 12, 15, 18, 21]))
 
-    wd = _freq_write_dates(dates, 'D', False)
+    wd = _freq_write_dates(dates, "D", False)
     assert np.all(wd.hour == 0)
     assert dates.normalize().unique().equals(wd.normalize())
 
-    wd = _freq_write_dates(dates, 'D', True)
+    wd = _freq_write_dates(dates, "D", True)
     assert np.all(wd.hour == 23)
 
-    wd = _freq_write_dates(dates, 'ME', True)
+    wd = _freq_write_dates(dates, "ME", True)
     assert np.all(wd.day.isin([28, 30, 31]))
     assert np.all(wd.hour == 23)
 
-    assert _freq_write_dates(dates, 'YE', False).equals(pd.to_datetime(['2021-12-31 23:00']))
-    assert _freq_write_dates(dates, 'YS', False).equals(pd.to_datetime(['2021-01-01 00:00']))
+    assert _freq_write_dates(dates, "YE", False).equals(pd.to_datetime(["2021-12-31 23:00"]))
+    assert _freq_write_dates(dates, "YS", False).equals(pd.to_datetime(["2021-01-01 00:00"]))
 
-    wd = _freq_write_dates(dates, 'ME', False)
+    wd = _freq_write_dates(dates, "ME", False)
     assert np.all(wd.day.isin([28, 30, 31]))
     assert np.all(wd.hour == 23)
 
-    wd = _freq_write_dates(dates, 'MS', False)
+    wd = _freq_write_dates(dates, "MS", False)
     assert np.all(wd.day == 1)
     assert np.all(wd.hour == 0)
 
-    dates = pd.date_range(start='2021-01-01 06:00', end='2021-12-31 21:00', freq='3h')
-    wd = _freq_write_dates(dates, 'D', False)
+    dates = pd.date_range(start="2021-01-01 06:00", end="2021-12-31 21:00", freq="3h")
+    wd = _freq_write_dates(dates, "D", False)
     assert np.all(wd.hour == 6)
 
-    wd = _freq_write_dates(dates, 'D', True)
+    wd = _freq_write_dates(dates, "D", True)
     assert np.all(wd.hour == 3)
 
     with pytest.raises(ValueError):
-        wd = _freq_write_dates(dates, 'h', False)
+        wd = _freq_write_dates(dates, "h", False)
 
     with pytest.raises(ValueError):
-        wd = _freq_write_dates(dates, 'h', True)
+        wd = _freq_write_dates(dates, "h", True)
 
-    dates = pd.date_range(start='2021-01-01 02:00', end='2021-12-31 04:00', freq='3h')
-    wd = _freq_write_dates(dates, 'D', False)
+    dates = pd.date_range(start="2021-01-01 02:00", end="2021-12-31 04:00", freq="3h")
+    wd = _freq_write_dates(dates, "D", False)
     assert np.all(wd.hour == 2)
     # assert _freq_write_dates(dates, 'A', False).size == 0
 
-    dates = pd.date_range(start='2021-01-01 02:00', end='2021-01-01 07:00', freq='h')
-    assert len(_freq_write_dates(dates, 'D', False)) == 1
-    assert len(_freq_write_dates(dates, 'D', True)) == 0
+    dates = pd.date_range(start="2021-01-01 02:00", end="2021-01-01 07:00", freq="h")
+    assert len(_freq_write_dates(dates, "D", False)) == 1
+    assert len(_freq_write_dates(dates, "D", True)) == 0
 
-    dates = pd.date_range(start='2021-01-15 00:00', end='2021-03-15 21:00', freq='3h')
-    wd = _freq_write_dates(dates, 'ME', True)
+    dates = pd.date_range(start="2021-01-15 00:00", end="2021-03-15 21:00", freq="3h")
+    wd = _freq_write_dates(dates, "ME", True)
     assert len(wd) == 2
 
-    dates = pd.date_range(start='2021-01-01 01:00', end='2021-12-31 22:00', freq='3h')
-    assert _freq_write_dates(dates, 'YE', False).equals(pd.to_datetime(['2021-12-31 22:00']))
-    assert _freq_write_dates(dates, 'YS', False).equals(pd.to_datetime(['2021-01-01 01:00']))
+    dates = pd.date_range(start="2021-01-01 01:00", end="2021-12-31 22:00", freq="3h")
+    assert _freq_write_dates(dates, "YE", False).equals(pd.to_datetime(["2021-12-31 22:00"]))
+    assert _freq_write_dates(dates, "YS", False).equals(pd.to_datetime(["2021-01-01 01:00"]))
 
-    for freq in ('BME', 'QE', 'ms', 'us', 'ns', 'foo'):
+    for freq in ("BME", "QE", "ms", "us", "ns", "foo"):
         with pytest.raises(errors.ConfigurationError):
             _freq_write_dates(dates, freq, False)
 
 
-@pytest.mark.parametrize('fmt', ['netcdf', 'ascii', 'geotiff', 'memory'])
+@pytest.mark.parametrize("fmt", ["netcdf", "ascii", "geotiff", "memory"])
 def test_formats(fmt, tmp_path):
     # Skip test for format "ascii" for certain GDAL versions because of this bug:
     # https://github.com/OSGeo/gdal/issues/9666
-    if fmt == 'ascii' and rasterio.__gdal_version__ in (
-        '3.8.0',
-        '3.8.1',
-        '3.8.2',
-        '3.8.3',
-        '3.8.4',
-        '3.8.5',
+    if fmt == "ascii" and rasterio.__gdal_version__ in (
+        "3.8.0",
+        "3.8.1",
+        "3.8.2",
+        "3.8.3",
+        "3.8.4",
+        "3.8.5",
     ):
         pytest.skip()
 
     config = base_config()
-    config.end_date = '2020-01-16'
+    config.end_date = "2020-01-16"
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
     grid_cfg.format = fmt
     grid_cfg.variables = [
-        {'var': 'meteo.temp', 'freq': 'D'},
-        {'var': 'meteo.precip', 'freq': 'D', 'agg': 'sum'},
-        {'var': 'meteo.sw_in', 'dates': ['2020-01-15 12:00'], 'name': 'myvar'},
-        {'var': 'base.dem', 'dates': ['2020-01-15 00:00']},
+        {"var": "meteo.temp", "freq": "D"},
+        {"var": "meteo.precip", "freq": "D", "agg": "sum"},
+        {"var": "meteo.sw_in", "dates": ["2020-01-15 12:00"], "name": "myvar"},
+        {"var": "base.dem", "dates": ["2020-01-15 00:00"]},
     ]
 
     model = oa.OpenAmundsen(config)
     model.initialize()
     model.run()
 
-    if fmt in ('netcdf', 'memory'):
-        if fmt == 'netcdf':
-            ds = xr.open_dataset(tmp_path / 'output_grids.nc')
-        elif fmt == 'memory':
+    if fmt in ("netcdf", "memory"):
+        if fmt == "netcdf":
+            ds = xr.open_dataset(tmp_path / "output_grids.nc")
+        elif fmt == "memory":
             ds = model.gridded_output.data
 
-        assert 'temp' in ds.variables
-        assert ds.time1.to_index().equals(pd.DatetimeIndex([
-            '2020-01-15 00:00',
-            '2020-01-16 00:00',
-        ]))
-        assert 'precip' in ds.variables
-        assert ds.time2.to_index().equals(pd.DatetimeIndex([
-            '2020-01-15 21:00',
-            '2020-01-16 21:00',
-        ]))
-        assert pd.DatetimeIndex(ds.time2_bounds.values.ravel()).equals(pd.DatetimeIndex([
-            '2020-01-15 00:00:00',
-            '2020-01-15 21:00:00',
-            '2020-01-15 21:00:00',
-            '2020-01-16 21:00:00',
-        ]))
-        assert 'myvar' in ds.variables
-        assert ds.time3.to_index().equals(pd.DatetimeIndex(['2020-01-15 12:00']))
-        assert_allclose(model.state.base.dem, ds.dem.loc['2020-01-15 00:00', :, :].values)
+        assert "temp" in ds.variables
+        assert ds.time1.to_index().equals(
+            pd.DatetimeIndex(
+                [
+                    "2020-01-15 00:00",
+                    "2020-01-16 00:00",
+                ]
+            )
+        )
+        assert "precip" in ds.variables
+        assert ds.time2.to_index().equals(
+            pd.DatetimeIndex(
+                [
+                    "2020-01-15 21:00",
+                    "2020-01-16 21:00",
+                ]
+            )
+        )
+        assert pd.DatetimeIndex(ds.time2_bounds.values.ravel()).equals(
+            pd.DatetimeIndex(
+                [
+                    "2020-01-15 00:00:00",
+                    "2020-01-15 21:00:00",
+                    "2020-01-15 21:00:00",
+                    "2020-01-16 21:00:00",
+                ]
+            )
+        )
+        assert "myvar" in ds.variables
+        assert ds.time3.to_index().equals(pd.DatetimeIndex(["2020-01-15 12:00"]))
+        assert_allclose(model.state.base.dem, ds.dem.loc["2020-01-15 00:00", :, :].values)
     else:
-        if fmt == 'ascii':
-            ext = 'asc'
-        elif fmt == 'geotiff':
-            ext = 'tif'
+        if fmt == "ascii":
+            ext = "asc"
+        elif fmt == "geotiff":
+            ext = "tif"
 
-        fn = tmp_path / f'temp_2020-01-16T0000.{ext}'
+        fn = tmp_path / f"temp_2020-01-16T0000.{ext}"
         with rasterio.open(fn) as ds:
             ds.read(1)
 
-        fn = tmp_path / f'precip_2020-01-16T0000_2020-01-16T2100.{ext}'
+        fn = tmp_path / f"precip_2020-01-16T0000_2020-01-16T2100.{ext}"
         with rasterio.open(fn) as ds:
             ds.read(1)
 
-        fn = tmp_path / f'myvar_2020-01-15T1200.{ext}'
+        fn = tmp_path / f"myvar_2020-01-15T1200.{ext}"
         with rasterio.open(fn) as ds:
             ds.read(1)
 
-        fn = tmp_path / f'dem_2020-01-15T0000.{ext}'
+        fn = tmp_path / f"dem_2020-01-15T0000.{ext}"
         with rasterio.open(fn) as ds:
             assert_allclose(model.state.base.dem, ds.read(1))
 
@@ -158,8 +170,8 @@ def test_duplicate_output_names(tmp_path):
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
     grid_cfg.variables = [
-        {'var': 'meteo.temp'},
-        {'var': 'snow.temp'},
+        {"var": "meteo.temp"},
+        {"var": "snow.temp"},
     ]
 
     model = oa.OpenAmundsen(config)
@@ -169,87 +181,87 @@ def test_duplicate_output_names(tmp_path):
 
 def test_values(tmp_path):
     config = base_config()
-    config.start_date = '2020-01-17'
-    config.end_date = '2020-01-19'
+    config.start_date = "2020-01-17"
+    config.end_date = "2020-01-19"
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
     grid_cfg.variables = [
-        {'var': 'meteo.temp', 'freq': 'D', 'agg': 'mean'},
-        {'var': 'meteo.precip', 'freq': 'D', 'agg': 'sum'},
-        {'var': 'meteo.sw_in', 'dates': ['2020-01-17 12:00']},
-        {'var': 'snow.swe', 'freq': 'D'},
+        {"var": "meteo.temp", "freq": "D", "agg": "mean"},
+        {"var": "meteo.precip", "freq": "D", "agg": "sum"},
+        {"var": "meteo.sw_in", "dates": ["2020-01-17 12:00"]},
+        {"var": "snow.swe", "freq": "D"},
     ]
 
     model = oa.OpenAmundsen(config)
     model.initialize()
     data_vals = {
-        'temp': {},
-        'precip': {},
-        'sw_in': {},
-        'swe': {},
+        "temp": {},
+        "precip": {},
+        "sw_in": {},
+        "swe": {},
     }
 
     for date in model.dates:
         model.run_single()
-        date = date.strftime('%Y-%m-%d %H:%M')
-        data_vals['temp'][date] = model.state.meteo.temp.copy()
-        data_vals['precip'][date] = model.state.meteo.precip.copy()
-        data_vals['sw_in'][date] = model.state.meteo.sw_in.copy()
-        data_vals['swe'][date] = model.state.snow.swe.copy()
+        date = date.strftime("%Y-%m-%d %H:%M")
+        data_vals["temp"][date] = model.state.meteo.temp.copy()
+        data_vals["precip"][date] = model.state.meteo.precip.copy()
+        data_vals["sw_in"][date] = model.state.meteo.sw_in.copy()
+        data_vals["swe"][date] = model.state.snow.swe.copy()
 
     ds = model.gridded_output.data
     assert_allclose(
-        data_vals['sw_in']['2020-01-17 12:00'],
-        ds.sw_in.loc['2020-01-17 12:00', :, :].values,
+        data_vals["sw_in"]["2020-01-17 12:00"],
+        ds.sw_in.loc["2020-01-17 12:00", :, :].values,
     )
 
     assert_allclose(
-        data_vals['swe']['2020-01-19 00:00'],
-        ds.swe.loc['2020-01-19 00:00', :, :].values,
+        data_vals["swe"]["2020-01-19 00:00"],
+        ds.swe.loc["2020-01-19 00:00", :, :].values,
     )
 
     mean_temp = (
-        data_vals['temp']['2020-01-18 00:00']
-        + data_vals['temp']['2020-01-18 03:00']
-        + data_vals['temp']['2020-01-18 06:00']
-        + data_vals['temp']['2020-01-18 09:00']
-        + data_vals['temp']['2020-01-18 12:00']
-        + data_vals['temp']['2020-01-18 15:00']
-        + data_vals['temp']['2020-01-18 18:00']
-        + data_vals['temp']['2020-01-18 21:00']
+        data_vals["temp"]["2020-01-18 00:00"]
+        + data_vals["temp"]["2020-01-18 03:00"]
+        + data_vals["temp"]["2020-01-18 06:00"]
+        + data_vals["temp"]["2020-01-18 09:00"]
+        + data_vals["temp"]["2020-01-18 12:00"]
+        + data_vals["temp"]["2020-01-18 15:00"]
+        + data_vals["temp"]["2020-01-18 18:00"]
+        + data_vals["temp"]["2020-01-18 21:00"]
     ) / 8
     assert_allclose(
         mean_temp,
-        ds.temp.loc['2020-01-18 21:00', :, :].values,
+        ds.temp.loc["2020-01-18 21:00", :, :].values,
     )
 
     precip_sum = (
-        data_vals['precip']['2020-01-18 00:00']
-        + data_vals['precip']['2020-01-18 03:00']
-        + data_vals['precip']['2020-01-18 06:00']
-        + data_vals['precip']['2020-01-18 09:00']
-        + data_vals['precip']['2020-01-18 12:00']
-        + data_vals['precip']['2020-01-18 15:00']
-        + data_vals['precip']['2020-01-18 18:00']
-        + data_vals['precip']['2020-01-18 21:00']
+        data_vals["precip"]["2020-01-18 00:00"]
+        + data_vals["precip"]["2020-01-18 03:00"]
+        + data_vals["precip"]["2020-01-18 06:00"]
+        + data_vals["precip"]["2020-01-18 09:00"]
+        + data_vals["precip"]["2020-01-18 12:00"]
+        + data_vals["precip"]["2020-01-18 15:00"]
+        + data_vals["precip"]["2020-01-18 18:00"]
+        + data_vals["precip"]["2020-01-18 21:00"]
     )
     assert_allclose(
         precip_sum,
-        ds.precip.loc['2020-01-18 21:00', :, :].values,
+        ds.precip.loc["2020-01-18 21:00", :, :].values,
     )
 
 
 def test_data_type(tmp_path):
     config = base_config()
-    config.start_date = '2020-01-17'
-    config.end_date = '2020-01-17'
+    config.start_date = "2020-01-17"
+    config.end_date = "2020-01-17"
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
     grid_cfg.variables = [
-        {'var': 'meteo.temp', 'freq': 'D', 'agg': 'mean'},
-        {'var': 'snow.num_layers', 'freq': 'D'},
-        {'var': 'snow.num_layers', 'freq': 'D', 'agg': 'sum', 'name': 'num_layers_sum'},
-        {'var': 'snow.num_layers', 'freq': 'D', 'agg': 'mean', 'name': 'num_layers_mean'},
+        {"var": "meteo.temp", "freq": "D", "agg": "mean"},
+        {"var": "snow.num_layers", "freq": "D"},
+        {"var": "snow.num_layers", "freq": "D", "agg": "sum", "name": "num_layers_sum"},
+        {"var": "snow.num_layers", "freq": "D", "agg": "mean", "name": "num_layers_mean"},
     ]
 
     model = oa.OpenAmundsen(config)
@@ -265,13 +277,13 @@ def test_data_type(tmp_path):
 
 def test_nothing_to_write(tmp_path):
     config = base_config()
-    config.start_date = '2020-01-01'
-    config.end_date = '2020-01-01 03:00'
+    config.start_date = "2020-01-01"
+    config.end_date = "2020-01-01 03:00"
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
     grid_cfg.variables = [
-        {'var': 'snow.swe', 'freq': 'D', 'agg': 'sum'},
-        {'var': 'meteo.temp', 'dates': ['2020-01-02 12:00']},
+        {"var": "snow.swe", "freq": "D", "agg": "sum"},
+        {"var": "meteo.temp", "dates": ["2020-01-02 12:00"]},
     ]
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -279,24 +291,24 @@ def test_nothing_to_write(tmp_path):
     assert model.gridded_output.data is None
 
     grid_cfg.variables = [
-        {'var': 'snow.swe', 'freq': 'D', 'agg': 'sum'},
-        {'var': 'meteo.temp', 'dates': ['2020-01-01 02:00']},
+        {"var": "snow.swe", "freq": "D", "agg": "sum"},
+        {"var": "meteo.temp", "dates": ["2020-01-01 02:00"]},
     ]
     model = oa.OpenAmundsen(config)
     model.initialize()
     model.run()
     ds = model.gridded_output.data
-    assert list(ds.data_vars.keys()) == ['temp']
+    assert list(ds.data_vars.keys()) == ["temp"]
 
 
 def test_dask(tmp_path):
     config = base_config()
-    config.end_date = '2020-01-16'
+    config.end_date = "2020-01-16"
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
-    grid_cfg.format = 'netcdf'
+    grid_cfg.format = "netcdf"
     grid_cfg.variables = [
-        {'var': 'meteo.temp', 'freq': 'D'},
+        {"var": "meteo.temp", "freq": "D"},
     ]
 
     model = oa.OpenAmundsen(config)
@@ -310,17 +322,17 @@ def test_dask(tmp_path):
 
 def test_append(tmp_path):
     config = base_config()
-    config.start_date = '2020-01-17'
-    config.end_date = '2020-01-19'
+    config.start_date = "2020-01-17"
+    config.end_date = "2020-01-19"
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
-    grid_cfg.format = 'netcdf'
+    grid_cfg.format = "netcdf"
     grid_cfg.variables = [
-        {'var': 'meteo.rel_hum'},
-        {'var': 'meteo.temp', 'freq': 'D', 'agg': 'mean'},
-        {'var': 'meteo.precip', 'freq': 'D', 'agg': 'sum'},
-        {'var': 'meteo.sw_in', 'dates': ['2020-01-17 12:00']},
-        {'var': 'snow.swe', 'freq': 'D'},
+        {"var": "meteo.rel_hum"},
+        {"var": "meteo.temp", "freq": "D", "agg": "mean"},
+        {"var": "meteo.precip", "freq": "D", "agg": "sum"},
+        {"var": "meteo.sw_in", "dates": ["2020-01-17 12:00"]},
+        {"var": "snow.swe", "freq": "D"},
     ]
 
     grid_cfg.append = False
@@ -329,32 +341,32 @@ def test_append(tmp_path):
     for date_num, date in enumerate(model.dates):
         model.run_single()
         if date_num == 0:
-            ds = xr.load_dataset(tmp_path / 'output_grids.nc')
-            assert ds.sizes['time1'] == len(model.dates)
-    ds_no_append = xr.load_dataset(tmp_path / 'output_grids.nc')
+            ds = xr.load_dataset(tmp_path / "output_grids.nc")
+            assert ds.sizes["time1"] == len(model.dates)
+    ds_no_append = xr.load_dataset(tmp_path / "output_grids.nc")
 
     grid_cfg.append = True
     model = oa.OpenAmundsen(config)
     model.initialize()
     for date_num, date in enumerate(model.dates):
         model.run_single()
-        with xr.open_dataset(tmp_path / 'output_grids.nc') as ds:
-            assert ds.sizes['time1'] == date_num + 1
-    ds_append = xr.load_dataset(tmp_path / 'output_grids.nc')
+        with xr.open_dataset(tmp_path / "output_grids.nc") as ds:
+            assert ds.sizes["time1"] == date_num + 1
+    ds_append = xr.load_dataset(tmp_path / "output_grids.nc")
 
     xr.testing.assert_identical(ds_no_append, ds_append)
 
 
-@pytest.mark.parametrize('fmt', ['netcdf', 'geotiff'])
+@pytest.mark.parametrize("fmt", ["netcdf", "geotiff"])
 def test_compress(fmt, tmp_path):
     config = base_config()
-    config.start_date = '2020-01-01 00:00'
-    config.end_date = '2020-01-01 03:00'
+    config.start_date = "2020-01-01 00:00"
+    config.end_date = "2020-01-01 03:00"
     config.results_dir = tmp_path
     grid_cfg = config.output_data.grids
     grid_cfg.format = fmt
     grid_cfg.variables = [
-        {'var': 'meteo.temp'},
+        {"var": "meteo.temp"},
     ]
 
     for compress in (False, True):
@@ -363,11 +375,11 @@ def test_compress(fmt, tmp_path):
         model.initialize()
         model.run()
 
-        if fmt == 'netcdf':
-            with xr.open_dataset(tmp_path / 'output_grids.nc') as ds:
-                assert ds['temp'].encoding['zlib'] is compress
-        elif fmt == 'geotiff':
-            with rasterio.open(tmp_path / 'temp_2020-01-01T0000.tif') as ds:
+        if fmt == "netcdf":
+            with xr.open_dataset(tmp_path / "output_grids.nc") as ds:
+                assert ds["temp"].encoding["zlib"] is compress
+        elif fmt == "geotiff":
+            with rasterio.open(tmp_path / "temp_2020-01-01T0000.tif") as ds:
                 if compress:
                     assert ds.compression is not None
                 else:

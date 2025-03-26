@@ -41,9 +41,9 @@ def albedo(model, pos=None):
     if pos is None:
         pos = model.grid.roi
 
-    if albedo_config.decay_timescale_determination_temperature == 'air':
+    if albedo_config.decay_timescale_determination_temperature == "air":
         temp = s.meteo.temp[pos]
-    elif albedo_config.decay_timescale_determination_temperature == 'surface':
+    elif albedo_config.decay_timescale_determination_temperature == "surface":
         temp = s.surface.temp[pos]
 
     # Albedo decay
@@ -52,21 +52,21 @@ def albedo(model, pos=None):
         c.SECONDS_PER_HOUR * albedo_config.melting_snow_decay_timescale,
         c.SECONDS_PER_HOUR * albedo_config.cold_snow_decay_timescale,
     )
-    new_albedo = (
-        albedo_config.min
-        + (s.snow.albedo[pos] - albedo_config.min)
-        * np.exp(-1 / decay_timescale * model.timestep)
+    new_albedo = albedo_config.min + (s.snow.albedo[pos] - albedo_config.min) * np.exp(
+        -1 / decay_timescale * model.timestep
     )
 
     # Albedo refresh
     snowfall_rate = np.nan_to_num(s.meteo.snowfall[pos] / model.timestep, nan=0.0)
     refresh_snowfall_rate = albedo_config.refresh_snowfall / c.SECONDS_PER_HOUR  # kg m-2 s-1
-    if albedo_config.refresh_method == 'binary':
+    if albedo_config.refresh_method == "binary":
         new_albedo[snowfall_rate >= refresh_snowfall_rate] = albedo_config.max
-    elif albedo_config.refresh_method == 'continuous':
+    elif albedo_config.refresh_method == "continuous":
         new_albedo += (
             (albedo_config.max - new_albedo)
-            * np.minimum(1, snowfall_rate / refresh_snowfall_rate)  # minimum() to clip values at albedo_config.max
+            * np.minimum(
+                1, snowfall_rate / refresh_snowfall_rate
+            )  # minimum() to clip values at albedo_config.max
         )
 
     s.snow.albedo[pos] = new_albedo
@@ -93,17 +93,17 @@ def fresh_snow_density(temp):
        snow cover (NOAA Technical Report NWS 19, pp. 1–172). NOAA.
        https://repository.library.noaa.gov/view/noaa/6392
     """
-    min_temp = c.T0 - 15.
-    temp = np.array(temp).clip(min_temp)  # the parameterization is only valid for temperatures >= -15 °C
-    rho = 50 + 1.7 * (temp - min_temp)**1.5
-    rho[np.isnan(rho)] = 100.  # if temperature is not available, set density to 100 kg m-3
+    min_temp = c.T0 - 15.0
+    temp = np.array(temp).clip(min_temp)  # the parameterization is only valid for temperatures >= -15 °C # fmt: skip
+    rho = 50 + 1.7 * (temp - min_temp) ** 1.5
+    rho[np.isnan(rho)] = 100.0  # if temperature is not available, set density to 100 kg m-3
     return rho
 
 
 def compaction(model):
     snow = model.state.snow
 
-    if model.config.snow.compaction.method == 'anderson':
+    if model.config.snow.compaction.method == "anderson":
         _compaction_anderson(
             model.grid.roi_idxs,
             model.timestep,
@@ -114,8 +114,8 @@ def compaction(model):
             snow.density,
             model.state.meteo.temp,
         )
-    elif model.config.snow.compaction.method == 'empirical':
-        timescale = c.SECONDS_PER_HOUR * model.config.snow.compaction.timescale  # snow compaction timescale (s)
+    elif model.config.snow.compaction.method == "empirical":
+        timescale = c.SECONDS_PER_HOUR * model.config.snow.compaction.timescale  # snow compaction timescale (s) # fmt: skip
         _compaction_empirical(
             model.grid.roi_idxs,
             model.timestep,
@@ -194,25 +194,27 @@ def _compaction_anderson(
     c3 = 0.021  # m3 kg-1
     c5 = 0.04  # K-1
     c7 = 0.046  # m3 kg-1
-    rho_d = 150.  # kg m-3
+    rho_d = 150.0  # kg m-3
 
     num_pixels = len(roi_idxs)
     for idx_num in prange(num_pixels):
         i, j = roi_idxs[idx_num]
-        load = 0.  # snow load (mass of layers above + 50% of the current layer) (kg m-2)
+        load = 0.0  # snow load (mass of layers above + 50% of the current layer) (kg m-2)
 
         for k in range(num_layers[i, j]):
             if thickness[k, i, j] > 0:  # TODO is this necessary?
                 cur_layer_mass = ice_content[k, i, j] + liquid_water_content[k, i, j]
-                load += cur_layer_mass / 2.
+                load += cur_layer_mass / 2.0
 
                 # TODO rather update density in update_layers()?
-                density[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / thickness[k, i, j]
+                density[k, i, j] = (
+                    ice_content[k, i, j] + liquid_water_content[k, i, j]
+                ) / thickness[k, i, j]
 
                 if density[k, i, j] > rho_d:
                     c6 = np.exp(-c7 * (density[k, i, j] - rho_d))
                 else:
-                    c6 = 1.
+                    c6 = 1.0
 
                 # Parameter c4 has an enhancement factor of 2 for wet snow
                 if liquid_water_content[k, i, j] > 0:
@@ -221,20 +223,24 @@ def _compaction_anderson(
                     c4 = 0.01  # h-1
 
                 # Densification due to snow load (eq. (3.29) in [1], eq. (12) in [2])
-                dens_compact = c1 * load * np.exp(-c2 * (c.T0 - air_temp[i, j]) - c3 * density[k, i, j])
+                dens_compact = (
+                    c1 * load * np.exp(-c2 * (c.T0 - air_temp[i, j]) - c3 * density[k, i, j])
+                )
 
                 # Densification due to destructive metamorphism (eq. (3.31) in [1], eq. (13) in [2])
                 dens_metamorph = c4 * np.exp(-c5 * (c.T0 - air_temp[i, j])) * c6
 
                 densification_rate = density[k, i, j] * (dens_compact + dens_metamorph)
                 if np.isnan(densification_rate):
-                    densification_rate = 0.
+                    densification_rate = 0.0
 
                 density[k, i, j] += densification_rate * timestep_h
-                thickness[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / density[k, i, j]
+                thickness[k, i, j] = (
+                    ice_content[k, i, j] + liquid_water_content[k, i, j]
+                ) / density[k, i, j]
 
                 # Update snow load for the next layer
-                load += cur_layer_mass / 2.
+                load += cur_layer_mass / 2.0
 
 
 @njit(cache=True, parallel=True)
@@ -303,7 +309,9 @@ def _compaction_empirical(
         for k in range(num_layers[i, j]):
             if thickness[k, i, j] > 0:  # TODO is this necessary?
                 # TODO rather update density in update_layers()?
-                density[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / thickness[k, i, j]
+                density[k, i, j] = (
+                    ice_content[k, i, j] + liquid_water_content[k, i, j]
+                ) / thickness[k, i, j]
 
                 if temp[k, i, j] < c.T0:
                     max_density = max_cold_density
@@ -314,13 +322,13 @@ def _compaction_empirical(
                     # Where the maximum density is already reached, do not increase it anymore
                     # but to avoid jumps do not actually clip the values (because snow might
                     # switch between "cold" and "melting" from one timestep to another)
-                    density[k, i, j] = (
-                        max_density
-                        + (density[k, i, j] - max_density)
-                        * np.exp(-timestep / timescale)
+                    density[k, i, j] = max_density + (density[k, i, j] - max_density) * np.exp(
+                        -timestep / timescale
                     )
 
-                    thickness[k, i, j] = (ice_content[k, i, j] + liquid_water_content[k, i, j]) / density[k, i, j]
+                    thickness[k, i, j] = (
+                        ice_content[k, i, j] + liquid_water_content[k, i, j]
+                    ) / density[k, i, j]
 
 
 def snow_properties(model):
@@ -345,14 +353,15 @@ def snow_properties(model):
 
     if model.config.snow.snow_cover_fraction_depth_scale > 0:
         # Snow cover fraction (eq. (13))
-        snow.area_fraction[:] = np.tanh(snow.depth[:] / model.config.snow.snow_cover_fraction_depth_scale)
+        snow.area_fraction[:] = np.tanh(
+            snow.depth[:] / model.config.snow.snow_cover_fraction_depth_scale
+        )
     else:
-        snow.area_fraction[:] = (snow.depth[:] > 0) * 1.
+        snow.area_fraction[:] = (snow.depth[:] > 0) * 1.0
 
     # Areal heat capacity of snow (eq. (9))
     snow.heat_cap[:] = (
-        snow.ice_content * c.SPEC_HEAT_CAP_ICE
-        + snow.liquid_water_content * c.SPEC_HEAT_CAP_WATER
+        snow.ice_content * c.SPEC_HEAT_CAP_ICE + snow.liquid_water_content * c.SPEC_HEAT_CAP_WATER
     )
 
 
@@ -386,11 +395,11 @@ def max_liquid_water_content(model):
     s = model.state
     method = model.config.snow.liquid_water_content.method
 
-    if method == 'pore_volume_fraction':
-        pos = s.snow.thickness > 0.
+    if method == "pore_volume_fraction":
+        pos = s.snow.thickness > 0.0
         porosity = np.zeros(s.snow.ice_content.shape)
 
-        porosity[pos] = 1 - s.snow.ice_content[pos] / (c.ICE_DENSITY * s.snow.thickness[pos])  # eq. (27)
+        porosity[pos] = 1 - s.snow.ice_content[pos] / (c.ICE_DENSITY * s.snow.thickness[pos])  # eq. (27) # fmt: skip
 
         max_lwc = (  # eq. (28)
             c.WATER_DENSITY
@@ -398,7 +407,7 @@ def max_liquid_water_content(model):
             * porosity
             * model.config.snow.liquid_water_content.max
         )
-    elif method == 'mass_fraction':
+    elif method == "mass_fraction":
         max_lwc = model.config.snow.liquid_water_content.max * s.snow.ice_content
 
     return max_lwc

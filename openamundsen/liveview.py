@@ -5,7 +5,8 @@ import numpy as np
 try:
     import matplotlib
     import matplotlib.pyplot as plt
-    matplotlib.use('QtAgg')
+
+    matplotlib.use("QtAgg")
     mpl_available = True
 except ImportError:
     mpl_available = False
@@ -28,11 +29,12 @@ class LiveView:
     roi : ndarray
         Boolean array specifying the region of interest.
     """
+
     def __init__(self, config, state, roi):
         if not mpl_available:
             raise ModuleNotFoundError(
-                'matplotlib and a Qt binding (PyQt6/PySide6/PyQt5/PySide2) must be installed for '
-                'the live view functionality'
+                "matplotlib and a Qt binding (PyQt6/PySide6/PyQt5/PySide2) must be installed for "
+                "the live view functionality"
             )
 
         self.config = config
@@ -43,8 +45,8 @@ class LiveView:
         """
         Prepare and open the live view window.
         """
-        plt.style.use('dark_background')
-        plt.rcParams['toolbar'] = 'None'
+        plt.style.use("dark_background")
+        plt.rcParams["toolbar"] = "None"
 
         num_cols = self.config.cols
         num_rows = int(np.ceil(len(self.config.variables) / num_cols))
@@ -55,9 +57,9 @@ class LiveView:
         imgs = []
 
         for field_num, d in enumerate(self.config.variables):
-            field = d['var']
-            min_range = d['min']
-            max_range = d['max']
+            field = d["var"]
+            min_range = d["min"]
+            max_range = d["max"]
 
             data = self.state[field]
 
@@ -66,40 +68,40 @@ class LiveView:
                 data,
                 vmin=min_range,
                 vmax=max_range,
-                interpolation='None',
+                interpolation="None",
                 cmap=self.config.cmap,
             )
 
             cbar = fig.colorbar(img, ax=ax)
-            cbar.ax.tick_params(labelsize='x-small')
+            cbar.ax.tick_params(labelsize="x-small")
 
-            ax.set_title(self._var_label(field), fontsize='small')
-            ax.axis('off')
+            ax.set_title(self._var_label(field), fontsize="small")
+            ax.axis("off")
 
             imgs.append(img)
             fields.append(field)
 
         # Hide unused subplot spaces
-        for ax in axarr.flat[len(self.config.variables):]:
-            ax.axis('off')
+        for ax in axarr.flat[len(self.config.variables) :]:
+            ax.axis("off")
 
         plt.text(
             x=0.03,
             y=0.95,
-            s=f'openAMUNDSEN v{oa.__version__}',
-            fontsize='xx-large',
-            ha='left',
+            s=f"openAMUNDSEN v{oa.__version__}",
+            fontsize="xx-large",
+            ha="left",
             transform=fig.transFigure,
         )
         time_label = plt.text(
             x=0.97,
             y=0.95,
-            s='',
-            fontsize='large',
-            ha='right',
+            s="",
+            fontsize="large",
+            ha="right",
             transform=fig.transFigure,
             bbox=dict(  # set the text background color to ensure that old values are overplotted
-                facecolor=plt.rcParams['figure.facecolor'],
+                facecolor=plt.rcParams["figure.facecolor"],
                 linewidth=0,
             ),
         )
@@ -111,12 +113,12 @@ class LiveView:
         self.time_label = time_label
 
         if self.config.blit:
-            fig.canvas.mpl_connect('draw_event', self._on_draw)
+            fig.canvas.mpl_connect("draw_event", self._on_draw)
 
         plt.show(block=False)
         fig.canvas.draw()
         mgr = plt.get_current_fig_manager()
-        mgr.set_window_title('openAMUNDSEN')
+        mgr.set_window_title("openAMUNDSEN")
         mgr.resize(self.config.width, self.config.height)
 
     def update(self, date):
@@ -136,7 +138,7 @@ class LiveView:
 
         # Update time label
         time_label = self.time_label
-        time_label.set_text(f'{date:%Y-%m-%d %H:%M}')
+        time_label.set_text(f"{date:%Y-%m-%d %H:%M}")
 
         if self.config.blit:
             fig.draw_artist(time_label)
@@ -156,7 +158,7 @@ class LiveView:
             data[~self.roi] = np.nan
 
             # Perform downsampling
-            data = data[::self.config.downsample]
+            data = data[:: self.config.downsample]
 
             img.set_data(data)
 
@@ -209,6 +211,6 @@ class LiveView:
             label = var_name
 
         if meta.units is not None:
-            label += f'\n({meta.units})'
+            label += f"\n({meta.units})"
 
         return label

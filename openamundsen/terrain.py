@@ -121,9 +121,7 @@ def normal_vector(dem, res):
     normal_vec[:, :, -1] = normal_vec[:, :, -2]
 
     normal_vec_len = np.sqrt(  # length of the normal vector
-        normal_vec[0, :, :]**2 +
-        normal_vec[1, :, :]**2 +
-        normal_vec[2, :, :]**2
+        normal_vec[0, :, :] ** 2 + normal_vec[1, :, :] ** 2 + normal_vec[2, :, :] ** 2
     )
     normal_vec /= normal_vec_len  # make it a unit vector
 
@@ -131,13 +129,13 @@ def normal_vector(dem, res):
 
 
 def sky_view_factor(
-        dem,
-        res,
-        min_azim=0,
-        max_azim=360,
-        azim_step=10,
-        elev_step=1,
-        num_sweeps=1,
+    dem,
+    res,
+    min_azim=0,
+    max_azim=360,
+    azim_step=10,
+    elev_step=1,
+    num_sweeps=1,
 ):
     """
     Calculate the sky view factor for a DEM after Corripio (2003).
@@ -182,7 +180,7 @@ def sky_view_factor(
     """
     # Set SVF to 1 for 1x1 grids
     if dem.shape == (1, 1):
-        return np.full(dem.shape, 1.)
+        return np.full(dem.shape, 1.0)
 
     dem = dem.astype(float, copy=False)  # convert to float64 if necessary
     slope, _ = slope_aspect(dem, res)
@@ -197,24 +195,28 @@ def sky_view_factor(
     elev_angles = np.arange(min_elev_angle, max_elev_angle + 1)[::-1]
 
     for azim_num, azim_angle in enumerate(azim_angles):
-        logger.info(f'Calculating sky view factor for azimuth={azim_angle}° '
-                    f'({azim_num + 1}/{len(azim_angles)})')
+        logger.info(
+            f"Calculating sky view factor for azimuth={azim_angle}° "
+            f"({azim_num + 1}/{len(azim_angles)})"
+        )
 
         azim_rad = np.deg2rad(azim_angle)
         svf_cur = np.full(dem.shape, max_elev_angle)
 
         for elev_angle in elev_angles:
             elev_rad = np.deg2rad(elev_angle)
-            sun_vec = np.array([
-                np.sin(azim_rad) * np.cos(elev_rad),
-                -np.cos(azim_rad) * np.cos(elev_rad),
-                np.sin(elev_rad),
-            ])
+            sun_vec = np.array(
+                [
+                    np.sin(azim_rad) * np.cos(elev_rad),
+                    -np.cos(azim_rad) * np.cos(elev_rad),
+                    np.sin(elev_rad),
+                ]
+            )
 
             illum = shadows(dem, res, sun_vec, num_sweeps=num_sweeps)
             svf_cur[illum == 1] = elev_angle
 
-        svf += np.cos(np.deg2rad(svf_cur))**2
+        svf += np.cos(np.deg2rad(svf_cur)) ** 2
 
     svf /= len(azim_angles)
     return svf
@@ -251,28 +253,28 @@ def curvature(dem, res, kind, L=None):
        distributions in windy environments using SnowTran-3D. Journal of
        Glaciology, 53(181), 241–256.
     """
-    if kind == 'liston':
+    if kind == "liston":
         if L is None:
             L = res
 
         L_px = int(np.ceil(L / res))
 
         z = dem
-        z_n = _shift_arr(dem, 0, L_px, mode='edge')
-        z_ne = _shift_arr(dem, 1, L_px, mode='edge')
-        z_e = _shift_arr(dem, 2, L_px, mode='edge')
-        z_se = _shift_arr(dem, 3, L_px, mode='edge')
-        z_s = _shift_arr(dem, 4, L_px, mode='edge')
-        z_sw = _shift_arr(dem, 5, L_px, mode='edge')
-        z_w = _shift_arr(dem, 6, L_px, mode='edge')
-        z_nw = _shift_arr(dem, 7, L_px, mode='edge')
+        z_n = _shift_arr(dem, 0, L_px, mode="edge")
+        z_ne = _shift_arr(dem, 1, L_px, mode="edge")
+        z_e = _shift_arr(dem, 2, L_px, mode="edge")
+        z_se = _shift_arr(dem, 3, L_px, mode="edge")
+        z_s = _shift_arr(dem, 4, L_px, mode="edge")
+        z_sw = _shift_arr(dem, 5, L_px, mode="edge")
+        z_w = _shift_arr(dem, 6, L_px, mode="edge")
+        z_nw = _shift_arr(dem, 7, L_px, mode="edge")
 
         curv = (
-            (z - (z_w + z_e) / 2.) / (2 * L)
-            + (z - (z_s + z_n) / 2.) / (2 * L)
-            + (z - (z_sw + z_ne) / 2.) / (2 * np.sqrt(2) * L)
-            + (z - (z_nw + z_se) / 2.) / (2 * np.sqrt(2) * L)
-        ) / 4.
+            (z - (z_w + z_e) / 2.0) / (2 * L)
+            + (z - (z_s + z_n) / 2.0) / (2 * L)
+            + (z - (z_sw + z_ne) / 2.0) / (2 * np.sqrt(2) * L)
+            + (z - (z_nw + z_se) / 2.0) / (2 * np.sqrt(2) * L)
+        ) / 4.0
     else:
         raise NotImplementedError
 
@@ -365,7 +367,7 @@ def _openness_dir(dem, res, L, dir):
     return opn_dir
 
 
-def _shift_arr(M, dir, n, mode='retain'):
+def _shift_arr(M, dir, n, mode="retain"):
     """
     Shift an array along one of the eight (inter)cardinal directions.
 
@@ -391,7 +393,7 @@ def _shift_arr(M, dir, n, mode='retain'):
     S : ndarray
         Shifted array.
     """
-    if mode == 'retain':
+    if mode == "retain":
         return _shift_arr_retain(M, dir, n)
     else:
         if dir == 0:  # north
@@ -439,20 +441,20 @@ def _shift_arr_retain(M, dir, n):
     S = M.copy()
 
     if dir == 0:  # north
-        S[:-n - 1, :] = M[1 + n:, :]
+        S[: -n - 1, :] = M[1 + n :, :]
     elif dir == 1:  # northeast
-        S[:-n - 1, 1 + n:] = M[1 + n:, :-n - 1]
+        S[: -n - 1, 1 + n :] = M[1 + n :, : -n - 1]
     elif dir == 2:  # east
-        S[:, 1 + n:] = M[:, :-n - 1]
+        S[:, 1 + n :] = M[:, : -n - 1]
     elif dir == 3:  # southeast
-        S[1 + n:, 1 + n:] = M[:-n - 1, :-n - 1]
+        S[1 + n :, 1 + n :] = M[: -n - 1, : -n - 1]
     elif dir == 4:  # south
-        S[1 + n:, :] = M[:-n - 1, :]
+        S[1 + n :, :] = M[: -n - 1, :]
     elif dir == 5:  # southwest
-        S[1 + n:, :-n - 1] = M[:-n - 1, 1 + n:]
+        S[1 + n :, : -n - 1] = M[: -n - 1, 1 + n :]
     elif dir == 6:  # west
-        S[:, :-n - 1] = M[:, 1 + n:]
+        S[:, : -n - 1] = M[:, 1 + n :]
     elif dir == 7:  # northwest
-        S[:-n - 1, :-n - 1] = M[1 + n:, 1 + n:]
+        S[: -n - 1, : -n - 1] = M[1 + n :, 1 + n :]
 
     return S

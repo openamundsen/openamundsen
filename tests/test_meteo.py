@@ -6,7 +6,7 @@ import pandas as pd
 
 def test_atmospheric_pressure():
     elevs = [0, 1000, 2000, 3000]
-    pressures = [101_325, 89_874.57, 79_495.22, 70_108.54]  # values from https://www.mide.com/air-pressure-at-altitude-calculator
+    pressures = [101_325, 89_874.57, 79_495.22, 70_108.54]  # values from https://www.mide.com/air-pressure-at-altitude-calculator # fmt: skip
     press_calc = meteo.atmospheric_pressure(elevs)
     assert_allclose(press_calc, pressures, rtol=1e-2)
 
@@ -38,7 +38,7 @@ def test_saturation_vapor_pressure():
 def test_absolute_humidity():
     temps = np.array([30, 20, 10, 0]) + 273.15
     rel_hums = np.array([10, 30, 70, 20])
-    abs_hums = np.array([3.0, 5.2, 6.6, 1.0]) * 1e-3  # values from https://www.tis-gdv.de/tis_e/misc/klima-htm/
+    abs_hums = np.array([3.0, 5.2, 6.6, 1.0]) * 1e-3  # values from https://www.tis-gdv.de/tis_e/misc/klima-htm/ # fmt: skip
     vapor_pressures = meteo.vapor_pressure(temps, rel_hums)
     assert_allclose(
         meteo.absolute_humidity(temps, vapor_pressures),
@@ -49,7 +49,7 @@ def test_absolute_humidity():
 
 def test_psychrometric_constant():
     temps = np.array([0, 5, 10, 20]) + 273.15
-    psych_consts = np.array([65.5, 65.8, 66.1, 66.8])  # from http://ponce.sdsu.edu/psychrometric_constant.html
+    psych_consts = np.array([65.5, 65.8, 66.1, 66.8])  # from http://ponce.sdsu.edu/psychrometric_constant.html # fmt: skip
 
     lat_heat_vaps = meteo.latent_heat_of_vaporization(temps)
     atmos_pressures = meteo.atmospheric_pressure(0)
@@ -67,7 +67,7 @@ def test_psychrometric_constant():
 def test_wet_bulb_temperature():
     temps = np.array([5, 10, 20, 30]) + 273.15
     rel_hums = np.array([50, 70, 90, 100])
-    wet_bulb_temps = np.array([1.345, 7.393, 18.863, 30]) + 273.15  # from http://www.flycarpet.net/en/PsyOnline
+    wet_bulb_temps = (np.array([1.345, 7.393, 18.863, 30]) + 273.15)  # from http://www.flycarpet.net/en/PsyOnline # fmt: skip
     # TODO also test negative temps
 
     lat_heat_vaps = meteo.latent_heat_of_vaporization(temps)
@@ -146,7 +146,7 @@ def test_precipitation_phase():
     sf = meteo.precipitation_phase(temps, threshold_temp=273.15)
     assert_array_equal(sf, [1, 0, 1, 0, 0, 1, 1, 0])
 
-    temps = np.array([-0.99, -1.01, -1.0, 0., 1., 2.99, 3.01, 3.]) + 273.15
+    temps = np.array([-0.99, -1.01, -1.0, 0.0, 1.0, 2.99, 3.01, 3.0]) + 273.15
     sf = meteo.precipitation_phase(temps, threshold_temp=1 + 273.15, temp_range=4)
     assert_allclose(sf, [0.9975, 1, 1, 0.75, 0.5, 0.0025, 0, 0], atol=1e-10)
 
