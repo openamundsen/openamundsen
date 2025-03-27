@@ -1,6 +1,7 @@
-from loguru import logger
-from openamundsen import modules
 import numpy as np
+from loguru import logger
+
+from openamundsen import modules
 
 
 class LandCover:

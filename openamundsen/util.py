@@ -1,14 +1,16 @@
 from dataclasses import dataclass
-from munch import Munch
+from pathlib import Path, PosixPath, WindowsPath
+from typing import Union
+
 import numpy as np
-from openamundsen import constants
 import pandas as pd
 import pandas.tseries.frequencies
-from pathlib import Path, PosixPath, WindowsPath
 import pyproj
 import rasterio
 import ruamel.yaml
-from typing import Union
+from munch import Munch
+
+from openamundsen import constants
 
 
 class ConfigurationYAML(ruamel.yaml.YAML):
@@ -86,11 +88,11 @@ def raster_filename(kind, config):
     -------
     file : pathlib.Path
     """
-    dir = config["input_data"]["grids"]["dir"]
+    grids_dir = config["input_data"]["grids"]["dir"]
     domain = config["domain"]
     resolution = config["resolution"]
     extension = "asc"
-    return Path(f"{dir}/{kind}_{domain}_{resolution}.{extension}")
+    return Path(f"{grids_dir}/{kind}_{domain}_{resolution}.{extension}")
 
 
 def transform_coords(x, y, src_crs, dst_crs):
@@ -177,19 +179,17 @@ class ModelGrid(Munch):
         self.center_lat = center_lat
 
         self.extended_grid = Munch(
-            dict(
-                available=False,
-                rows=None,
-                cols=None,
-                row_offset=None,
-                col_offset=None,
-                row_slice=None,
-                col_slice=None,
-                dem=None,
-                svf=None,
-                normal_vec=None,
-                shadows=None,
-            )
+            available=False,
+            rows=None,
+            cols=None,
+            row_offset=None,
+            col_offset=None,
+            row_slice=None,
+            col_slice=None,
+            dem=None,
+            svf=None,
+            normal_vec=None,
+            shadows=None,
         )
         # ("shadows" required because the shadows are calculated in
         # clear_sky_shortwave_irradiance(), but are required again later in shortwave_irradiance()
@@ -262,7 +262,7 @@ class TimestepProperties:
     last_of_day: bool
 
 
-def normalize_array(data, min, max):
+def normalize_array(data, min, max):  # noqa: A002
     """
     Normalize an array within a range.
 

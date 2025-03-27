@@ -1,6 +1,7 @@
 import numpy as np
-import openamundsen.constants as c
 import pandas as pd
+
+import openamundsen.constants as c
 
 
 def day_angle(doy):
@@ -125,7 +126,7 @@ def hour_angle(date, timezone, lon, eot):
         Hour angle in degrees.
     """
     date = pd.to_datetime(date)
-    hour = (date - date.normalize()).total_seconds() / c.SECONDS_PER_HOUR  # fractional hour of the day # fmt: skip
+    hour = (date - date.normalize()).total_seconds() / c.SECONDS_PER_HOUR  # fractional hour of the day # fmt: skip # noqa: E501
 
     lstm = c.STANDARD_TIMEZONE_WIDTH * timezone  # local standard time meridian
     tc = c.MINUTES_PER_DEGREE_OF_EARTH_ROTATION * (lon - lstm) + eot  # time correction (minutes)

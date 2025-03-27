@@ -1,6 +1,6 @@
-from openamundsen import constants as c
 import numpy as np
 
+from openamundsen import constants as c
 
 # Magnus formula coefficients a (Pa), b, and c (°C)
 VAPOR_PRESSURE_COEFFS_ICE = (610.71, 22.44, 272.44)

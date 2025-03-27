@@ -1,6 +1,7 @@
+import numpy as np
 from loguru import logger
 from numba import njit, prange
-import numpy as np
+
 from openamundsen.modules.radiation import shadows
 
 
@@ -320,7 +321,7 @@ def openness(dem, res, L, negative=False, mean=True):
     if negative:
         dem = -dem
 
-    for dir in dirs:
+    for dir in dirs:  # noqa: A001
         opn[dir, :, :] = _openness_dir(dem, res, L, dir)
 
     if mean:
@@ -330,7 +331,7 @@ def openness(dem, res, L, negative=False, mean=True):
 
 
 @njit(cache=True, parallel=True)
-def _openness_dir(dem, res, L, dir):
+def _openness_dir(dem, res, L, dir):  # noqa: A002
     """
     Calculate topographic openness for a DEM and a single compass direction.
 
@@ -367,7 +368,7 @@ def _openness_dir(dem, res, L, dir):
     return opn_dir
 
 
-def _shift_arr(M, dir, n, mode="retain"):
+def _shift_arr(M, dir, n, mode="retain"):  # noqa: A002
     """
     Shift an array along one of the eight (inter)cardinal directions.
 
@@ -415,7 +416,7 @@ def _shift_arr(M, dir, n, mode="retain"):
 
 
 @njit(cache=True)
-def _shift_arr_retain(M, dir, n):
+def _shift_arr_retain(M, dir, n):  # noqa: A002
     """
     Shift an array along one of the eight (inter)cardinal directions.
     Pixels padded to the edges of the axes retain the value from the

@@ -1,1 +1,6 @@
-from .canopy import above_canopy_meteorology, CanopyModel
+from .canopy import CanopyModel, above_canopy_meteorology
+
+__all__ = [
+    "CanopyModel",
+    "above_canopy_meteorology",
+]

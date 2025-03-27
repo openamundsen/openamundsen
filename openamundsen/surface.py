@@ -1,5 +1,5 @@
-from numba import njit, prange
 import numpy as np
+
 from openamundsen import constants, meteo
 from openamundsen.modules.snow import CryoLayerID
 
@@ -250,7 +250,7 @@ def cryo_layer_energy_balance(model):
     s.surface.temp[melties] = constants.T0
     available_melt_time = np.zeros(roi.shape)
     en_bal = np.full(roi.shape, np.nan)
-    available_melt_time[melties] = model.timestep  # contains the time (in seconds) available for melt in this time step for each pixel # fmt: skip
+    available_melt_time[melties] = model.timestep  # contains the time (in seconds) available for melt in this time step for each pixel # fmt: skip # noqa: E501
 
     for layer_num in range(model.snow.num_cryo_layers):
         possible_melties = model.roi_mask_to_global(
@@ -293,7 +293,7 @@ def cryo_layer_energy_balance(model):
             / constants.LATENT_HEAT_OF_FUSION
         )
         s.snow.cold_content[layer_num, partial_melties] -= layer_melt
-        actual_layer_melt = -1 * np.minimum( s.snow.cold_content[layer_num, partial_melties], 0.0)  # actual melt not used for reducing the cold content # fmt: skip
+        actual_layer_melt = -1 * np.minimum(s.snow.cold_content[layer_num, partial_melties], 0.0)  # actual melt not used for reducing the cold content # fmt: skip # noqa: E501
         s.snow.melt[partial_melties] += actual_layer_melt
         s.snow.cold_content[layer_num, partial_melties] = s.snow.cold_content[
             layer_num, partial_melties

@@ -1,7 +1,10 @@
 import numpy as np
 from numba import njit, prange
-from openamundsen import constants, constants as c, heatconduction
+
+from openamundsen import constants, heatconduction
+from openamundsen import constants as c
 from openamundsen.snowmodel import SnowModel
+
 from . import snow
 
 

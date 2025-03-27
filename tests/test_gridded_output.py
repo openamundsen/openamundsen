@@ -1,13 +1,15 @@
-from .conftest import base_config
 import numpy as np
-from numpy.testing import assert_allclose
-import openamundsen as oa
-import openamundsen.errors as errors
-from openamundsen.fileio.griddedoutput import _freq_write_dates
 import pandas as pd
 import pytest
 import rasterio
 import xarray as xr
+from numpy.testing import assert_allclose
+
+import openamundsen as oa
+import openamundsen.errors as errors
+from openamundsen.fileio.griddedoutput import _freq_write_dates
+
+from .conftest import base_config
 
 
 def test_freq_write_dates():
@@ -338,7 +340,7 @@ def test_append(tmp_path):
     grid_cfg.append = False
     model = oa.OpenAmundsen(config)
     model.initialize()
-    for date_num, date in enumerate(model.dates):
+    for date_num in range(len(model.dates)):
         model.run_single()
         if date_num == 0:
             ds = xr.load_dataset(tmp_path / "output_grids.nc")
@@ -348,7 +350,7 @@ def test_append(tmp_path):
     grid_cfg.append = True
     model = oa.OpenAmundsen(config)
     model.initialize()
-    for date_num, date in enumerate(model.dates):
+    for date_num in range(len(model.dates)):
         model.run_single()
         with xr.open_dataset(tmp_path / "output_grids.nc") as ds:
             assert ds.sizes["time1"] == date_num + 1

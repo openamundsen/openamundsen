@@ -1,11 +1,13 @@
-from loguru import logger
-import numpy as np
-from openamundsen import constants, errors, forcing, meteo as oameteo, util
-import pandas as pd
 from pathlib import Path
-import xarray as xr
+from typing import Dict, List
 
-from typing import List, Dict
+import numpy as np
+import pandas as pd
+import xarray as xr
+from loguru import logger
+
+from openamundsen import constants, errors, forcing, util
+from openamundsen import meteo as oameteo
 
 
 def read_meteo_data(
@@ -342,9 +344,17 @@ def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
     td = util.offset_to_timedelta(freq)
     td_1d = pd.Timedelta("1d")
     if td < td_1d:
-        resample_kwargs = dict(label="right", closed="right", origin=pd.Timestamp(start_date))
+        resample_kwargs = {
+            "label": "right",
+            "closed": "right",
+            "origin": pd.Timestamp(start_date),
+        }
     elif td == td_1d:
-        resample_kwargs = dict(label="left", closed="right", origin="start")
+        resample_kwargs = {
+            "label": "left",
+            "closed": "right",
+            "origin": "start",
+        }
     else:
         raise errors.MeteoDataError("Resampling to frequencies > 1 day is not supported")
 
@@ -454,7 +464,7 @@ def _read_meteo_metadata(meteo_format, meteo_data_dir, meteo_crs, grid_crs):
         and `alt`.
     """
     if meteo_format == "netcdf":
-        nc_files = sorted(list(meteo_data_dir.glob("*.nc")))
+        nc_files = sorted(meteo_data_dir.glob("*.nc"))
         if len(nc_files) == 0:
             raise errors.MeteoDataError(f"No meteo data files found in {meteo_data_dir}")
 
@@ -482,19 +492,19 @@ def _read_meteo_metadata(meteo_format, meteo_data_dir, meteo_crs, grid_crs):
 
         meta = pd.DataFrame(
             index=station_ids,
-            data=dict(
-                name=names,
-                x=xs_gridcrs,
-                y=ys_gridcrs,
-                alt=alts,
-            ),
+            data={
+                "name": names,
+                "x": xs_gridcrs,
+                "y": ys_gridcrs,
+                "alt": alts,
+            },
         )
     elif meteo_format == "csv":
         filename = f"{meteo_data_dir}/stations.csv"
         try:
             meta = pd.read_csv(filename, index_col=0)
-        except FileNotFoundError:
-            raise errors.MeteoDataError(f"Missing station metadata file ({filename})")
+        except FileNotFoundError as err:
+            raise errors.MeteoDataError(f"Missing station metadata file ({filename})") from err
 
         required_cols = ["name", "x", "y", "alt"]
         if not all(pd.Index(required_cols).isin(meta.columns)):
@@ -562,8 +572,10 @@ def _apply_station_rules(meta, bounds, exclude, include):
         for station_id in include:
             try:
                 meta = pd.concat([meta, meta_all.loc[[station_id]]])
-            except KeyError:
-                raise errors.MeteoDataError(f"Station to be included not found: {station_id}")
+            except KeyError as err:
+                raise errors.MeteoDataError(
+                    f"Station to be included not found: {station_id}"
+                ) from err
 
     meta = meta[~meta.index.duplicated(keep="first")]  # remove potential duplicate entries
     return meta

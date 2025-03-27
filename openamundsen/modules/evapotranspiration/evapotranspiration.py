@@ -1,8 +1,10 @@
-from loguru import logger
-from openamundsen import constants as c, meteo
 import numpy as np
-from .soiltexture import SoilTextureClass
+from loguru import logger
 
+from openamundsen import constants as c
+from openamundsen import meteo
+
+from .soiltexture import SoilTextureClass
 
 # Default soil water characteristics for different soil types (from Table 19 in Allen et al. (1998))
 DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY = {  # m3 m-3
@@ -72,7 +74,7 @@ class EvapotranspirationModel:
         s = model.state
 
         s_et = s.add_category("evapotranspiration")
-        s_et.add_variable("soil_texture", long_name="Soil texture class", dtype=int, retain=True)  # TODO move to base or soil group eventually # fmt: skip
+        s_et.add_variable("soil_texture", long_name="Soil texture class", dtype=int, retain=True)  # TODO: move to base or soil group eventually # fmt: skip # noqa: E501
         s_et.add_variable("evaporation", "kg m-2", "Evaporation")
         s_et.add_variable("transpiration", "kg m-2", "Transpiration")
         s_et.add_variable("evapotranspiration", "kg m-2", "Evapotranspiration")
@@ -140,7 +142,7 @@ class EvapotranspirationModel:
         # locations
         lccs = np.unique(s.land_cover.land_cover[roi])
         lccs = lccs[lccs > 0]
-        lccs = set(lccs) & set(model.config.land_cover.classes.keys())  # calculate ET only for land cover classes with set parameters # fmt: skip
+        lccs = set(lccs) & set(model.config.land_cover.classes.keys())  # calculate ET only for land cover classes with set parameters # fmt: skip # noqa: E501
         self.land_cover_class_pixels = {}
         for lcc in lccs:
             self.land_cover_class_pixels[lcc] = (s.land_cover.land_cover == lcc) & roi
@@ -179,7 +181,7 @@ class EvapotranspirationModel:
             )
 
             # Same for the calculation of initial root zone depletion
-            swc = swc_field_cap  # assume root zone is near field capacity following heavy rain or irrigation
+            swc = swc_field_cap  # assume root zone is near field capacity following heavy rain or irrigation # noqa: E501
             s_et.cum_root_zone_depletion[pos] = (  # eq. (87)
                 1000 * (swc_field_cap - swc)
                 # * rooting_depth
@@ -235,7 +237,6 @@ class EvapotranspirationModel:
     def evapotranspiration(self):
         model = self.model
         roi = model.grid.roi
-        doy = model.date.dayofyear
         s = model.state
         s_et = s.evapotranspiration
         snowies_roi = s.snow.swe[roi] > 0.0
@@ -339,7 +340,7 @@ class EvapotranspirationModel:
             if not is_water_body:
                 self._water_stress_coefficient(pos_snowfree)
                 if crop_coefficient_type == "single":
-                    s_et.evapotranspiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]  # eq. (81) # fmt: skip
+                    s_et.evapotranspiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]  # eq. (81) # fmt: skip # noqa: E501
                 elif crop_coefficient_type == "dual":
                     s_et.transpiration[pos_snowfree] *= s_et.water_stress_coeff[pos_snowfree]
                     s_et.evapotranspiration[pos_snowfree] = (
@@ -376,16 +377,16 @@ class EvapotranspirationModel:
         self._reference_net_radiation()
 
         soil_heat_flux_factor = 0.1 if model.sun_params["sun_over_horizon"] else 0.5
-        s_et.soil_heat_flux[roi] = soil_heat_flux_factor * s_et.ref_net_radiation[roi]  # eq. (45-46) # fmt: skip
+        s_et.soil_heat_flux[roi] = soil_heat_flux_factor * s_et.ref_net_radiation[roi]  # eq. (45-46) # fmt: skip # noqa: E501
 
         Wm2_to_MJm2h = (
             1e-6 * c.SECONDS_PER_HOUR
         )  # conversion factor from W m-2 (= J m-2 s-1) to MJ m-2 h-1
 
-        Rn = s_et.ref_net_radiation[roi] * Wm2_to_MJm2h  # net radiation at the grass surface (MJ m-2 h-1) # fmt: skip
+        Rn = s_et.ref_net_radiation[roi] * Wm2_to_MJm2h  # net radiation at the grass surface (MJ m-2 h-1) # fmt: skip # noqa: E501
         G = s_et.soil_heat_flux[roi] * Wm2_to_MJm2h  # soil heat flux density (MJ m-2 h-1)
         T = s.meteo.top_canopy_temp[roi] - c.T0  # air temperature (°C)
-        D = 4098 * (0.6108 * np.exp(17.27 * T / (T + 237.3))) / (T + 237.3) ** 2  # slope of the relationship between saturation vapor pressure and temperature (kPa °C-1) (eq. (13)) # fmt: skip
+        D = 4098 * (0.6108 * np.exp(17.27 * T / (T + 237.3))) / (T + 237.3) ** 2  # slope of the relationship between saturation vapor pressure and temperature (kPa °C-1) (eq. (13)) # fmt: skip # noqa: E501
         gamma = s.meteo.psych_const[roi] * 1e-3  # psychrometric constant (kPa °C-1)
         es = s.meteo.sat_vap_press[roi] * 1e-3  # saturation vapor pressure (kPa)
         ea = s.meteo.vap_press[roi] * 1e-3  # actual vapor pressure (kPa)
@@ -512,7 +513,7 @@ class EvapotranspirationModel:
         precip = np.nan_to_num(s.meteo.rainfall[pos])
         precip_runoff = 0.0  # as suggested by [1]
         irrigation = 0.0
-        capillary_rise = 0.0  # assumed to be zero when the water table is more than about 1 m below the bottom of the root zone [1]
+        capillary_rise = 0.0  # assumed to be zero when the water table is more than about 1 m below the bottom of the root zone [1] # noqa: E501
 
         s_et.deep_percolation[pos] = (  # eq. (88)
             (precip - precip_runoff)
@@ -552,7 +553,7 @@ class EvapotranspirationModel:
         s_et.sealed_interception[pos_rain] += np.nan_to_num(s.meteo.rainfall[pos_rain])
         runoff = (s_et.sealed_interception[pos_rain] - max_interception).clip(min=0)
         s_et.sealed_interception[pos_rain] -= runoff
-        s_et.deep_percolation[pos_rain] = runoff  # runoff is currently treated as deep percolation for sealed surfaces (should be improved) # fmt: skip
+        s_et.deep_percolation[pos_rain] = runoff  # runoff is currently treated as deep percolation for sealed surfaces (should be improved) # fmt: skip # noqa: E501
         s_et.evaporation[pos_rain] = 0.0
 
         rs = 0.0  # stomatal resistance (s m-1)
@@ -568,14 +569,14 @@ class EvapotranspirationModel:
         Rn = s_et.ref_net_radiation[pos_dry]  # net radiation (W m-2)
         G = s_et.soil_heat_flux[pos_dry]  # soil heat flux density (W m-2)
         T = s.meteo.top_canopy_temp[pos_dry] - c.T0  # air temperature (°C)
-        D = 1e3 * 4098 * (0.6108 * np.exp(17.27 * T / (T + 237.3))) / (T + 237.3) ** 2  # slope of the relationship between saturation vapor pressure and temperature (Pa K-1) (eq. (13)) # fmt: skip
+        D = 1e3 * 4098 * (0.6108 * np.exp(17.27 * T / (T + 237.3))) / (T + 237.3) ** 2  # slope of the relationship between saturation vapor pressure and temperature (Pa K-1) (eq. (13)) # fmt: skip # noqa: E501
 
         gamma = s.meteo.psych_const[pos_dry]  # psychrometric constant (Pa K-1)
         es = s.meteo.sat_vap_press[pos_dry]  # saturation vapor pressure (Pa)
         ea = s.meteo.vap_press[pos_dry]  # actual vapor pressure (Pa)
 
         Tv = 1.01 * s.meteo.top_canopy_temp[pos_dry]  # virtual temperature (K)
-        rhoa = s.meteo.atmos_press[pos_dry] / c.GAS_CONSTANT_DRY_AIR * Tv  # air density at constant pressure (kg m-3) # fmt: skip
+        rhoa = s.meteo.atmos_press[pos_dry] / c.GAS_CONSTANT_DRY_AIR * Tv  # air density at constant pressure (kg m-3) # fmt: skip # noqa: E501
         cp = (  # specific heat at constant pressure (J kg-1 K-1) (p. 26)
             gamma * 0.622 * c.LATENT_HEAT_OF_VAPORIZATION / s.meteo.atmos_press[pos_dry]
         )
@@ -752,9 +753,7 @@ def crop_coefficient(
             min_plant_height = crop_coeff_min / crop_coeff_mid * max_plant_height
         elif period_num == 1:  # crop development
             min_plant_height = crop_coeff_ini / crop_coeff_mid * max_plant_height
-        elif period_num == 2:  # mid season
-            min_plant_height = max_plant_height
-        elif period_num == 3:  # late season
+        elif period_num == 2 or period_num == 3:  # mid season
             min_plant_height = max_plant_height
 
         plant_height = np.maximum(

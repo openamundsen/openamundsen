@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from munch import Munch
+
 import numpy as np
+from munch import Munch
+
 from openamundsen import errors
 
 _DTYPE_INIT_VALS = {
@@ -50,7 +52,7 @@ class StateVariableManager:
             raise errors.CategoryError(f"Category {category} already exists")
 
         if not category.isidentifier():
-            raise errors.CategoryError(f"Category name must be a valid Python identifier")
+            raise errors.CategoryError("Category name must be a valid Python identifier")
 
         self._categories.append(category)
         self._categories.sort()
@@ -390,7 +392,8 @@ def add_default_state_variables(model):
     elif model.config.snow.model == "cryolayers":
         surf.add_variable("layer_type", "1", "Surface layer type", dtype=int)
 
-    # Snow variables (shared by all snow models, additional ones might be added from the individual models)
+    # Snow variables (shared by all snow models, additional ones might be added from the individual
+    # models)
     snow = state.add_category("snow")
     snow.add_variable("swe", "kg m-2", "Snow water equivalent", "surface_snow_amount", retain=True)
     snow.add_variable("depth", "m", "Snow depth", "surface_snow_thickness")

@@ -1,6 +1,8 @@
-from .conftest import base_config
 import multiprocessing
+
 import openamundsen as oa
+
+from .conftest import base_config
 
 
 def run_model(model):

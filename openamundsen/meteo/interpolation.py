@@ -1,5 +1,6 @@
-from loguru import logger
 import numpy as np
+from loguru import logger
+
 from openamundsen import constants, interpolation, meteo, util
 
 
@@ -34,7 +35,7 @@ def _param_station_data(ds, param, date):
     else:
         param_as_list = param
 
-    ds_param = ds[param_as_list + ["x", "y", "alt"]].sel(time=date).dropna(dim="station")
+    ds_param = ds[[*param_as_list, "x", "y", "alt"]].sel(time=date).dropna(dim="station")
     data = ds_param[param]
     xs = ds_param["x"].values
     ys = ds_param["y"].values
@@ -362,7 +363,7 @@ def interpolate_param(
 
     param_config : dict
         Interpolation configuration for the respective parameter from the model run configuration
-        (e.g., config['meteo']['interpolation'][‘temperature']).
+        (e.g., config['meteo']['interpolation']['temperature']).
 
     data : ndarray
         Values to be interpolated.
@@ -403,7 +404,7 @@ def interpolate_param(
     # For relative humidity interpolate dew point temperature and convert back to humidity later
     if param == "rel_hum":
         if temps is None or target_temps is None:
-            raise Exception("Temperature must be provided for humidity interpolation")
+            raise ValueError("Temperature must be provided for humidity interpolation")
 
         rel_hums = data
         dew_point_temps = meteo.dew_point_temperature(temps, rel_hums)

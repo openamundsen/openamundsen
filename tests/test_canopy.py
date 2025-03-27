@@ -1,10 +1,13 @@
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+import openamundsen as oa
+
 from .compare import compare_datasets
 from .conftest import base_config
-import numpy as np
-import openamundsen as oa
-from pathlib import Path
-import pytest
-import tempfile
 
 
 @pytest.fixture(scope="session")

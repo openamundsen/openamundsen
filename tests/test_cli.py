@@ -1,6 +1,8 @@
-from .conftest import base_config
-from openamundsen.util import to_yaml
 import subprocess
+
+from openamundsen.util import to_yaml
+
+from .conftest import base_config
 
 
 def test_cli(tmp_path):
@@ -13,4 +15,4 @@ def test_cli(tmp_path):
     with open(config_file, "w") as f:
         f.write(to_yaml(config.toDict()))
 
-    subprocess.check_call(["openamundsen", str(config_file)])
+    subprocess.check_call(["openamundsen", str(config_file)])  # noqa: S603, S607

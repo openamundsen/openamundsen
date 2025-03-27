@@ -1,11 +1,13 @@
-from .conftest import base_config
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_equal
-import openamundsen as oa
-import openamundsen.errors as errors
 import pandas as pd
 import pytest
 import xarray as xr
+from numpy.testing import assert_allclose, assert_array_equal
+
+import openamundsen as oa
+import openamundsen.errors as errors
+
+from .conftest import base_config
 
 
 @pytest.mark.parametrize("fmt", ["netcdf", "csv", "memory"])

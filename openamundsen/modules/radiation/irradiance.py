@@ -1,13 +1,15 @@
-from loguru import logger
 import numpy as np
-from .clearsky import _clear_sky_shortwave_irradiance
+import xarray as xr
+from loguru import logger
+
 from openamundsen import (
     constants,
     interpolation,
     meteo,
     modules,
 )
-import xarray as xr
+
+from .clearsky import _clear_sky_shortwave_irradiance
 
 
 def clear_sky_shortwave_irradiance(model):
@@ -16,7 +18,8 @@ def clear_sky_shortwave_irradiance(model):
     if model.sun_params["sun_over_horizon"]:
         mean_surface_albedo = model.state.surface.albedo[roi].mean()
         if np.isnan(mean_surface_albedo):
-            # E.g. in the first timestep no albedo has yet been calculated; assume a default value here
+            # E.g. in the first timestep no albedo has yet been calculated;
+            # assume a default value here
             mean_surface_albedo = model.config.soil.albedo
 
         logger.debug("Calculating shadows")
@@ -284,8 +287,8 @@ def longwave_irradiance(model):
     clear_sky_emissivity = meteo.clear_sky_emissivity(m.precipitable_water[roi])
 
     # TODO these should be parameters
-    cloud_emissivity = 0.976  # emissivity of totally overcast skies (Greuell et al., 1997)
-    rock_emission_factor = 0.01  # (K W-1 m2) temperature of emitting rocks during daytime is assumed to be higher than the air temperature by this factor multiplied by the incoming shortwave radiation (Greuell et al., 1997)
+    cloud_emissivity = 0.976  # emissivity of totally overcast skies (Greuell et al., 1997) # noqa: E501 # fmt: skip
+    rock_emission_factor = 0.01  # (K W-1 m2) temperature of emitting rocks during daytime is assumed to be higher than the air temperature by this factor multiplied by the incoming shortwave radiation (Greuell et al., 1997) # noqa: E501
 
     # Incoming longwave radiation from the clear sky
     lw_in_clearsky = (

@@ -1,10 +1,13 @@
-from .conftest import base_config
-from openamundsen.util import to_yaml
 import os
-import pytest
 import subprocess
 import textwrap
+
+import pytest
 import xarray as xr
+
+from openamundsen.util import to_yaml
+
+from .conftest import base_config
 
 
 def test_numba(tmp_path):
@@ -24,13 +27,13 @@ def test_numba(tmp_path):
     with open(config_file, "w") as f:
         f.write(to_yaml(config.toDict()))
 
-    subprocess.check_call(["openamundsen", str(config_file)])
+    subprocess.check_call(["openamundsen", str(config_file)])  # noqa: S603, S607
     ds_points_numba = xr.load_dataset(tmp_path / "output_timeseries.nc")
     ds_grids_numba = xr.load_dataset(tmp_path / "output_grids.nc")
 
     env = os.environ.copy()
     env["NUMBA_DISABLE_JIT"] = "1"
-    subprocess.check_call(["openamundsen", str(config_file)], env=env)
+    subprocess.check_call(["openamundsen", str(config_file)], env=env)  # noqa: S603, S607
     ds_points_nonumba = xr.load_dataset(tmp_path / "output_timeseries.nc")
     ds_grids_nonumba = xr.load_dataset(tmp_path / "output_grids.nc")
 
@@ -66,4 +69,4 @@ def test_floating_errors(tmp_path):
 
     env = os.environ.copy()
     env["NUMBA_DISABLE_JIT"] = "1"
-    subprocess.check_call(["python", tmp_path / "run.py"], env=env)
+    subprocess.check_call(["python", tmp_path / "run.py"], env=env)  # noqa: S603, S607

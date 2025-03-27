@@ -1,13 +1,14 @@
 from pathlib import Path
 
 import numpy as np
-import openamundsen as oa
-import openamundsen.errors as errors
 import pytest
 import rasterio
 import rasterio.windows
 import xarray as xr
 from numpy.testing import assert_allclose, assert_equal
+
+import openamundsen as oa
+import openamundsen.errors as errors
 
 from .conftest import base_config
 

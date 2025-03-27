@@ -1,34 +1,36 @@
-from .conftest import base_config
-import numpy as np
-from numpy.testing import assert_allclose, assert_array_equal
-import openamundsen as oa
-import openamundsen.errors as errors
-import pandas as pd
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
+from numpy.testing import assert_array_equal
+
+import openamundsen as oa
+
+from .conftest import base_config
 
 
 def compare_tsp(tsp, **kwargs):
-    d = dict(
-        first_of_run=False,
-        strict_first_of_year=False,
-        strict_first_of_month=False,
-        strict_first_of_day=False,
-        first_of_year=False,
-        first_of_month=False,
-        first_of_day=False,
-        last_of_run=False,
-        strict_last_of_year=False,
-        strict_last_of_month=False,
-        strict_last_of_day=False,
-        last_of_year=False,
-        last_of_month=False,
-        last_of_day=False,
-    )
+    d = {
+        "first_of_run": False,
+        "strict_first_of_year": False,
+        "strict_first_of_month": False,
+        "strict_first_of_day": False,
+        "first_of_year": False,
+        "first_of_month": False,
+        "first_of_day": False,
+        "last_of_run": False,
+        "strict_last_of_year": False,
+        "strict_last_of_month": False,
+        "strict_last_of_day": False,
+        "last_of_year": False,
+        "last_of_month": False,
+        "last_of_day": False,
+    }
     d.update(kwargs)
 
-    for key in d.keys():
+    for key in d:
         assert getattr(tsp, key) == d[key], f"{key} should be {d[key]}"
 
 

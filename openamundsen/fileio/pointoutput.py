@@ -1,11 +1,13 @@
-from dataclasses import dataclass
-from loguru import logger
-import numpy as np
-from openamundsen import constants, errors, util
-import pandas as pd
 import pprint
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
 import rasterio
 import xarray as xr
+from loguru import logger
+
+from openamundsen import constants, errors, util
 
 
 @dataclass
@@ -133,7 +135,7 @@ class PointOutputManager:
     """
 
     def __init__(self, model):
-        vars = []
+        vars = []  # noqa: A001
         points = []
         config = model.config.output_data.timeseries
 
@@ -173,13 +175,13 @@ class PointOutputManager:
         for var in vars:
             try:
                 _ = model.state[var.var_name]
-            except (AttributeError, KeyError):
+            except (AttributeError, KeyError) as err:
                 raise errors.ConfigurationError(
                     f"Invalid time series output variable: {var.var_name}"
-                )
+                ) from err
 
         # Check if there are any duplicate output names
-        if len(set([v.output_name for v in vars])) < len(vars):
+        if len({v.output_name for v in vars}) < len(vars):
             raise errors.ConfigurationError(
                 "Duplicate output names in time series output configuration.\n"
                 f"List of variables:\n{pprint.pformat(vars)}"
@@ -307,9 +309,10 @@ class PointOutputManager:
                 if category in three_dim_coords:
                     if three_dim_coords[coord_name] != meta.dim3:
                         # We assume that all 3-dimensional variables within a category have the
-                        # same shape (e.g. "soil.temp" must have the same shape as "soil.therm_cond");
-                        # varying numbers of layers within a category are not supported
-                        raise Exception("Inconsistent length of third variable dimension")
+                        # same shape (e.g. "soil.temp" must have the same shape as
+                        # "soil.therm_cond"); varying numbers of layers within a category are not
+                        # supported
+                        raise ValueError("Inconsistent length of third variable dimension")
                 else:
                     three_dim_coords[coord_name] = meta.dim3
 
@@ -439,9 +442,7 @@ class PointOutputManager:
 
                     # Drop all coordinate variables except "time" (i.e. "lon", "lat", etc.)
                     # so that they are not in the resulting dataframe when calling to_dataframe()
-                    ds_out_point = ds_out_point.drop_vars(
-                        list(set(list(ds_out_point.coords)) - set(["time"]))
-                    )
+                    ds_out_point = ds_out_point.drop_vars(list(set(ds_out_point.coords) - {"time"}))
 
                     df = ds_out_point.to_dataframe()
 

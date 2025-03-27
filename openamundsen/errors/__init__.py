@@ -18,5 +18,5 @@ class CategoryError(Exception):
     pass
 
 
-class RuntimeError(Exception):
+class OpenAmundsenRuntimeError(Exception):
     pass

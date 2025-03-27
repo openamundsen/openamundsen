@@ -1,12 +1,14 @@
-import cerberus
 import datetime
 import json
+import re
+from pathlib import Path
+
+import cerberus
+import pandas as pd
 from munch import Munch
+
 from openamundsen import constants, util
 from openamundsen.errors import ConfigurationError
-import pandas as pd
-from pathlib import Path
-import re
 
 try:
     import openamundsen_snowmanagement
@@ -84,9 +86,11 @@ class ConfigurationEncoder(json.JSONEncoder):
 def _parse_end_date(end_date, timestep):
     # If end_date is specified without an hour value, the end hour should be inferred
     # (i.e., set to the latest time step of the end day).
-    if type(end_date) is datetime.date:  # do not use isinstance() because we want to catch only datetime.date and not its subclasses (datetime.datetime, pd.Timestamp etc.) # fmt: skip
-        infer_end_hour = True
-    elif isinstance(end_date, str) and re.match(r"^\d\d\d\d-\d\d-\d\d$", end_date.strip()):
+    if (
+        type(end_date)
+        is datetime.date  # do not use isinstance() because we want to catch only datetime.date and not its subclasses (datetime.datetime, pd.Timestamp etc.) # noqa: E501
+        or (isinstance(end_date, str) and re.match(r"^\d\d\d\d-\d\d-\d\d$", end_date.strip()))
+    ):
         infer_end_hour = True
     else:
         infer_end_hour = False
@@ -231,8 +235,8 @@ def validate_config(config):
             write_freq_td = pd.Timedelta(write_freq)
             if write_freq_td.total_seconds() % timestep_td.total_seconds() != 0:
                 raise ConfigurationError("write_freq must be a multiple of timestep")
-        except ValueError:
-            raise ConfigurationError("write_freq must be a multiple of timestep")
+        except ValueError as err:
+            raise ConfigurationError("write_freq must be a multiple of timestep") from err
 
     if config.input_data.meteo.format == "netcdf" and config.input_data.meteo.crs is not None:
         print(

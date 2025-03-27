@@ -1,11 +1,13 @@
 from dataclasses import dataclass
-from loguru import logger
+
 import netCDF4
 import numpy as np
-from openamundsen import constants, errors, fileio, util
 import pandas as pd
 import pyproj
 import xarray as xr
+from loguru import logger
+
+from openamundsen import constants, errors, fileio, util
 
 try:
     import dask.array
@@ -107,7 +109,7 @@ class GriddedOutputManager:
             ]
             if len(write_dates) == 0:
                 logger.debug(
-                    f'Discarding grid output variable {field_cfg["var"]} (nothing to be written)'
+                    f"Discarding grid output variable {field_cfg['var']} (nothing to be written)"
                 )
                 continue
 
@@ -339,8 +341,8 @@ class GriddedOutputManager:
             key = next(iter(time_var_names))
             time_var_names[key] = "time"
 
-        times = {}  # dict for storing times and boundaries (for aggregated variables) of the time variables
-        field_time_vars = []  # contains for each field the name of the respective NetCDF time variable
+        times = {}  # dict for storing times and boundaries (for aggregated variables) of the time variables # noqa: E501
+        field_time_vars = []  # contains for each field the name of the respective NetCDF time variable # noqa: E501
 
         for field in self.fields:
             key = _field_key(field)
@@ -469,9 +471,10 @@ class GriddedOutputManager:
                 if category in three_dim_coords:
                     if three_dim_coords[coord_name] != meta.dim3:
                         # We assume that all 3-dimensional variables within a category have the
-                        # same shape (e.g. "soil.temp" must have the same shape as "soil.therm_cond");
-                        # varying numbers of layers within a category are not supported
-                        raise Exception("Inconsistent length of third variable dimension")
+                        # same shape (e.g. "soil.temp" must have the same shape as
+                        # "soil.therm_cond"); varying numbers of layers within a category are not
+                        # supported
+                        raise ValueError("Inconsistent length of third variable dimension")
                 else:
                     three_dim_coords[coord_name] = meta.dim3
 
@@ -609,14 +612,13 @@ def _freq_write_dates(dates, out_freq, agg):
 
     try:
         out_offset = util.to_offset(out_freq)
-        if not any([isinstance(out_offset, o) for o in _ALLOWED_OFFSETS]):
-            raise ValueError
-    except ValueError:
+        if not any(isinstance(out_offset, o) for o in _ALLOWED_OFFSETS):
+            raise ValueError  # noqa: TRY301
+    except ValueError as err:
         allowed_offsets_str = ", ".join([o().__class__.__name__ for o in _ALLOWED_OFFSETS])
         raise errors.ConfigurationError(
-            f"Unsupported output frequency: {out_freq}. "
-            f"Supported offsets: {allowed_offsets_str}"
-        )
+            f"Unsupported output frequency: {out_freq}. Supported offsets: {allowed_offsets_str}"
+        ) from err
 
     if not _is_anchored(out_offset):
         # For non-anchored offsets (e.g., '3h', 'D'), the output frequency must be a multiple of
@@ -670,13 +672,11 @@ def _freq_write_dates(dates, out_freq, agg):
         )
 
         if any(
-            [
-                isinstance(out_offset, o)
-                for o in (
-                    pd.tseries.offsets.YearEnd,
-                    pd.tseries.offsets.MonthEnd,
-                )
-            ]
+            isinstance(out_offset, o)
+            for o in (
+                pd.tseries.offsets.YearEnd,
+                pd.tseries.offsets.MonthEnd,
+            )
         ) and model_freq_td < pd.Timedelta(days=1):
             write_dates += pd.Timedelta(days=1) - model_freq_td
 

@@ -1,9 +1,9 @@
 import numpy as np
-from openamundsen import constants, errors, util
 import pandas as pd
 import rasterio
 import xarray as xr
 
+from openamundsen import constants, errors, util
 
 _POINT_DATASET_META_VARS = [
     "station_name",
@@ -246,7 +246,7 @@ def combine_point_datasets(datasets, add_minimum_required_vars=True):
         meteo_vars.update(set(constants.MINIMUM_REQUIRED_METEO_VARS))
     for ds in datasets:
         meteo_vars.update(set(ds.data_vars))
-    meteo_vars = sorted(list(meteo_vars & set(_POINT_DATASET_ALLOWED_METEO_VARS)))
+    meteo_vars = sorted(meteo_vars & set(_POINT_DATASET_ALLOWED_METEO_VARS))
 
     for ds in datasets:
         ds = ds.copy()
@@ -359,7 +359,7 @@ def prepare_point_coordinates(ds, grid, crs):
             within_roi_var.loc[station] = grid.roi[row, col]
 
     # reorder variables (only for aesthetic reasons)
-    meteo_vars = sorted(list(set(_POINT_DATASET_ALLOWED_METEO_VARS) & set(ds.data_vars)))
+    meteo_vars = sorted(set(_POINT_DATASET_ALLOWED_METEO_VARS) & set(ds.data_vars))
     var_order = _POINT_DATASET_META_VARS + _POINT_DATASET_GRID_VARS + meteo_vars
     ds = ds[var_order]
 
@@ -377,7 +377,7 @@ def is_valid_point_dataset(ds, dates=None):
     """
     Test if the passed variable is a valid point forcing dataset.
     """
-    if set(ds.dims) != set(["station", "time"]):
+    if set(ds.dims) != {"station", "time"}:
         return False
 
     for v in _POINT_DATASET_MINIMAL_VARS:

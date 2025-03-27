@@ -1,6 +1,6 @@
-import openamundsen as oa
 import numpy as np
 
+import openamundsen as oa
 
 try:
     import matplotlib
@@ -100,10 +100,10 @@ class LiveView:
             fontsize="large",
             ha="right",
             transform=fig.transFigure,
-            bbox=dict(  # set the text background color to ensure that old values are overplotted
-                facecolor=plt.rcParams["figure.facecolor"],
-                linewidth=0,
-            ),
+            bbox={  # set the text background color to ensure that old values are overplotted
+                "facecolor": plt.rcParams["figure.facecolor"],
+                "linewidth": 0,
+            },
         )
 
         self.fields = fields

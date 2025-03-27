@@ -1,11 +1,13 @@
-from .compare import compare_datasets
-from .conftest import base_config
-import numpy as np
-from numpy.testing import assert_allclose, assert_equal
-import openamundsen as oa
-import pytest
 import warnings
 
+import numpy as np
+import pytest
+from numpy.testing import assert_allclose, assert_equal
+
+import openamundsen as oa
+
+from .compare import compare_datasets
+from .conftest import base_config
 
 single_point_results_all = [
     "single_point_results_multilayer",

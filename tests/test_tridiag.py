@@ -1,7 +1,8 @@
 import numpy as np
 from numpy.testing import assert_allclose
-from openamundsen.tridiag import solve_tridiag
 from scipy.sparse import diags
+
+from openamundsen.tridiag import solve_tridiag
 
 
 def test_solve_tridiag():

@@ -52,7 +52,8 @@ def initialize(model):
     # Saturated soil water pressure
     s.sat_water_pressure[roi] = 10 ** (0.17 - 0.63 * cfg.clay_fraction - 1.58 * cfg.sand_fraction)
 
-    # Volumetric soil moisture content at saturation (values from doi:10.1029/wr020i006p00682, table 4)
+    # Volumetric soil moisture content at saturation
+    # (values from doi:10.1029/wr020i006p00682, table 4)
     s.vol_moisture_content_sat[roi] = 0.505 - 0.037 * cfg.clay_fraction - 0.142 * cfg.sand_fraction
 
     # Volumetric soil moisture content at critical point

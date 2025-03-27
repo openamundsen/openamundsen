@@ -1,9 +1,12 @@
-from .conftest import base_config
-import numpy as np
-from numpy.testing import assert_allclose
-import openamundsen as oa
 from pathlib import Path
+
+import numpy as np
 import pytest
+from numpy.testing import assert_allclose
+
+import openamundsen as oa
+
+from .conftest import base_config
 
 
 @pytest.mark.slow
@@ -16,7 +19,7 @@ def test_evapotranspiration(tmp_path):
     model.initialize()
 
     meteo = model.meteo.copy()
-    meteo.temp.values[:, 30] = np.nan  # nan values should not propagate to evapotranspiration variables # fmt: skip
+    meteo.temp.values[:, 30] = np.nan  # nan values should not propagate to evapotranspiration variables # fmt: skip # noqa: E501
 
     roi_xs = model.grid.X.flat[model.grid.roi_idxs_flat]
     roi_ys = model.grid.Y.flat[model.grid.roi_idxs_flat]
@@ -126,7 +129,7 @@ def test_evapotranspiration(tmp_path):
     model.run()
     ds = model.point_output.data
 
-    for stc_num, stc in enumerate(stcs):
+    for stc_num in range(len(stcs)):
         ds_stc = ds.isel(point=stc_num)
         assert np.all(ds_stc.evapotranspiration >= 0)
         assert ds_lcc.evapotranspiration.max() > 0

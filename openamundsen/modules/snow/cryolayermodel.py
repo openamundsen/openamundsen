@@ -1,10 +1,12 @@
 import numpy as np
+
 from openamundsen import constants
 from openamundsen.snowmodel import SnowModel
+
 from .snow import (
     _compaction_anderson,
-    fresh_snow_density,
     albedo,
+    fresh_snow_density,
     max_liquid_water_content,
     snow_properties,
 )

@@ -1,12 +1,16 @@
-from .conftest import base_config
-import numpy as np
-from numpy.testing import assert_allclose, assert_array_equal
-import openamundsen as oa
-from openamundsen import errors, meteo as oameteo
-import pandas as pd
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
+from numpy.testing import assert_allclose, assert_array_equal
+
+import openamundsen as oa
+from openamundsen import errors
+from openamundsen import meteo as oameteo
+
+from .conftest import base_config
 
 
 def meteo_to_netcdf(ds, out_dir):
@@ -136,7 +140,7 @@ def test_format_callback():
 
     model = oa.OpenAmundsen(config)
     model.initialize()
-    for date in model.dates:
+    for _date in model.dates:
         model.run_single()
         meteo["temp"].append(model.state.meteo.temp.copy())
         meteo["precip"].append(model.state.meteo.precip.copy())
@@ -440,7 +444,7 @@ def test_slice_and_resample(fmt, tmp_path):
 
     agg_funcs_inst = {p: lambda s: s.iloc[-1] for p in params}
     agg_funcs_inst["precip"] = pd.Series.sum
-    agg_funcs_res = {p: pd.Series.mean for p in params}
+    agg_funcs_res = dict.fromkeys(params, pd.Series.mean)
     agg_funcs_res["precip"] = pd.Series.sum
 
     config = base_config()

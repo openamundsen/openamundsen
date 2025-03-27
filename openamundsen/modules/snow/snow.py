@@ -1,5 +1,6 @@
-from numba import njit, prange
 import numpy as np
+from numba import njit, prange
+
 from openamundsen import (
     constants as c,
 )
@@ -94,7 +95,7 @@ def fresh_snow_density(temp):
        https://repository.library.noaa.gov/view/noaa/6392
     """
     min_temp = c.T0 - 15.0
-    temp = np.array(temp).clip(min_temp)  # the parameterization is only valid for temperatures >= -15 °C # fmt: skip
+    temp = np.array(temp).clip(min_temp)  # the parameterization is only valid for temperatures >= -15 °C # fmt: skip # noqa: E501
     rho = 50 + 1.7 * (temp - min_temp) ** 1.5
     rho[np.isnan(rho)] = 100.0  # if temperature is not available, set density to 100 kg m-3
     return rho
@@ -115,7 +116,7 @@ def compaction(model):
             model.state.meteo.temp,
         )
     elif model.config.snow.compaction.method == "empirical":
-        timescale = c.SECONDS_PER_HOUR * model.config.snow.compaction.timescale  # snow compaction timescale (s) # fmt: skip
+        timescale = c.SECONDS_PER_HOUR * model.config.snow.compaction.timescale  # snow compaction timescale (s) # fmt: skip # noqa: E501
         _compaction_empirical(
             model.grid.roi_idxs,
             model.timestep,
@@ -399,7 +400,7 @@ def max_liquid_water_content(model):
         pos = s.snow.thickness > 0.0
         porosity = np.zeros(s.snow.ice_content.shape)
 
-        porosity[pos] = 1 - s.snow.ice_content[pos] / (c.ICE_DENSITY * s.snow.thickness[pos])  # eq. (27) # fmt: skip
+        porosity[pos] = 1 - s.snow.ice_content[pos] / (c.ICE_DENSITY * s.snow.thickness[pos])  # eq. (27) # fmt: skip # noqa: E501
 
         max_lwc = (  # eq. (28)
             c.WATER_DENSITY

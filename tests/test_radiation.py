@@ -1,15 +1,16 @@
 import numpy as np
-from numpy.testing import assert_allclose
-import openamundsen.modules.radiation as rad
 import pandas as pd
+from numpy.testing import assert_allclose
 from pvlib import solarposition
+
+import openamundsen.modules.radiation as rad
 
 
 def test_equation_of_time():
     doys = np.arange(366) + 1
     eot_oa = rad.equation_of_time(doys)
     eot_pv = solarposition.equation_of_time_spencer71(doys)
-    assert_allclose(eot_pv, eot_oa, atol=0.15)  # error is due to 365 vs 365.25 used in calculating day angle # fmt: skip
+    assert_allclose(eot_pv, eot_oa, atol=0.15)  # error is due to 365 vs 365.25 used in calculating day angle # fmt: skip # noqa: E501
 
 
 def test_declination_angle():

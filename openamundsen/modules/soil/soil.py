@@ -1,9 +1,7 @@
 from numba import njit, prange
-import numpy as np
-from openamundsen import (
-    constants as c,
-    heatconduction,
-)
+
+from openamundsen import constants as c
+from openamundsen import heatconduction
 
 
 def soil_properties(model):
@@ -131,8 +129,8 @@ def _soil_properties(
                         -kappa * (temp[k, i, j] - c.T0) / sat_water_pressure[i, j]
                     ) ** (-1 / clapp_hornberger[i, j])
 
-                    # Actual amount of unfrozen water (limited by the total water content of the soil)
-                    # (eqs. (41), (44))
+                    # Actual amount of unfrozen water (limited by the total water content of the
+                    # soil) (eqs. (41), (44))
                     vol_unfrozen_moisture_content = min(
                         max_vol_unfrozen_moisture_content,
                         vol_moisture_content[k, i, j],

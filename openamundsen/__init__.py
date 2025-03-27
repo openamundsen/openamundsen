@@ -1,12 +1,13 @@
-from .conf import Configuration, parse_config, read_config
-from .model import OpenAmundsen, Model
 from . import constants, errors, terrain
+from .conf import Configuration, parse_config, read_config
+from .model import Model, OpenAmundsen
 
 
 # Get version (method as used by matplotlib: https://github.com/matplotlib/matplotlib/blob/bcc1ce8461f5b6e874baaaa02ef776d0243a4abe/lib/matplotlib/__init__.py#L133-L151)
 def __getattr__(name):
     if name == "__version__":
         from pathlib import Path
+
         import setuptools_scm
 
         global __version__
@@ -29,8 +30,12 @@ def __getattr__(name):
 
 
 __all__ = [
-    "OpenAmundsen",
     "Configuration",
+    "Model",
+    "OpenAmundsen",
+    "constants",
+    "errors",
     "parse_config",
     "read_config",
+    "terrain",
 ]

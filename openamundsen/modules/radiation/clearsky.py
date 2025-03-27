@@ -1,6 +1,6 @@
 import numpy as np
+
 import openamundsen.constants as c
-import openamundsen.modules.radiation as rad
 
 
 def _clear_sky_shortwave_irradiance(

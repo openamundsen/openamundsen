@@ -1,7 +1,8 @@
+import warnings
+
 import numpy as np
 import pytest
 import xarray as xr
-import warnings
 
 
 def compare_datasets(
@@ -38,9 +39,9 @@ def compare_datasets(
     compare_vars = []
     for v in variables:
         if not (v in ds_base.variables and v in ds_dev.variables):
-            warnings.warn(f"Variable {v} not in both datasets, cannot compare")
+            warnings.warn(f"Variable {v} not in both datasets, cannot compare", stacklevel=2)
         elif ds_base[v].shape != ds_dev[v].shape:
-            warnings.warn(f"Non-matching shapes for variable {v}")
+            warnings.warn(f"Non-matching shapes for variable {v}", stacklevel=2)
         else:
             compare_vars.append(v)
 
@@ -49,7 +50,10 @@ def compare_datasets(
 
         for v in compare_vars:
             if len(ds_base[v].dims) > 3:
-                warnings.warn(f"Variable {v} is 3-dimensional, plotting not supported")
+                warnings.warn(
+                    f"Variable {v} is 3-dimensional, plotting not supported",
+                    stacklevel=2,
+                )
             else:
                 plot_vars.append(v)
 
@@ -67,7 +71,8 @@ def compare_datasets(
                 max_abs_diff, max_rel_diff = _max_diff(data_base, data_dev)
                 warnings.warn(
                     f"Non-matching values for variable {v}. "
-                    f"Max abs/rel diff: {max_abs_diff:g} / {max_rel_diff:g}"
+                    f"Max abs/rel diff: {max_abs_diff:g} / {max_rel_diff:g}",
+                    stacklevel=2,
                 )
 
                 if plot:
@@ -85,7 +90,8 @@ def compare_datasets(
                     max_abs_diff, max_rel_diff = _max_diff(data_base_cur, data_dev_cur)
                     warnings.warn(
                         f"Non-matching values for variable {v} ({date}). "
-                        f"Max abs/rel diff: {max_abs_diff:g} / {max_rel_diff:g}"
+                        f"Max abs/rel diff: {max_abs_diff:g} / {max_rel_diff:g}",
+                        stacklevel=2,
                     )
 
                     if plot:
@@ -95,7 +101,7 @@ def compare_datasets(
                         changed_vars[v].append(date_num)
 
     if plot:
-        from .plot import plot_point_comparison, plot_gridded_comparison, fig_to_html
+        from .plot import fig_to_html, plot_gridded_comparison, plot_point_comparison
         # (import here because plotly is only required for report generation)
 
         if is_time_series:

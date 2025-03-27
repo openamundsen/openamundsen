@@ -1,6 +1,7 @@
 import numpy as np
-from openamundsen.fileio import read_raster_file
 import pytest
+
+from openamundsen.fileio import read_raster_file
 
 RASTER_TEMPLATE = """
 ncols        6

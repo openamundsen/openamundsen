@@ -1,7 +1,7 @@
-from loguru import logger
 import numpy as np
-from openamundsen import constants, interpolation, meteo
+from loguru import logger
 
+from openamundsen import constants, meteo
 
 # Transfer function coefficents for 10 m wind speeds from [2] (Table 3).
 # Values in the tuples correspond to (a, b, c, max_U).
@@ -192,8 +192,8 @@ def correct_station_precipitation(model):
 
             try:
                 coeff_a, coeff_b, coeff_c, max_wind_speed = KOCHENDORFER_COEFFS[gauge]
-            except KeyError:
-                raise NotImplementedError(f"Unknown gauge: {gauge}")
+            except KeyError as err:
+                raise NotImplementedError(f"Unknown gauge: {gauge}") from err
 
             # Calculate catch ratio following [2] (use eq. (1) from the corrigendum, not eq. (4)
             # from the original paper)

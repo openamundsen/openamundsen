@@ -89,7 +89,8 @@ def idw(x, y, z, x_targets, y_targets, power=2, smoothing=0, ignore_nan=True):
     y = np.asarray(y, dtype=float)
     z = np.asarray(z, dtype=float)
 
-    assert len(x) == len(y) == len(z)
+    if not len(x) == len(y) == len(z):
+        raise ValueError("x, y and z must have equal lengths")
 
     if ignore_nan:
         pos = np.isfinite(x) & np.isfinite(y) & np.isfinite(z)

@@ -1,4 +1,9 @@
 from .evapotranspiration import (
-    crop_coefficient,
     EvapotranspirationModel,
+    crop_coefficient,
 )
+
+__all__ = [
+    "EvapotranspirationModel",
+    "crop_coefficient",
+]

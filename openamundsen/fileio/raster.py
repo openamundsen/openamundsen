@@ -1,5 +1,6 @@
-from openamundsen.errors import RasterFileError
 import rasterio
+
+from openamundsen.errors import RasterFileError
 
 
 def read_raster_metadata(filename, crs=None):

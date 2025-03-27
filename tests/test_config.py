@@ -1,11 +1,13 @@
+import tempfile
 from copy import deepcopy
-import openamundsen as oa
-import openamundsen.errors as errors
+from textwrap import dedent
+
 import pandas as pd
 import pytest
 from ruamel.yaml import YAML
-import tempfile
-from textwrap import dedent
+
+import openamundsen as oa
+import openamundsen.errors as errors
 
 
 def save_and_read_yaml_dict(d):
@@ -35,7 +37,7 @@ def save_and_parse_config(config):
                 f.write(config)
                 f.flush()
             else:
-                raise Exception("Unsupported type")
+                raise TypeError("Unsupported type")
 
         return oa.parse_config(oa.read_config(filename))
 

@@ -1,24 +1,28 @@
-import copy
+import sys
+import time
+
+import numpy as np
+import pandas as pd
+import rasterio
 from loguru import logger
+
 from openamundsen import (
     conf,
     constants,
     errors,
     fileio,
     forcing,
-    meteo as oameteo,
     modules,
-    surface,
     statevars,
+    surface,
     terrain,
     util,
 )
+from openamundsen import (
+    meteo as oameteo,
+)
+
 from .landcover import LandCover
-import numpy as np
-import pandas as pd
-import rasterio
-import sys
-import time
 
 
 class OpenAmundsen:
@@ -182,7 +186,7 @@ class OpenAmundsen:
 
         self._calculate_terrain_parameters()
 
-        config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary # fmt: skip
+        config.results_dir.mkdir(parents=True, exist_ok=True)  # create results directory if necessary # noqa: E501 # fmt: skip
         self._initialize_point_outputs()
         self._initialize_gridded_outputs()
 
@@ -218,7 +222,7 @@ class OpenAmundsen:
         if self.date_idx is None:
             self.date_idx = 0
         elif self.date_idx == len(self.dates) - 1:
-            raise errors.RuntimeError("Model run already finished")
+            raise errors.OpenAmundsenRuntimeError("Model run already finished")
         else:
             self.date_idx += 1
 
@@ -252,7 +256,7 @@ class OpenAmundsen:
                 global_idxs = np.flatnonzero(global_mask)
 
         if mask.shape[-1] != len(global_idxs):
-            raise Exception("Local mask does not match global mask size")
+            raise ValueError("Local mask does not match global mask size")
 
         if mask.ndim == 1:
             global_mask = np.zeros(self.grid.shape, dtype=bool)

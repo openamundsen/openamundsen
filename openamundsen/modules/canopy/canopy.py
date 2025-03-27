@@ -1,6 +1,9 @@
-from openamundsen import constants as c, meteo
-import numpy as np
 import warnings
+
+import numpy as np
+
+from openamundsen import constants as c
+from openamundsen import meteo
 
 
 class CanopyModel:
