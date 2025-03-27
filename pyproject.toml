@@ -78,3 +78,30 @@ exclude = ["tests*"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+extend-select = [
+    "YTT", # flake8-2020
+    "S", # flake8-bandit
+    "B", # flake8-bugbear
+    "A", # flake8-builtins
+    "C4", # flake8-comprehensions
+    "T10", # flake8-debugger
+    "I", # isort
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "PGH", # pygrep-hooks
+    "UP", # pyupgrade
+    "RUF", # ruff
+    "TRY", # tryceratops
+]
+ignore = [
+    "TRY003", # Avoid specifying long messages outside the exception class
+]
+allowed-confusables = ["–"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101", # allow asserts
+]
