@@ -150,8 +150,8 @@ def test_albedo(fixture_name, request):
     min_albedo = config.snow.albedo.min
     max_albedo = config.snow.albedo.max
     pos_snow = swe > 0.0
-    assert np.all(albedo[pos_snow] >= min_albedo)
-    assert np.all(albedo[pos_snow] <= max_albedo)
+    assert np.all(albedo[pos_snow] >= np.float32(min_albedo))
+    assert np.all(albedo[pos_snow] <= np.float32(max_albedo))
     assert np.all(np.isnan(albedo[~pos_snow]))
 
 
@@ -185,8 +185,8 @@ def test_cryolayers_layer_albedo(single_point_results_cryolayers):
     min_albedo = config.snow.albedo.min
     max_albedo = config.snow.albedo.max
     pos_snow = swe3d > 0.0
-    assert np.all(layer_albedo[pos_snow] >= min_albedo)
-    assert np.all(layer_albedo[pos_snow] <= max_albedo)
+    assert np.all(layer_albedo[pos_snow] >= np.float32(min_albedo))
+    assert np.all(layer_albedo[pos_snow] <= np.float32(max_albedo))
     assert np.all(np.isnan(layer_albedo[~pos_snow]))
 
 
