@@ -305,10 +305,12 @@ def _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=False)
 
         end_date = (end_date + td_1d).normalize()
 
-    ds = ds.sel(time=slice(start_date, end_date))
-
     if inferred_freq is not None and inferred_freq != freq:
+        # keep data from previous day for aggregation, if present
+        ds = ds.sel(time=slice(start_date - td_1d, end_date))
         ds = _resample_dataset(ds, start_date, end_date, freq, aggregate=aggregate)
+
+    ds = ds.sel(time=slice(start_date, end_date))
 
     return ds
 
