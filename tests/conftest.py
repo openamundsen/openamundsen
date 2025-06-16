@@ -34,6 +34,7 @@ data_fetcher = pooch.create(
         "meteo/rofental/netcdf/latschbloder.nc": "cc96e0dbc4024b093fcc161d8f2c862bb8abd379a7d3dbd540d78242f17aef75",  # noqa: E501
         "meteo/rofental/netcdf/proviantdepot.nc": "f8a276c98343c2574fb810eb4b3ee1b08bd29d9f5d0cfaa5a1104f1aa25af374",  # noqa: E501
         "results/canopy_point.nc": "3cd25b0119037be0eb95401ae7cfb618fc840d5244e4b2f42af45e72feff493c",  # noqa: E501
+        "results/interpolation_grids.nc": "4fefde117296cee12cd4cff86a810ccd1657945719079fd5bb7d1c1faa969066",  # noqa: E501
         "results/snow_cryolayers_point.nc": "04c6363c888bd6296e9ed3fa5325e418c659532b4f066d24fd33a34d5930877d",  # noqa: E501
         "results/snow_multilayer_point.nc": "702b7879a57f9837c97a629e66cd11fbb014d1b6e42f1241874de86d0714c380",  # noqa: E501
     },
