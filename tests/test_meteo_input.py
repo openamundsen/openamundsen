@@ -448,7 +448,7 @@ def test_slice_and_resample(fmt, tmp_path):
     agg_funcs_res["precip"] = pd.Series.sum
 
     config = base_config()
-    config.start_date = "2015-11-20"
+    config.start_date = "2015-11-19"
     config.end_date = "2015-11-30"
     config.timestep = "h"
     config.input_data.meteo.format = fmt
@@ -457,6 +457,8 @@ def test_slice_and_resample(fmt, tmp_path):
     model.initialize()
     df_h = meteo_to_df(model)
 
+    config.start_date = "2015-11-20"
+    config.end_date = "2015-11-30"
     config.timestep = "3h"
     model = oa.OpenAmundsen(config)
     model.initialize()
@@ -470,15 +472,23 @@ def test_slice_and_resample(fmt, tmp_path):
     )
     assert np.isnan(df_res.loc["2015-11-26 15:00"].precip)
     assert_allclose(
-        df_h.loc[: df_res.index[-1]].precip.sum(),
+        df_h.loc["2015-11-19 22:00":"2015-11-30 21:00"].precip.sum(),
         df_res.precip.sum(),
     )
 
+    config.start_date = "2015-11-21"
+    config.end_date = "2015-11-30"
     config.input_data.meteo.aggregate_when_downsampling = True
     model = oa.OpenAmundsen(config)
     model.initialize()
     assert matches_start_and_end_date(model)
     df_res = meteo_to_df(model)
+    pd.testing.assert_series_equal(
+        df_h.loc["2015-11-20 22:00":"2015-11-21 00:00"].agg(agg_funcs_res, skipna=False),
+        df_res.loc["2015-11-21 00:00"],
+        check_exact=False,
+        check_names=False,
+    )
     pd.testing.assert_series_equal(
         df_h.loc["2015-11-30 13:00":"2015-11-30 15:00"].agg(agg_funcs_res, skipna=False),
         df_res.loc["2015-11-30 15:00"],
