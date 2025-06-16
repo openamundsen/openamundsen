@@ -356,7 +356,8 @@ def interpolate_param(
     Parameters
     ----------
     param : str
-        Parameter to be interpolated. Can be one of 'temp', 'precip', 'rel_hum', 'wind_speed'.
+        Parameter to be interpolated. Can be one of 'temp', 'precip', 'rel_hum', 'wind_speed',
+        'wind_vec'.
 
     date : datetime-like
         Date (required in the case of seasonally specified lapse rates).
