@@ -511,7 +511,7 @@ def _read_meteo_metadata(meteo_format, meteo_data_dir, meteo_crs, grid_crs):
         required_cols = ["name", "x", "y", "alt"]
         if not all(pd.Index(required_cols).isin(meta.columns)):
             raise errors.MeteoDataError(
-                "Station metadata file does not contain all required columns ({required_cols})"
+                f"Station metadata file does not contain all required columns ({required_cols})"
             )
 
         # Transform x/y coordinates from meteo CRS to grid CRS
