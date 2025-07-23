@@ -28,6 +28,7 @@ dependencies = [
     "numba >= 0.50.1",
     "numpy",
     "pandas >= 1.1.0",
+    "pwlf",
     "pyproj",
     "setuptools_scm",
     "setuptools >= 61", # setuptools >= 61 is required by setuptools_scm 8. Because of the version-finding mechanism in __init__.py we need to include this as a dependency here as well.

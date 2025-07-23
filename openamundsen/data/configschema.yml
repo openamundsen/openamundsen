@@ -323,6 +323,28 @@ meteo:
                 - -0.0035  # Nov
                 - -0.0031  # Dec
 
+            # Parameters for the "regression" method
+            regression_params:
+              type: dict
+              default: {}
+              schema:
+                # Maximum number of piecewise linear segments used for regression
+                max_segments:
+                  type: integer
+                  default: 1
+                  min: 1
+
+                # Minimum number of data points for each segment
+                min_points_per_segment:
+                  type: integer
+                  default: 4
+                  min: 2
+
+                # AIC difference that has to be exceeded in order to select a more complex model (i.e. more segments)
+                delta_aic_threshold:
+                  type: float
+                  default: 7.
+
         precipitation:
           type: dict
           default: {}
@@ -393,6 +415,28 @@ meteo:
                 - -0.0044  # Oct
                 - -0.0047  # Nov
                 - -0.0046  # Dec
+
+            # Parameters for the "regression" method
+            regression_params:
+              type: dict
+              default: {}
+              schema:
+                # Maximum number of piecewise linear segments used for regression
+                max_segments:
+                  type: integer
+                  default: 1
+                  min: 1
+
+                # Minimum number of data points for each segment
+                min_points_per_segment:
+                  type: integer
+                  default: 4
+                  min: 2
+
+                # AIC difference that has to be exceeded in order to select a more complex model (i.e. more segments)
+                delta_aic_threshold:
+                  type: float
+                  default: 7.
 
         wind:
           type: dict

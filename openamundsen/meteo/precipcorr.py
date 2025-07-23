@@ -239,6 +239,13 @@ def _interpolate_temp_hum_wind(
     if where is not None:
         date_idxs = date_idxs[where]
 
+    # TODO: For performance reasons piecewise regression for temperature and humidity is currently
+    # disabled here, even if enabled in the config
+    temp_config = temp_config.copy()
+    hum_config = hum_config.copy()
+    temp_config.regression_params.max_segments = 1
+    hum_config.regression_params.max_segments = 1
+
     for date_idx in date_idxs:
         date = dates[date_idx]
 
