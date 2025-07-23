@@ -87,6 +87,10 @@ def _piecewise_linear_fit(
     best = None
 
     for num_segments in range(1, max_segments + 1):
+        # Stop if it is impossible to allocate min_points_per_segment to each segment
+        if num_segments > 1 and len(xs) < num_segments * min_points_per_segment:
+            break
+
         pw = pwlf.PiecewiseLinFit(xs, ys)
         try:
             pw.fit(
@@ -106,7 +110,7 @@ def _piecewise_linear_fit(
             np.sum((xs >= lo) & (xs <= hi)) < min_points_per_segment
             for lo, hi in zip(breaks[:-1], breaks[1:])
         ):
-            continue
+            break
 
         preds = pw.predict(xs)
         rss = np.sum((ys - preds) ** 2)
@@ -114,12 +118,23 @@ def _piecewise_linear_fit(
         k = 2 * num_segments
         aic = n * np.log(rss / n) + 2 * k
 
-        if best is None or (best["aic"] - aic) >= delta_aic_threshold:
-            best = {
-                "model": pw,
-                "breaks": breaks,
-                "aic": aic,
-            }
+        model_params = {
+            "model": pw,
+            "breaks": breaks,
+            "aic": aic,
+        }
+
+        if best is None:
+            best = model_params
+            continue
+
+        model_has_improved = (best["aic"] - aic) >= delta_aic_threshold
+        if model_has_improved:
+            best = model_params
+        else:
+            # If the model has not improved compared to the earlier one we stop, since it is
+            # unlikely in this case that the next one will improve the results
+            break
 
     return best
 
