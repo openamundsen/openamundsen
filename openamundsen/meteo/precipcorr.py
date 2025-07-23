@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from loguru import logger
 
 from openamundsen import constants, meteo
@@ -63,8 +64,8 @@ def correct_station_precipitation(model):
     wind_speeds = m["wind_speed"].values.T.copy()
     precips = m["precip"].values.T  # no copy, because this will be modified in place
 
-    # Interpolate missing temperature, humidity and wind speed values
-    # TODO this is only really necessary for nonzero precipitation values; could be optimized
+    # Interpolate missing temperature, humidity and wind speed values for the dates with non-zero
+    # precipitation values
     _interpolate_temp_hum_wind(
         dates,
         xs,
@@ -76,6 +77,7 @@ def correct_station_precipitation(model):
         model.config.meteo.interpolation.temperature,
         model.config.meteo.interpolation.humidity,
         model.config.meteo.interpolation.wind,
+        where=(precips > 0).any(axis=1),
     )
 
     temps_c = temps - constants.T0
@@ -214,16 +216,17 @@ def correct_station_precipitation(model):
 
 
 def _interpolate_temp_hum_wind(
-    dates,
-    xs,
-    ys,
-    zs,
-    temps,
-    rel_hums,
-    wind_speeds,
-    temp_config,
-    hum_config,
-    wind_speed_config,
+    dates: pd.DatetimeIndex,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    zs: np.ndarray,
+    temps: np.ndarray,
+    rel_hums: np.ndarray,
+    wind_speeds: np.ndarray,
+    temp_config: dict,
+    hum_config: dict,
+    wind_speed_config: dict,
+    where: np.ndarray | None = None,
 ):
     """
     Interpolate air temperature, relative humidity and wind speed recordings
@@ -232,15 +235,21 @@ def _interpolate_temp_hum_wind(
     """
     num_stations = len(xs)
 
-    for date_num, date in enumerate(dates):
-        nan_pos = np.isnan(temps[date_num, :])
+    date_idxs = np.arange(len(dates))
+    if where is not None:
+        date_idxs = date_idxs[where]
+
+    for date_idx in date_idxs:
+        date = dates[date_idx]
+
+        nan_pos = np.isnan(temps[date_idx, :])
         num_nan = nan_pos.sum()
         if num_nan > 0 and num_nan < num_stations:
-            temps[date_num, nan_pos] = meteo.interpolate_param(
+            temps[date_idx, nan_pos], _ = meteo.interpolate_param(
                 "temp",
                 date,
                 temp_config,
-                temps[date_num, ~nan_pos],
+                temps[date_idx, ~nan_pos],
                 xs[~nan_pos],
                 ys[~nan_pos],
                 zs[~nan_pos],
@@ -249,32 +258,32 @@ def _interpolate_temp_hum_wind(
                 zs[nan_pos],
             )
 
-        nan_pos = np.isnan(rel_hums[date_num, :])
+        nan_pos = np.isnan(rel_hums[date_idx, :])
         num_nan = nan_pos.sum()
         if num_nan > 0 and num_nan < num_stations:
-            rel_hums[date_num, nan_pos] = meteo.interpolate_param(
+            rel_hums[date_idx, nan_pos], _ = meteo.interpolate_param(
                 "rel_hum",
                 date,
                 hum_config,
-                rel_hums[date_num, ~nan_pos],
+                rel_hums[date_idx, ~nan_pos],
                 xs[~nan_pos],
                 ys[~nan_pos],
                 zs[~nan_pos],
                 xs[nan_pos],
                 ys[nan_pos],
                 zs[nan_pos],
-                temps=temps[date_num, ~nan_pos],
-                target_temps=temps[date_num, nan_pos],
+                temps=temps[date_idx, ~nan_pos],
+                target_temps=temps[date_idx, nan_pos],
             )
 
-        nan_pos = np.isnan(wind_speeds[date_num, :])
+        nan_pos = np.isnan(wind_speeds[date_idx, :])
         num_nan = nan_pos.sum()
         if num_nan > 0 and num_nan < num_stations:
-            wind_speeds[date_num, nan_pos] = meteo.interpolate_param(
+            wind_speeds[date_idx, nan_pos], _ = meteo.interpolate_param(
                 "wind_speed",
                 date,
-                wind_speeds[date_num, ~nan_pos],
                 wind_speed_config,
+                wind_speeds[date_idx, ~nan_pos],
                 xs[~nan_pos],
                 ys[~nan_pos],
                 zs[~nan_pos],
