@@ -273,8 +273,8 @@ def _interpolate_temp_hum_wind(
             wind_speeds[date_num, nan_pos] = meteo.interpolate_param(
                 "wind_speed",
                 date,
-                temp_config,
                 wind_speeds[date_num, ~nan_pos],
+                wind_speed_config,
                 xs[~nan_pos],
                 ys[~nan_pos],
                 zs[~nan_pos],
