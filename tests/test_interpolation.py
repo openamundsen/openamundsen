@@ -28,6 +28,13 @@ def test_compare_interpolation_grids():
     model.run()
     compare_datasets("interpolation_temp_fixed", model.gridded_output.data)
 
+    config.meteo.interpolation.temperature.trend_method = "regression"
+    config.meteo.interpolation.temperature.regression_params.max_segments = 2
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    compare_datasets("interpolation_temp_piecewise-regression", model.gridded_output.data)
+
     config = bc.copy()
     config.output_data.grids.variables = [{"var": "meteo.precip"}]
     config.meteo.interpolation.precipitation.trend_method = "regression"
@@ -75,6 +82,13 @@ def test_compare_interpolation_grids():
     model.initialize()
     model.run()
     compare_datasets("interpolation_hum_fixed", model.gridded_output.data)
+
+    config.meteo.interpolation.humidity.trend_method = "regression"
+    config.meteo.interpolation.humidity.regression_params.max_segments = 2
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    compare_datasets("interpolation_hum_piecewise-regression", model.gridded_output.data)
 
     config = bc.copy()
     config.output_data.grids.variables = [{"var": "meteo.wind_speed"}]

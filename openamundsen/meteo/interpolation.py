@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+from typing import Literal
+
 import numpy as np
+import pandas as pd
+import pwlf
 from loguru import logger
 
 from openamundsen import constants, interpolation, meteo, util
@@ -71,6 +77,68 @@ def _linear_fit(x, y):
     return slope, intercept
 
 
+def _piecewise_linear_fit(
+    xs: np.ndarray,
+    ys: np.ndarray,
+    max_segments: int,
+    min_points_per_segment: int,
+    delta_aic_threshold: float,
+) -> dict | None:
+    best = None
+
+    for num_segments in range(1, max_segments + 1):
+        # Stop if it is impossible to allocate min_points_per_segment to each segment
+        if num_segments > 1 and len(xs) < num_segments * min_points_per_segment:
+            break
+
+        pw = pwlf.PiecewiseLinFit(xs, ys)
+        try:
+            pw.fit(
+                num_segments,
+                seed=42,
+                maxiter=50,
+                popsize=15,
+            )
+        except (ValueError, ZeroDivisionError):
+            continue
+
+        breaks = pw.fit_breaks
+
+        # Ensure there are at least min_points_per_segment points in each segment (except for the
+        # single-segment case)
+        if num_segments > 1 and any(
+            np.sum((xs >= lo) & (xs <= hi)) < min_points_per_segment
+            for lo, hi in zip(breaks[:-1], breaks[1:])
+        ):
+            break
+
+        preds = pw.predict(xs)
+        rss = np.sum((ys - preds) ** 2)
+        n = len(ys)
+        k = 2 * num_segments
+        aic = n * np.log(rss / n) + 2 * k
+
+        model_params = {
+            "model": pw,
+            "breaks": breaks,
+            "aic": aic,
+        }
+
+        if best is None:
+            best = model_params
+            continue
+
+        model_has_improved = (best["aic"] - aic) >= delta_aic_threshold
+        if model_has_improved:
+            best = model_params
+        else:
+            # If the model has not improved compared to the earlier one we stop, since it is
+            # unlikely in this case that the next one will improve the results
+            break
+
+    return best
+
+
 def _apply_linear_trend(data, elevs, trend, direction):
     """
     Detrend or retrend a set of data points using a given trend value.
@@ -102,92 +170,39 @@ def _apply_linear_trend(data, elevs, trend, direction):
         raise NotImplementedError(f"Unsupported direction: {direction}")
 
 
-def _interpolate_with_trend(
-    data,
-    xs,
-    ys,
-    zs,
-    target_xs,
-    target_ys,
-    target_zs,
-    trend_method,
-    lapse_rate,
-):
+def _apply_piecewise_trend(
+    data: np.ndarray,
+    elevs: np.ndarray,
+    pw_model: pwlf.PiecewiseLinFit,
+    direction: Literal["detrend", "retrend"],
+) -> np.ndarray:
     """
-    Interpolate station measurements using inverse distance weighting with an
-    elevation-dependent trend.
+    Add or remove a piecewise-linear elevation trend.
 
     Parameters
     ----------
-    data : ndarray
-        Values to be interpolated.
-
-    xs, ys, zs : ndarray
-        x, y and z coordinates of the stations.
-
-    target_xs, target_ys, target_zs : ndarray
-        x, y and z coordinates of the interpolation targets.
-
-    trend_method : string
-        Method to use for de-/retrending. Either 'regression' (to derive a
-        trend from the data points using linear regression), 'fixed' (to use a
-        prescribed lapse rate as linear trend), 'fractional' (to use a
-        prescribed fractional lapse rate (in case of precipitation) as linear
-        trend) or 'adjustment_factor' (to use a nonlinear precipitation
-        adjustment factor following [1]).
-
-    lapse_rate : float
-        Trend value. If trend_method == 'regression', this value is ignored.
-        If trend_method == 'fixed', the value is interpreted as absolute change
-        by elevation (e.g. °C m-1).  If trend_method == 'fractional', the value
-        is interpreted as a fractional change by elevation (e.g., 0.0005 for
-        0.05 % m-1) If trend_method == 'adjustment_factor', the value is
-        interpreted as a nonlinear precipitation adjustment factor following
-        [1].
+    data
+        Values to (de)trend.
+    elevs
+        Matching elevations.
+    pw_model
+        Fitted pwlf.PiecewiseLinFit.
+    direction
+        Either "detrend" or "retrend".
 
     Returns
     -------
-    data_interpol : ndarray
-        Interpolated values for the target locations.
-
-    References
-    ----------
-    .. [1] Liston, G. E., & Elder, K. (2006). A Meteorological Distribution
-       System for High-Resolution Terrestrial Modeling (MicroMet). Journal of
-       Hydrometeorology, 7(2), 217–234. https://doi.org/10.1175/JHM486.1
+    np.ndarray
+        De-/retrended data points.
     """
-    if trend_method in ("regression", "fixed", "fractional"):
-        if trend_method == "regression":
-            # When using the regression method, the passed lapse rate is overwritten
-            lapse_rate, _ = _linear_fit(zs, data)
-        elif trend_method == "fixed":
-            pass  # do nothing, i.e., use the passed lapse rate as is
-        elif trend_method == "fractional":
-            lapse_rate *= np.nanmean(data)
+    trend_vals = pw_model.predict(elevs)
 
-        data_detrended = _apply_linear_trend(data, zs, lapse_rate, "detrend")
-        data_detrended_interpol = interpolation.idw(
-            xs,
-            ys,
-            data_detrended,
-            target_xs,
-            target_ys,
-        )
-        data_interpol = _apply_linear_trend(
-            data_detrended_interpol,
-            target_zs,
-            lapse_rate,
-            "retrend",
-        )
-    elif trend_method == "adjustment_factor":
-        data_interpol_notrend = interpolation.idw(xs, ys, data, target_xs, target_ys)
-        zs_interpol = interpolation.idw(xs, ys, zs, target_xs, target_ys)
-        z_diffs = target_zs - zs_interpol
-        data_interpol = data_interpol_notrend * (  # eq. (33) from [1]
-            (1 + lapse_rate * z_diffs) / (1 - lapse_rate * z_diffs)
-        )
-
-    return data_interpol
+    if direction == "detrend":
+        return data - trend_vals
+    elif direction == "retrend":
+        return data + trend_vals
+    else:
+        raise ValueError(f"Unsupported direction: {direction}")
 
 
 def interpolate_station_data(model):
@@ -207,13 +222,15 @@ def interpolate_station_data(model):
     target_ys = model.grid.roi_points[:, 1]
     target_zs = model.state.base.dem[roi]
 
+    model._interpolation = {}
+
     for param in ("temp", "precip"):
         param_config = model.config["meteo"]["interpolation"][
             constants.INTERPOLATION_CONFIG_PARAM_MAPPINGS[param]
         ]
         data, xs, ys, zs = _param_station_data(model.meteo, param, date)
 
-        model.state.meteo[param][roi] = interpolate_param(
+        model.state.meteo[param][roi], model._interpolation[param] = interpolate_param(
             param,
             model.date,
             param_config,
@@ -235,7 +252,7 @@ def interpolate_station_data(model):
     data, xs, ys, zs = _param_station_data(model.meteo, [param, "temp"], date)
     rel_hums = data[0, :]
     temps = data[1, :]
-    model.state.meteo[param][roi] = interpolate_param(
+    model.state.meteo[param][roi], _ = interpolate_param(
         param,
         model.date,
         param_config,
@@ -253,7 +270,7 @@ def interpolate_station_data(model):
     wind_config = model.config["meteo"]["interpolation"]["wind"]
     if wind_config["method"] == "idw":
         data, xs, ys, zs = _param_station_data(model.meteo, "wind_speed", date)
-        model.state.meteo["wind_speed"][roi] = interpolate_param(
+        model.state.meteo["wind_speed"][roi], _ = interpolate_param(
             "wind_speed",
             model.date,
             wind_config,
@@ -268,7 +285,7 @@ def interpolate_station_data(model):
 
         if model._has_wind_gusts:
             data, xs, ys, zs = _param_station_data(model.meteo, "wind_speed_gust", date)
-            model.state.meteo["wind_speed_gust"][roi] = interpolate_param(
+            model.state.meteo["wind_speed_gust"][roi], _ = interpolate_param(
                 "wind_speed",
                 model.date,
                 wind_config,
@@ -337,19 +354,19 @@ def interpolate_station_data(model):
 
 
 def interpolate_param(
-    param,
-    date,
-    param_config,
-    data,
-    xs,
-    ys,
-    zs,
-    target_xs,
-    target_ys,
-    target_zs,
-    temps=None,
-    target_temps=None,
-):
+    param: str,
+    date: pd.Timestamp,
+    param_config: dict,
+    data: np.ndarray,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    zs: np.ndarray,
+    target_xs: np.ndarray,
+    target_ys: np.ndarray,
+    target_zs: np.ndarray,
+    temps: np.ndarray | None = None,
+    target_temps: np.ndarray | None = None,
+) -> tuple[np.ndarray, dict]:
     """
     Interpolate a set of data points to a set of target points.
 
@@ -386,6 +403,14 @@ def interpolate_param(
     data_interpol : ndarray
         Interpolated values for the target locations.
     """
+    if param not in ("temp", "precip", "rel_hum", "wind_speed", "wind_vec"):
+        raise ValueError(f"Unsupported parameter: {param}")
+
+    trend_method = param_config["trend_method"]
+    lapse_rate = param_config["lapse_rate"][date.month - 1]
+
+    interpolation_params = {"gradient_type": "none"}
+
     # If there are no points to be interpolated, return an all-zero array for precipitation, and an
     # all-nan array for all other parameters
     if data.size == 0:
@@ -394,13 +419,7 @@ def interpolate_param(
         else:
             fill_value = np.nan
 
-        return np.full(target_xs.shape, fill_value)
-
-    if param in ("temp", "precip", "rel_hum", "wind_speed", "wind_vec"):
-        trend_method = param_config["trend_method"]
-        lapse_rate = param_config["lapse_rate"][date.month - 1]
-    else:
-        raise NotImplementedError(f"Unsupported parameter: {param}")
+        return (np.full(target_xs.shape, fill_value), interpolation_params)
 
     # For relative humidity interpolate dew point temperature and convert back to humidity later
     if param == "rel_hum":
@@ -411,17 +430,82 @@ def interpolate_param(
         dew_point_temps = meteo.dew_point_temperature(temps, rel_hums)
         data = dew_point_temps
 
-    data_interpol = _interpolate_with_trend(
-        data,
-        xs,
-        ys,
-        zs,
-        target_xs,
-        target_ys,
-        target_zs,
-        trend_method,
-        lapse_rate,
-    )
+    regression_params = param_config.get("regression_params", {})
+    max_segments = regression_params.get("max_segments", 1)
+
+    if trend_method in ("regression", "fixed", "fractional") and max_segments == 1:
+        # Use simple linear regression
+        if trend_method == "regression":
+            # When using the regression method, the passed lapse rate is overwritten
+            lapse_rate, _ = _linear_fit(zs, data)
+        elif trend_method == "fixed":
+            pass  # do nothing, i.e., use the passed lapse rate as is
+        elif trend_method == "fractional":
+            lapse_rate *= np.nanmean(data)
+
+        data_detrended = _apply_linear_trend(data, zs, lapse_rate, "detrend")
+        data_detrended_interpol = interpolation.idw(
+            xs,
+            ys,
+            data_detrended,
+            target_xs,
+            target_ys,
+        )
+        data_interpol = _apply_linear_trend(
+            data_detrended_interpol,
+            target_zs,
+            lapse_rate,
+            "retrend",
+        )
+        interpolation_params.update(
+            gradient_type="linear",
+            gradient=lapse_rate,
+        )
+    elif trend_method == "regression" and max_segments > 1:
+        # Use piecewise linear regression
+        pw_lr = _piecewise_linear_fit(
+            zs,
+            data,
+            regression_params["max_segments"],
+            regression_params["min_points_per_segment"],
+            regression_params["delta_aic_threshold"],
+        )
+
+        if pw_lr is None:
+            return (np.full(target_xs.shape, np.nan), interpolation_params)
+
+        pw_model = pw_lr["model"]
+        data_detrended = _apply_piecewise_trend(data, zs, pw_model, "detrend")
+        data_detrended_interpol = interpolation.idw(
+            xs,
+            ys,
+            data_detrended,
+            target_xs,
+            target_ys,
+        )
+        data_interpol = _apply_piecewise_trend(
+            data_detrended_interpol,
+            target_zs,
+            pw_model,
+            "retrend",
+        )
+
+        interpolation_params["gradient_type"] = "piecewise_linear"
+        if pw_lr is not None:
+            interpolation_params.update(**pw_lr)
+    elif trend_method == "adjustment_factor":
+        data_interpol_notrend = interpolation.idw(xs, ys, data, target_xs, target_ys)
+        zs_interpol = interpolation.idw(xs, ys, zs, target_xs, target_ys)
+        z_diffs = target_zs - zs_interpol
+        data_interpol = data_interpol_notrend * (  # eq. (33) from [1]
+            (1 + lapse_rate * z_diffs) / (1 - lapse_rate * z_diffs)
+        )
+        interpolation_params.update(
+            gradient_type="adjustment_factor",
+            gradient=lapse_rate,
+        )
+    else:
+        raise ValueError
 
     if param == "rel_hum":
         target_dew_point_temps = data_interpol
@@ -442,7 +526,7 @@ def interpolate_param(
         min_range, max_range = constants.ALLOWED_METEO_VAR_RANGES[param]
         data_interpol = np.clip(data_interpol, min_range, max_range)
 
-    return data_interpol
+    return data_interpol, interpolation_params
 
 
 def _liston_wind_correction(
@@ -461,7 +545,7 @@ def _liston_wind_correction(
     target_scaled_curvatures,
 ):
     wind_us, wind_vs = meteo.wind_to_uv(wind_speeds, wind_dirs)
-    wind_u_roi = interpolate_param(
+    wind_u_roi, _ = interpolate_param(
         "wind_vec",
         date,
         wind_config,
@@ -473,7 +557,7 @@ def _liston_wind_correction(
         target_ys,
         target_zs,
     )
-    wind_v_roi = interpolate_param(
+    wind_v_roi, _ = interpolate_param(
         "wind_vec",
         date,
         wind_config,
