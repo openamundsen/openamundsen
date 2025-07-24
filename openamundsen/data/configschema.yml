@@ -30,8 +30,7 @@ results_dir:  # directory for writing the result files
 
 crs:  # coordinate reference system of the input raster files
   type: string
-  nullable: true
-  default:
+  required: true
 
 timezone:  # timezone (difference of local time to UTC in hours)
   type: integer

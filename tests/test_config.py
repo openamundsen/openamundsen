@@ -48,6 +48,7 @@ def minimal_config():
         "domain": "dummy",
         "start_date": "2019-11-01",
         "end_date": "2020-04-30",
+        "crs": "epsg:32632",
         "resolution": 50,
         "timezone": 1,
     }
@@ -58,6 +59,7 @@ def test_config_equal():
         "domain": "dummy",
         "start_date": "2019-11-01",
         "end_date": "2020-04-30",
+        "crs": "epsg:32632",
         "resolution": 50,
         "timezone": 1,
         "input_data": {
@@ -84,6 +86,7 @@ def test_read_config(minimal_config):
         domain: dummy
         start_date: 2019-11-01
         end_date: 2020-12-31
+        crs: "epsg:32632"
         resolution: 50
         timezone: 1
     """)
@@ -152,6 +155,7 @@ def test_infer_end_date(minimal_config):
         domain: dummy
         start_date: 2019-11-01
         end_date: {d}
+        crs: "epsg:32632"
         resolution: 50
         timezone: 1
     """)
