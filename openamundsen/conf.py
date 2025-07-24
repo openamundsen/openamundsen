@@ -5,6 +5,7 @@ from pathlib import Path
 
 import cerberus
 import pandas as pd
+import pyproj
 from munch import Munch
 
 from openamundsen import constants, util
@@ -222,6 +223,12 @@ def validate_config(config):
     )
     if dates[-1] != config.end_date:
         raise ConfigurationError("Start/end date is not compatible with timestep")
+
+    # Check if a projected CRS is used
+    if pyproj.CRS(config.crs).is_geographic:
+        raise ConfigurationError(
+            f"{config.crs} is a geographic CRS, please use a projected CRS instead"
+        )
 
     # Check if write_freq is compatible with timestep - as long as the time step is <= 1d,
     # write_freq can be an offset like 'ME' or 'YE', but for larger timesteps it is not guaranteed

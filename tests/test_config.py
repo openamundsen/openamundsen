@@ -225,3 +225,9 @@ def test_parse_twice(minimal_config):
     c1 = oa.parse_config(minimal_config)
     c2 = oa.parse_config(c1)
     assert c1 == c2
+
+
+def test_geographic_crs(minimal_config):
+    minimal_config["crs"] = "epsg:4326"
+    with pytest.raises(errors.ConfigurationError):
+        oa.parse_config(minimal_config)
