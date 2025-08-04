@@ -724,3 +724,25 @@ def test_filters(tmp_path):
         ds_unfiltered.sel(time=slice("2015-08-04 00:00", None)),
         ds_filtered.sel(time=slice("2015-08-04 00:00", None)),
     )
+
+
+def test_one_station_ends_less_than_one_day_before_start_date(tmp_path):
+    # Test a fix for an issue introduced in the improved aggregation handling from #106 which would
+    # occur when the data for one station ends less than one day before the simulation start date.
+    config = base_config()
+    config.start_date = "2015-11-20"
+    config.end_date = "2015-11-30"
+    config.timestep = "h"
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    meteo_to_netcdf(model.meteo, tmp_path)
+
+    ds_bv = xr.load_dataset(tmp_path / "bellavista.nc")
+    ds_bv.sel(time=slice(None, "2015-11-26 11:00")).to_netcdf(tmp_path / "bellavista.nc")
+
+    config.start_date = "2015-11-27"
+    config.timestep = "3h"
+    config.input_data.meteo.dir = str(tmp_path)
+    model = oa.OpenAmundsen(config)
+    model.initialize()

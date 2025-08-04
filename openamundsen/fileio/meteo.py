@@ -399,6 +399,7 @@ def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
                 **resample_kwargs,
             )
             .agg(pd.Series.sum, skipna=False)
+            .reindex(df_res.index)  # to avoid potentially inserting new rows into df_res
         )
 
     # For wind gusts always take the maximum value
@@ -410,6 +411,7 @@ def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
                 **resample_kwargs,
             )
             .max()
+            .reindex(df_res.index)  # to avoid potentially inserting new rows into df_res
         )
 
     # Check if the desired frequency is a subset of the original frequency of the
