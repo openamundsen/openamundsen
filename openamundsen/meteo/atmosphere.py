@@ -301,7 +301,7 @@ def wet_bulb_temperature(temp, rel_hum, vap_press, psych_const):
         Air temperature (K).
 
     rel_hum : numeric
-        Relative humidity (%).
+        Relative humidity (%). (Deprecated)
 
     vap_press : numeric
         Vapor pressure (Pa).
@@ -315,7 +315,6 @@ def wet_bulb_temperature(temp, rel_hum, vap_press, psych_const):
         Wet-bulb temperature (K).
     """
     temp = np.asarray(temp)
-    rel_hum = np.asarray(rel_hum)
     vap_press = np.asarray(vap_press)
     psych_const = np.asarray(psych_const)
 
@@ -323,6 +322,7 @@ def wet_bulb_temperature(temp, rel_hum, vap_press, psych_const):
 
     x0 = temp - 10  # first start value (x_(k-1))
     x1 = temp.copy()  # second start value (x_k)
+    x1[np.isnan(vap_press)] = np.nan  # where RH (-> vapor pressure) is nan WBT should also be nan
     y0 = _water_vapor_pressure_difference(temp, x0, vap_press, psych_const)
     y1 = _water_vapor_pressure_difference(temp, x1, vap_press, psych_const)
 

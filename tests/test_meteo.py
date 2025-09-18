@@ -70,6 +70,11 @@ def test_wet_bulb_temperature():
     wet_bulb_temps = (np.array([1.345, 7.393, 18.863, 30]) + 273.15)  # from http://www.flycarpet.net/en/PsyOnline # fmt: skip # noqa: E501
     # TODO also test negative temps
 
+    # WBT should be nan where either T or RH are nan
+    temps = np.append(temps, [np.nan, 273.15])
+    rel_hums = np.append(rel_hums, [100, np.nan])
+    wet_bulb_temps = np.append(wet_bulb_temps, [np.nan, np.nan])
+
     lat_heat_vaps = meteo.latent_heat_of_vaporization(temps)
     atmos_pressures = meteo.atmospheric_pressure(0)
     vapor_pressures = meteo.vapor_pressure(temps, rel_hums)
