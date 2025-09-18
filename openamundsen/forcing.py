@@ -273,7 +273,7 @@ def combine_point_datasets(datasets, add_minimum_required_vars=True):
 
         datasets_processed.append(ds)
 
-    return xr.combine_nested(datasets_processed, concat_dim="station")
+    return xr.combine_nested(datasets_processed, concat_dim="station", join="outer")
 
 
 def prepare_point_coordinates(ds, grid, crs):
