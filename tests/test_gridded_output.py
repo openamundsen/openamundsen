@@ -379,7 +379,7 @@ def test_compress(fmt, tmp_path):
 
         if fmt == "netcdf":
             with xr.open_dataset(tmp_path / "output_grids.nc") as ds:
-                assert ds["temp"].encoding["zlib"] is compress
+                assert ds["temp"].encoding.get("zlib", False) is compress
         elif fmt == "geotiff":
             with rasterio.open(tmp_path / "temp_2020-01-01T0000.tif") as ds:
                 if compress:
