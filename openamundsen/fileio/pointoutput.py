@@ -408,7 +408,7 @@ class PointOutputManager:
                 filename = self.model.config.results_dir / "output_timeseries.nc"
 
                 if date == self.write_dates[0]:
-                    ds.to_netcdf(filename)
+                    ds.to_netcdf(filename, engine=constants.NETCDF_ENGINE)
                 else:
                     with xr.open_dataset(filename) as old_ds:
                         # Handle an issue introduced in xarray v2022.06.0 - without this line, the
@@ -418,7 +418,7 @@ class PointOutputManager:
 
                         ds_merge = xr.concat([old_ds, ds], "time")
 
-                    ds_merge.to_netcdf(filename)
+                    ds_merge.to_netcdf(filename, engine=constants.NETCDF_ENGINE)
             elif self.format == "csv":
                 ds_out = ds.copy()
 

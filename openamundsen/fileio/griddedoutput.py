@@ -176,7 +176,7 @@ class GriddedOutputManager:
                     ds = ds.drop_sel({v: ds[v] for v in self._time_dims})
                     ds.encoding["unlimited_dims"] = self._time_dims
 
-                ds.to_netcdf(nc_file)
+                ds.to_netcdf(nc_file, engine=constants.NETCDF_ENGINE)
                 self.nc_file_created = True
 
             ds = netCDF4.Dataset(nc_file, "r+")

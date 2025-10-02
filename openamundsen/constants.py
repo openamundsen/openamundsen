@@ -94,6 +94,8 @@ NETCDF_VAR_MAPPINGS = {
     "wind_speed_gust": "wind_speed_gust",
 }
 
+NETCDF_ENGINE = "netcdf4"
+
 # Mappings of internal variable names to interpolation config keys (e.g.
 # config['meteo']['interpolation']['temperature'])
 INTERPOLATION_CONFIG_PARAM_MAPPINGS = {
