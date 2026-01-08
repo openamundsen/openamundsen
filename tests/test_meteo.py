@@ -114,6 +114,22 @@ def test_dew_point_temperature():
     )
 
 
+def test_relative_humidity_from_dew_point_temperature():
+    temps = np.array([-5, 5, 15, 20, 25, 30, 35]) + 273.15
+    rel_hums = np.array([30, 50, 50, 70, 90, 100, 30])
+
+    tds = meteo.dew_point_temperature(temps, rel_hums)
+    rel_hums_calc = meteo.relative_humidity_from_dew_point_temperature(temps, tds)
+    assert_allclose(rel_hums, rel_hums_calc, atol=1e-10)
+
+    tds_known = np.array([-19.8, -4.6, 4.65, 14.36, 23.24, 30, 14.84]) + 273.15
+    assert_allclose(
+        meteo.relative_humidity_from_dew_point_temperature(temps, tds_known),
+        rel_hums,
+        atol=0.5,
+    )
+
+
 def test_cloud_factor_from_cloud_fraction():
     cloud_fractions = np.linspace(0, 1, 100)
     cloud_factors = meteo.cloud_factor_from_cloud_fraction(cloud_fractions)

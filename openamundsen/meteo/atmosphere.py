@@ -369,6 +369,30 @@ def dew_point_temperature(temp, rel_hum):
     return td_c + c.T0
 
 
+def relative_humidity_from_dew_point_temperature(temp, dew_point_temp):
+    """
+    Calculate relative humidity from air temperature and dew point temperature.
+
+    This is the inverse function for dew_point_temperature().
+
+    Parameters
+    ----------
+    temp : numeric
+        Air temperature (K).
+
+    dew_point_temp : numeric
+        Dew point temperature (K).
+
+    Returns
+    -------
+    rel_hum : numeric
+        Relative humidity (%).
+    """
+    sat_vap_press_dew_point = saturation_vapor_pressure(dew_point_temp, over="water")
+    sat_vap_press_temp = saturation_vapor_pressure(temp, over="water")
+    return 100 * sat_vap_press_dew_point / sat_vap_press_temp
+
+
 def precipitable_water(temp, vap_press):
     """
     Calculate precipitable water after Prata (1996).
