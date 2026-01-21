@@ -847,6 +847,16 @@ class OpenAmundsen:
             threshold_temp=self.config.meteo.precipitation_phase.threshold_temp,
             temp_range=self.config.meteo.precipitation_phase.temp_range,
         )
+        if self.config.meteo.precipitation_phase.disallow_snow_below_rain:
+            # Ensure that there is no snow falling at elevations below the highest elevation where
+            # precipitation is 100% rain (might happen in inversion situations otherwise).
+            # Note: this is not fully consistent because in correct_station_precipitation() still
+            # the "wrong" snowfall fraction is used.
+            rain_pixels = snowfall_frac == 0
+            if np.any(rain_pixels):
+                roi_dem = self.state.base.dem[roi]
+                max_rain_elev = np.max(roi_dem[rain_pixels])
+                snowfall_frac = np.where(roi_dem <= max_rain_elev, 0, snowfall_frac)
         m.snowfall[roi] = snowfall_frac * m.precip[roi]
         m.rainfall[roi] = (1 - snowfall_frac) * m.precip[roi]
 

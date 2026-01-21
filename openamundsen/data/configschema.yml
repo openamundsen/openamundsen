@@ -573,6 +573,10 @@ meteo:
           type: number
           default: 1.
 
+        disallow_snow_below_rain:
+          type: boolean
+          default: false
+
     # Settings for precipitation correction
     precipitation_correction:
       type: list
