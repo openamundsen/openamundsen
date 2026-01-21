@@ -651,7 +651,7 @@ def _freq_write_dates(dates, out_freq, agg):
             d0 = dates[dates <= period_end_dates[0]][-1]
             write_dates = period_end_dates + (d0 - period_end_dates[0])
 
-            if period_end_dates[0] - write_dates[0] > pd.Timedelta("1d"):
+            if period_end_dates[0] - write_dates[0] > pd.Timedelta("24h"):
                 write_dates = write_dates.delete(0)
 
             # Keep the last output interval only if it is fully covered (e.g., do not write half

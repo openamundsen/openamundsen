@@ -221,12 +221,22 @@ def to_offset(offset: Union[str, pd.offsets.BaseOffset]) -> pd.offsets.BaseOffse
     # the deprecated aliases "H", "M" and "Y" here with their new versions.
     # Furthermore, we parse the offsets "ME" and "YE" (which have been introduced in pandas 2.2.0)
     # here manually in order to make them work also with earlier pandas versions.
+    # Also, as of pandas 3.0.0, the "d" offset has been deprecated in favor of "D" and also now
+    # always represents calendar days instead of 24-hour spans
+    # (https://pandas.pydata.org/docs/dev/whatsnew/v3.0.0.html#changed-behavior-of-pd-offsets-day-to-always-represent-calendar-day).
+    # In openAMUNDSEN we assume days to be 24-hour spans, so we replace "<n>d" offsets here with
+    # "<n*24>h".
     if isinstance(offset, str):
-        if offset.endswith("H"):
+        if offset[-1].upper() == "D":
+            # Replace "<n>D" with "<n*24>h" and "D" with "24h".
+            num_days_str = offset[:-1]
+            num_days = int(num_days_str) if len(num_days_str) > 0 else 1
+            offset = f"{24 * num_days}h"
+        elif offset[-1] == "H":
             offset = offset[:-1] + "h"
-        elif offset.endswith("M"):
+        elif offset[-1] == "M":
             offset = offset[:-1] + "ME"
-        elif offset.endswith("Y"):
+        elif offset[-1] == "Y":
             offset = offset[:-1] + "YE"
 
         if offset == "ME":

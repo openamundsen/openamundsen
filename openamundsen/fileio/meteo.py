@@ -288,7 +288,7 @@ def _slice_and_resample_dataset(ds, start_date, end_date, freq, aggregate=False)
     """
     freq_td = util.offset_to_timedelta(freq)
     inferred_freq = ds.time.to_index().inferred_freq
-    td_1d = pd.Timedelta("1d")
+    td_1d = pd.Timedelta("24h")
 
     if inferred_freq is None and ds.sizes["time"] > 2:
         # ("> 2" because inferring the frequency requires at least 3 points, so for shorter
@@ -343,8 +343,9 @@ def _resample_dataset(ds, start_date, end_date, freq, aggregate=False):
     ds_res : Dataset
         Resampled dataset.
     """
+    freq = util.to_offset(freq)  # make sure that e.g. "24h" is used instead of "1D"
     td = util.offset_to_timedelta(freq)
-    td_1d = pd.Timedelta("1d")
+    td_1d = pd.Timedelta("24h")
     if td < td_1d:
         resample_kwargs = {
             "label": "right",
