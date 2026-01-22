@@ -45,6 +45,16 @@ log_level:  # python logging-compatible log level (e.g. DEBUG or INFO)
   type: string
   default: INFO
 
+numba_threads:  # number of threads for numba parallel regions ("auto", integer, or null)
+  nullable: true
+  default: auto
+  oneof:
+    - type: string
+      allowed:
+        - auto
+    - type: integer
+      min: 1
+
 reset_state_variables: # reset all not to be retained state variables in every timestep
   type: boolean
   default: false

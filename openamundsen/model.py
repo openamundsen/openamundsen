@@ -1,6 +1,7 @@
 import sys
 import time
 
+import numba
 import numpy as np
 import pandas as pd
 import rasterio
@@ -48,6 +49,7 @@ class OpenAmundsen:
         self.dates = None
         self.date = None
         self.date_idx = None
+        self._numba_threads = None
 
     def initialize(self, meteo=None, meteo_callback=None):
         """
@@ -74,6 +76,7 @@ class OpenAmundsen:
 
         self._prepare_time_steps()
         self._initialize_grid()
+        self._resolve_numba_threads()
         self._initialize_state_variable_management()
 
         if config.snow.model == "multilayer":
@@ -219,6 +222,11 @@ class OpenAmundsen:
         Process the next time step, i.e., increment the date counter and call the methods for
         preparing the meteorological fields and the interface to the submodules.
         """
+        # Set numba thread count for this timestep (and restore afterwards)
+        if self._numba_threads is not None:
+            prev_num_threads = numba.get_num_threads()
+            numba.set_num_threads(self._numba_threads)
+
         if self.date_idx is None:
             self.date_idx = 0
         elif self.date_idx == len(self.dates) - 1:
@@ -247,6 +255,9 @@ class OpenAmundsen:
         if self.config.liveview.enabled:
             logger.debug("Updating live view window")
             self.liveview.update(self.date)
+
+        if self._numba_threads is not None:
+            numba.set_num_threads(prev_num_threads)
 
     def global_mask(self, mask, global_mask=None, global_idxs=None):
         if global_idxs is None:
@@ -385,6 +396,31 @@ class OpenAmundsen:
         grid = util.ModelGrid(meta)
         grid.prepare_coordinates()
         self.grid = grid
+
+    def _resolve_numba_threads(self):
+        """
+        Resolve the numba_threads configuration to an actual thread count.
+        If set to "auto", determine the number of threads based on grid size.
+        """
+        numba_threads = self.config.numba_threads
+
+        if numba_threads is None:
+            # Use system default
+            self._numba_threads = None
+        elif numba_threads == "auto":
+            # Determine thread count based on grid size
+            num_pixels = self.grid.rows * self.grid.cols
+            if num_pixels < 100:
+                threads = 1
+            elif num_pixels < 10_000:
+                threads = 2
+            else:
+                threads = 4
+            # Cap at system available threads
+            self._numba_threads = min(threads, numba.config.NUMBA_NUM_THREADS)
+        else:
+            # Use the configured integer value
+            self._numba_threads = min(numba_threads, numba.config.NUMBA_NUM_THREADS)
 
     def _initialize_state_variable_management(self):
         """
