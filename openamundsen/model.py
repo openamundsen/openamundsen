@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 
@@ -400,27 +401,38 @@ class OpenAmundsen:
     def _resolve_numba_threads(self):
         """
         Resolve the numba_threads configuration to an actual thread count.
-        If set to "auto", determine the number of threads based on grid size.
+        If set to "auto", determine the number of threads based on grid size,
+        unless NUMBA_NUM_THREADS environment variable is set.
         """
         numba_threads = self.config.numba_threads
 
         if numba_threads is None:
             # Use system default
             self._numba_threads = None
+            logger.debug("Setting number of numba threads based on system default")
         elif numba_threads == "auto":
-            # Determine thread count based on grid size
-            num_pixels = self.grid.rows * self.grid.cols
-            if num_pixels < 100:
-                threads = 1
-            elif num_pixels < 10_000:
-                threads = 2
+            if "NUMBA_NUM_THREADS" in os.environ:
+                self._numba_threads = None  # let the environment variable be parsed by numba
+                logger.debug(
+                    "Setting number of numba threads based on environment variable "
+                    + "NUMBA_NUM_THREADS"
+                )
             else:
-                threads = 4
-            # Cap at system available threads
-            self._numba_threads = min(threads, numba.config.NUMBA_NUM_THREADS)
+                # Determine thread count based on grid size
+                num_pixels = self.grid.rows * self.grid.cols
+                if num_pixels < 100:
+                    threads = 1
+                elif num_pixels < 10_000:
+                    threads = 2
+                else:
+                    threads = 4
+                # Cap at system available threads
+                self._numba_threads = min(threads, numba.config.NUMBA_NUM_THREADS)
+                logger.debug(f"Setting number of numba threads to {self._numba_threads}")
         else:
             # Use the configured integer value
             self._numba_threads = min(numba_threads, numba.config.NUMBA_NUM_THREADS)
+            logger.debug(f"Setting number of numba threads to {self._numba_threads}")
 
     def _initialize_state_variable_management(self):
         """
