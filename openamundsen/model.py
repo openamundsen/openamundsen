@@ -810,8 +810,9 @@ class OpenAmundsen:
 
         m = self.state.meteo
         roi = self.grid.roi
+        roi_dem = self.state.base.dem[roi]
 
-        m.atmos_press[roi] = oameteo.atmospheric_pressure(self.state.base.dem[roi])
+        m.atmos_press[roi] = oameteo.atmospheric_pressure(roi_dem)
         m.sat_vap_press[roi] = oameteo.saturation_vapor_pressure(m.temp[roi])
         m.vap_press[roi] = oameteo.vapor_pressure(m.temp[roi], m.rel_hum[roi])
         m.spec_hum[roi] = oameteo.specific_humidity(m.atmos_press[roi], m.vap_press[roi])
@@ -854,7 +855,6 @@ class OpenAmundsen:
             # the "wrong" snowfall fraction is used.
             rain_pixels = snowfall_frac == 0
             if np.any(rain_pixels):
-                roi_dem = self.state.base.dem[roi]
                 max_rain_elev = np.max(roi_dem[rain_pixels])
                 snowfall_frac = np.where(roi_dem <= max_rain_elev, 0, snowfall_frac)
         m.snowfall[roi] = snowfall_frac * m.precip[roi]
