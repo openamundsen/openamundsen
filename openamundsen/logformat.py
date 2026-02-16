@@ -19,8 +19,16 @@ class ColoredFormatter(logging.Formatter):
         level_color = _LEVEL_COLORS.get(record.levelname, "")
         level = f"{record.levelname: <8}"
         message = record.getMessage()
-        return (
+        text = (
             f"{_GREEN}{timestamp}{_RESET} | "
             f"{level_color}{level}{_RESET} | "
             f"{level_color}{message}{_RESET}"
         )
+
+        if record.exc_info:
+            text += "\n" + self.formatException(record.exc_info)
+
+        if record.stack_info:
+            text += "\n" + self.formatStack(record.stack_info)
+
+        return text
