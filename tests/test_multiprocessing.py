@@ -6,7 +6,6 @@ from .conftest import base_config
 
 
 def run_model(model):
-    model.configure_logger()
     model.run()
 
 

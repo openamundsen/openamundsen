@@ -1,7 +1,10 @@
+import logging
+
 import numpy as np
-from loguru import logger
 
 from openamundsen import modules
+
+logger = logging.getLogger(__name__)
 
 
 class LandCover:

@@ -1,8 +1,11 @@
+import logging
+
 import numpy as np
-from loguru import logger
 from numba import njit, prange
 
 from openamundsen.modules.radiation import shadows
+
+logger = logging.getLogger(__name__)
 
 
 def slope_aspect(dem, res):

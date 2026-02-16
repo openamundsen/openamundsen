@@ -1,10 +1,13 @@
+import logging
+
 import numpy as np
-from loguru import logger
 
 from openamundsen import constants as c
 from openamundsen import meteo
 
 from .soiltexture import SoilTextureClass
+
+logger = logging.getLogger(__name__)
 
 # Default soil water characteristics for different soil types (from Table 19 in Allen et al. (1998))
 DEFAULT_SOIL_WATER_CONTENTS_AT_FIELD_CAPACITY = {  # m3 m-3

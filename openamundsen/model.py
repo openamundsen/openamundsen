@@ -1,12 +1,11 @@
+import logging
 import os
-import sys
 import time
 
 import numba
 import numpy as np
 import pandas as pd
 import rasterio
-from loguru import logger
 
 from openamundsen import (
     conf,
@@ -25,6 +24,8 @@ from openamundsen import (
 )
 
 from .landcover import LandCover
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAmundsen:
@@ -216,7 +217,7 @@ class OpenAmundsen:
             self.run_single()
 
         time_diff = pd.Timedelta(seconds=(time.time() - start_time))
-        logger.success("Model run finished. Runtime: " + str(time_diff))
+        logger.info("Model run finished. Runtime: " + str(time_diff))
 
     def run_single(self):
         """
@@ -366,21 +367,7 @@ class OpenAmundsen:
         """
         Configure the logger.
         """
-        # Remove all handlers and re-add default handler, filtering out openAMUNDSEN messages
-        logger.remove()
-        logger.add(sys.stderr, filter=lambda record: not record["name"].startswith("openamundsen."))
-
-        # Add handler for openAMUNDSEN messages
-        log_format = (
-            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
-            + "<level>{message}</level>"
-        )
-        logger.add(
-            sys.stderr,
-            format=log_format,
-            filter="openamundsen",
-            level=self.config.log_level,
-        )
+        logging.getLogger("openamundsen").setLevel(self.config.log_level)
 
     def _initialize_grid(self):
         """

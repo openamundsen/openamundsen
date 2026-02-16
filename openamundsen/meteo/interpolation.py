@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import logging
 from typing import Literal
 
 import numpy as np
 import pandas as pd
 import pwlf
-from loguru import logger
 
 from openamundsen import constants, interpolation, meteo, util
+
+logger = logging.getLogger(__name__)
 
 
 def _param_station_data(ds, param, date):

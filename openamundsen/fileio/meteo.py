@@ -1,13 +1,15 @@
+import logging
 from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 import xarray as xr
-from loguru import logger
 
 from openamundsen import constants, errors, forcing, util
 from openamundsen import meteo as oameteo
+
+logger = logging.getLogger(__name__)
 
 
 def read_meteo_data(

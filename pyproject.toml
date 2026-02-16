@@ -22,7 +22,6 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
     "cerberus",
-    "loguru",
     "munch",
     "netCDF4",
     "numba >= 0.50.1",

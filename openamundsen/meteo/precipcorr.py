@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pandas as pd
-from loguru import logger
 
 from openamundsen import constants, meteo
+
+logger = logging.getLogger(__name__)
 
 # Transfer function coefficents for 10 m wind speeds from [2] (Table 3).
 # Values in the tuples correspond to (a, b, c, max_U).
