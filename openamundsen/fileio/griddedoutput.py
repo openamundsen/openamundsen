@@ -131,6 +131,12 @@ class GriddedOutputManager:
         self.model = model
         self.fields = fields
         self.format = config.format
+        self.layout = config.layout
+        if self.layout == "roi_pixel" and self.format not in ("netcdf", "memory"):
+            raise errors.ConfigurationError(
+                'Layout "roi_pixel" is only supported for NetCDF and memory grid outputs'
+            )
+
         self.nc_file_created = False
         self.data = None
 
@@ -235,7 +241,15 @@ class GriddedOutputManager:
                     data = field.data
 
                 if self.format == "netcdf":
-                    ds[field.output_name][date_idx, :, :] = data
+                    if self.layout == "grid":
+                        ds[field.output_name][date_idx, :, :] = data
+                    elif self.layout == "roi_pixel":
+                        if data.ndim == 2:
+                            ds[field.output_name][date_idx, :] = data[self.model.grid.roi]
+                        else:
+                            ds[field.output_name][date_idx, :, :] = data[:, self.model.grid.roi]
+                    else:
+                        raise NotImplementedError
 
                     if append:
                         field_time_dim = ds[field.output_name].dimensions[0]
@@ -302,7 +316,19 @@ class GriddedOutputManager:
                                 **rio_meta,
                             )
                 elif self.format == "memory":
-                    self.data[field.output_name].values[date_idx, :, :] = data
+                    if self.layout == "grid":
+                        self.data[field.output_name].values[date_idx, :, :] = data
+                    elif self.layout == "roi_pixel":
+                        if data.ndim == 2:
+                            self.data[field.output_name].values[date_idx, :] = data[
+                                self.model.grid.roi
+                            ]
+                        else:
+                            self.data[field.output_name].values[date_idx, :, :] = data[
+                                :, self.model.grid.roi
+                            ]
+                    else:
+                        raise NotImplementedError
                 else:
                     raise NotImplementedError
 
@@ -387,24 +413,35 @@ class GriddedOutputManager:
                 time_attrs,
             )
 
-        coords["x"] = (
-            ["x"],
-            x_coords,
-            {
-                "standard_name": "projection_x_coordinate",
-                "long_name": "x coordinate of projection",
-                "units": "m",
-            },
-        )
-        coords["y"] = (
-            ["y"],
-            y_coords,
-            {
-                "standard_name": "projection_y_coordinate",
-                "long_name": "y coordinate of projection",
-                "units": "m",
-            },
-        )
+        if self.layout == "grid":
+            coords["x"] = (
+                ["x"],
+                x_coords,
+                {
+                    "standard_name": "projection_x_coordinate",
+                    "long_name": "x coordinate of projection",
+                    "units": "m",
+                },
+            )
+            coords["y"] = (
+                ["y"],
+                y_coords,
+                {
+                    "standard_name": "projection_y_coordinate",
+                    "long_name": "y coordinate of projection",
+                    "units": "m",
+                },
+            )
+        elif self.layout == "roi_pixel":
+            coords["pixel"] = (
+                ["pixel"],
+                self.model.grid.roi_idxs_flat,
+                {
+                    "long_name": "flattened grid pixel index in row-major order",
+                },
+            )
+        else:
+            raise NotImplementedError
         coords["crs"] = (
             [],
             np.array(0),
@@ -421,12 +458,18 @@ class GriddedOutputManager:
             for field in self.fields:
                 meta = self.model.state.meta(field.var)
                 dtype, _ = self._field_dtype_and_fill_value(field)
+                if self.layout == "grid":
+                    num_pixels = len(y_coords) * len(x_coords)
+                elif self.layout == "roi_pixel":
+                    num_pixels = len(self.model.grid.roi_idxs_flat)
+                else:
+                    raise NotImplementedError
+
                 dataset_size += (
                     np.dtype(dtype).itemsize
                     * len(field.write_dates)
                     * max(meta.dim3, 1)
-                    * len(y_coords)
-                    * len(x_coords)
+                    * num_pixels
                 )
 
             dataset_size_gib = dataset_size / 1024**3
@@ -455,10 +498,19 @@ class GriddedOutputManager:
             attrs["_FillValue"] = fill_value
 
             if meta.dim3 == 0:  # 2-dimensional variable
+                if self.layout == "grid":
+                    dims = [field_time_var, "y", "x"]
+                    shape = (len(field.write_dates), len(y_coords), len(x_coords))
+                elif self.layout == "roi_pixel":
+                    dims = [field_time_var, "pixel"]
+                    shape = (len(field.write_dates), len(self.model.grid.roi_idxs_flat))
+                else:
+                    raise NotImplementedError
+
                 data[field.output_name] = (
-                    [field_time_var, "y", "x"],
+                    dims,
                     full(
-                        (len(field.write_dates), len(y_coords), len(x_coords)),
+                        shape,
                         fill_value,
                         dtype=dtype,
                     ),
@@ -478,10 +530,23 @@ class GriddedOutputManager:
                 else:
                     three_dim_coords[coord_name] = meta.dim3
 
+                if self.layout == "grid":
+                    dims = [field_time_var, coord_name, "y", "x"]
+                    shape = (len(field.write_dates), meta.dim3, len(y_coords), len(x_coords))
+                elif self.layout == "roi_pixel":
+                    dims = [field_time_var, coord_name, "pixel"]
+                    shape = (
+                        len(field.write_dates),
+                        meta.dim3,
+                        len(self.model.grid.roi_idxs_flat),
+                    )
+                else:
+                    raise NotImplementedError
+
                 data[field.output_name] = (
-                    [field_time_var, coord_name, "y", "x"],
+                    dims,
                     full(
-                        (len(field.write_dates), meta.dim3, len(y_coords), len(x_coords)),
+                        shape,
                         fill_value,
                         dtype=dtype,
                     ),
@@ -494,6 +559,14 @@ class GriddedOutputManager:
 
         ds = xr.Dataset(data, coords=coords)
         ds.attrs["Conventions"] = "CF-1.7"
+        ds.attrs["openamundsen_output_layout"] = self.layout
+        if self.layout == "roi_pixel":
+            grid = self.model.grid
+            ds.attrs["nrows"] = grid.rows
+            ds.attrs["ncols"] = grid.cols
+            ds.attrs["resolution"] = grid.resolution
+            ds.attrs["xllcorner"] = grid.transform.xoff
+            ds.attrs["yllcorner"] = grid.transform.yoff - grid.rows * grid.resolution
 
         _, datetime_units, calendar = xr.coding.times.encode_cf_datetime(self.model.dates)
         for time_var in times:

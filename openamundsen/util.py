@@ -135,6 +135,7 @@ class ModelGrid(Munch):
         - xs, ys: 1d-arrays containing the x and y coordinates in the grid CRS.
         - X, Y, 2d-arrays containing the x and y coordinates for each grid point.
         - all_points: (N, 2)-array containing (x, y) coordinates of all grid points.
+        - roi_xs, roi_ys: 1d-arrays containing the x and y coordinates of all ROI points.
         - roi_points: (N, 2)-array containing (x, y) coordinates of all ROI points.
         - roi_idxs: (N, 2)-array containing (row, col) indexes of all ROI points.
         - roi_idxs_flat: 1d-array containing the flattened (1d) indexes of all ROI points
@@ -204,9 +205,9 @@ class ModelGrid(Munch):
         if "roi" not in self:
             self.roi = np.ones((self.rows, self.cols), dtype=bool)
 
-        roi_xs = self.X[self.roi]
-        roi_ys = self.Y[self.roi]
-        self.roi_points = np.column_stack((roi_xs, roi_ys))
+        self.roi_xs = self.X[self.roi]
+        self.roi_ys = self.Y[self.roi]
+        self.roi_points = np.column_stack((self.roi_xs, self.roi_ys))
         self.roi_idxs = np.array(np.where(self.roi)).T
         self.roi_idxs_flat = np.where(self.roi.flat)[0]
 
