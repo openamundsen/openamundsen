@@ -32,3 +32,10 @@ class ColoredFormatter(logging.Formatter):
             text += "\n" + self.formatStack(record.stack_info)
 
         return text
+
+
+def create_default_stream_handler():
+    handler = logging.StreamHandler()
+    handler.setFormatter(ColoredFormatter())
+    handler._openamundsen_default_handler = True
+    return handler

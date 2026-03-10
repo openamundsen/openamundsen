@@ -13,6 +13,7 @@ from openamundsen import (
     errors,
     fileio,
     forcing,
+    logformat,
     modules,
     statevars,
     surface,
@@ -365,9 +366,38 @@ class OpenAmundsen:
 
     def configure_logger(self):
         """
-        Configure the logger.
+        Configure logging for openAMUNDSEN.
+
+        If ``enable_default_logging`` is true and the host application has not configured logging
+        yet, attach the built-in colored stderr handler to the ``openamundsen`` logger. Otherwise,
+        do not install a default handler and let log records propagate to application-managed
+        logging.
         """
-        logging.getLogger("openamundsen").setLevel(self.config.log_level)
+        package_logger = logging.getLogger("openamundsen")
+        package_logger.setLevel(self.config.log_level)
+
+        default_handlers = [
+            handler
+            for handler in package_logger.handlers
+            if getattr(handler, "_openamundsen_default_handler", False)
+        ]
+        for handler in default_handlers:
+            package_logger.removeHandler(handler)
+            handler.close()
+
+        package_handlers = [
+            handler
+            for handler in package_logger.handlers
+            if not isinstance(handler, logging.NullHandler)
+        ]
+        root_logger = logging.getLogger()
+        host_logging_configured = bool(package_handlers or root_logger.handlers)
+
+        if self.config.enable_default_logging and not host_logging_configured:
+            package_logger.addHandler(logformat.create_default_stream_handler())
+            package_logger.propagate = False
+        else:
+            package_logger.propagate = True
 
     def _initialize_grid(self):
         """
