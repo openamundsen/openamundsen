@@ -9,13 +9,15 @@ _LEVEL_COLORS = {
 }
 _RESET = "\033[0m"
 _GREEN = "\033[32m"
+_LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
+_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 class ColoredFormatter(logging.Formatter):
     """Formatter that replicates the loguru-style colored output."""
 
     def format(self, record):
-        timestamp = self.formatTime(record, "%Y-%m-%d %H:%M:%S")
+        timestamp = self.formatTime(record, _DATE_FORMAT)
         level_color = _LEVEL_COLORS.get(record.levelname, "")
         level = f"{record.levelname: <8}"
         message = record.getMessage()
@@ -34,8 +36,17 @@ class ColoredFormatter(logging.Formatter):
         return text
 
 
-def create_default_stream_handler():
-    handler = logging.StreamHandler()
-    handler.setFormatter(ColoredFormatter())
+def _use_colors(stream):
+    return hasattr(stream, "isatty") and stream.isatty()
+
+
+def create_default_stream_handler(stream=None):
+    handler = logging.StreamHandler(stream)
+    if _use_colors(handler.stream):
+        formatter = ColoredFormatter()
+    else:
+        formatter = logging.Formatter(_LOG_FORMAT, datefmt=_DATE_FORMAT)
+
+    handler.setFormatter(formatter)
     handler._openamundsen_default_handler = True
     return handler
