@@ -238,6 +238,7 @@ output_data:
   # Configuration for gridded outputs
   grids:
     format: netcdf # "netcdf", "ascii", "geotiff" or "memory"
+    layout: grid # "grid" (full y/x grid) or "roi_pixel" (1D ROI pixels, NetCDF/memory only)
     variables:
       - var: meteo.precip # internal variable name
         name: precip_month # NetCDF output variable name

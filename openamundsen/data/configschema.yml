@@ -197,6 +197,13 @@ output_data:
             - memory
           default: netcdf
 
+        layout: # output layout for NetCDF/memory grids ("grid": y/x, "roi_pixel": ROI-only 1D pixels)
+          type: string
+          allowed:
+            - grid
+            - roi_pixel
+          default: grid
+
         append: # when using NetCDF output, append data instead of creating a full-size dataset beforehand
           type: boolean
           default: true

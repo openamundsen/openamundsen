@@ -8,6 +8,7 @@ import pandas.tseries.frequencies
 import pyproj
 import rasterio
 import ruamel.yaml
+import xarray as xr
 from munch import Munch
 
 from openamundsen import constants
@@ -95,6 +96,89 @@ def raster_filename(kind, config):
     return Path(f"{grids_dir}/{kind}_{domain}_{resolution}.{extension}")
 
 
+def convert_roi_pixel_dataset_to_grid(ds: xr.Dataset) -> xr.Dataset:
+    """
+    Reconstruct a gridded-output dataset with ``layout="roi_pixel"`` to ``layout="grid"``.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset in ROI-pixel layout as produced by openAMUNDSEN gridded output.
+
+    Returns
+    -------
+    xr.Dataset
+        Dataset with all ``pixel`` dimensions expanded to ``y``/``x``.
+    """
+    if ds.attrs.get("openamundsen_output_layout") != "roi_pixel":
+        raise ValueError('Dataset does not use the "roi_pixel" output layout')
+
+    nrows = int(ds.attrs["nrows"])
+    ncols = int(ds.attrs["ncols"])
+    resolution = ds.attrs["resolution"]
+    xllcorner = ds.attrs["xllcorner"]
+    yllcorner = ds.attrs["yllcorner"]
+    pixel_idxs = ds.pixel.values
+
+    x_coords = xllcorner + resolution * (np.arange(ncols) + 0.5)
+    y_coords = yllcorner + resolution * (nrows - np.arange(nrows) - 0.5)
+
+    coords = {}
+    for name, coord in ds.coords.items():
+        if name == "pixel":
+            continue
+        coords[name] = (coord.dims, coord.values, coord.attrs)
+
+    coords["x"] = (
+        ["x"],
+        x_coords,
+        {
+            "standard_name": "projection_x_coordinate",
+            "long_name": "x coordinate of projection",
+            "units": "m",
+        },
+    )
+    coords["y"] = (
+        ["y"],
+        y_coords,
+        {
+            "standard_name": "projection_y_coordinate",
+            "long_name": "y coordinate of projection",
+            "units": "m",
+        },
+    )
+
+    data_vars = {}
+    for name, da in ds.data_vars.items():
+        if "pixel" not in da.dims:
+            data_vars[name] = (da.dims, da.values, da.attrs)
+            continue
+
+        pixel_axis = da.get_axis_num("pixel")
+        values = np.moveaxis(da.values, pixel_axis, -1)
+        fill_value = da.encoding.get("_FillValue", da.attrs.get("_FillValue", np.nan))
+        full_values = np.full((*values.shape[:-1], nrows, ncols), fill_value, dtype=da.dtype)
+        full_values.reshape(*values.shape[:-1], -1)[..., pixel_idxs] = values
+
+        target_order = (
+            *range(pixel_axis),
+            values.ndim - 1,
+            values.ndim,
+            *range(pixel_axis, values.ndim - 1),
+        )
+        full_values = np.transpose(full_values, axes=target_order)
+
+        dims = (*da.dims[:pixel_axis], "y", "x", *da.dims[pixel_axis + 1 :])
+        data_vars[name] = (dims, full_values, da.attrs)
+
+    attrs = dict(ds.attrs)
+    attrs["openamundsen_output_layout"] = "grid"
+    for attr in ("nrows", "ncols", "resolution", "xllcorner", "yllcorner"):
+        del attrs[attr]
+
+    return xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
+
+
 def transform_coords(x, y, src_crs, dst_crs):
     """
     Transform coordinates from one coordinate reference system to another.
@@ -135,6 +219,7 @@ class ModelGrid(Munch):
         - xs, ys: 1d-arrays containing the x and y coordinates in the grid CRS.
         - X, Y, 2d-arrays containing the x and y coordinates for each grid point.
         - all_points: (N, 2)-array containing (x, y) coordinates of all grid points.
+        - roi_xs, roi_ys: 1d-arrays containing the x and y coordinates of all ROI points.
         - roi_points: (N, 2)-array containing (x, y) coordinates of all ROI points.
         - roi_idxs: (N, 2)-array containing (row, col) indexes of all ROI points.
         - roi_idxs_flat: 1d-array containing the flattened (1d) indexes of all ROI points
@@ -204,9 +289,9 @@ class ModelGrid(Munch):
         if "roi" not in self:
             self.roi = np.ones((self.rows, self.cols), dtype=bool)
 
-        roi_xs = self.X[self.roi]
-        roi_ys = self.Y[self.roi]
-        self.roi_points = np.column_stack((roi_xs, roi_ys))
+        self.roi_xs = self.X[self.roi]
+        self.roi_ys = self.Y[self.roi]
+        self.roi_points = np.column_stack((self.roi_xs, self.roi_ys))
         self.roi_idxs = np.array(np.where(self.roi)).T
         self.roi_idxs_flat = np.where(self.roi.flat)[0]
 
