@@ -396,8 +396,6 @@ class OpenAmundsen:
         if self.config.enable_default_logging and not host_logging_configured:
             package_logger.addHandler(logformat.create_default_stream_handler())
             package_logger.propagate = False
-        else:
-            package_logger.propagate = True
 
     def _initialize_grid(self):
         """
