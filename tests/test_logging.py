@@ -53,7 +53,6 @@ def test_default_logging_adds_single_handler():
 
         model.configure_logger()
         assert len(_default_handlers(package_logger)) == 1
-        assert not package_logger.propagate
 
         model.configure_logger()
         assert len(_default_handlers(package_logger)) == 1
@@ -84,14 +83,13 @@ def test_disabled_default_logging_keeps_propagation():
         stream = io.StringIO()
         handler = logging.StreamHandler(stream)
         package_logger.addHandler(handler)
-        package_logger.propagate = False
         logging.getLogger("openamundsen.test").info("plain log message")
         assert "\033[" not in stream.getvalue()
     finally:
         state.restore()
 
 
-def test_host_logging_configuration_disables_default_logging():
+def test_package_logging_configuration_disables_default_logging():
     state = _LogStateRestorer()
     try:
         package_logger = logging.getLogger("openamundsen")
@@ -105,8 +103,8 @@ def test_host_logging_configuration_disables_default_logging():
 
         stream = io.StringIO()
         handler = logging.StreamHandler(stream)
-        root_logger.addHandler(handler)
-        root_logger.setLevel(logging.INFO)
+        package_logger.addHandler(handler)
+        package_logger.setLevel(logging.INFO)
 
         config = base_config()
         config.enable_default_logging = True

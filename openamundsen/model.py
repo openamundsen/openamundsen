@@ -53,6 +53,7 @@ class OpenAmundsen:
         self.date = None
         self.date_idx = None
         self._numba_threads = None
+        self._logger_configured_pid = None
 
     def initialize(self, meteo=None, meteo_callback=None):
         """
@@ -75,7 +76,7 @@ class OpenAmundsen:
         )
         self._require_glaciers = config.glaciers.enabled
 
-        self.configure_logger()
+        self._ensure_logger_configured()
 
         self._prepare_time_steps()
         self._initialize_grid()
@@ -225,6 +226,8 @@ class OpenAmundsen:
         Process the next time step, i.e., increment the date counter and call the methods for
         preparing the meteorological fields and the interface to the submodules.
         """
+        self._ensure_logger_configured()
+
         # Set numba thread count for this timestep (and restore afterwards)
         if self._numba_threads is not None:
             prev_num_threads = numba.get_num_threads()
@@ -390,12 +393,23 @@ class OpenAmundsen:
             for handler in package_logger.handlers
             if not isinstance(handler, logging.NullHandler)
         ]
-        root_logger = logging.getLogger()
-        host_logging_configured = bool(package_handlers or root_logger.handlers)
+        host_logging_configured = bool(package_handlers)
 
         if self.config.enable_default_logging and not host_logging_configured:
             package_logger.addHandler(logformat.create_default_stream_handler())
-            package_logger.propagate = False
+
+        self._logger_configured_pid = os.getpid()
+
+    def _ensure_logger_configured(self):
+        """
+        Ensure logging has been configured for the current process.
+
+        Model instances can be passed to spawned worker processes where logger handlers are not
+        inherited, but the instance state is. Tracking the PID ensures that logging is configured
+        again in the child process without reconfiguring it on every time step.
+        """
+        if self._logger_configured_pid != os.getpid():
+            self.configure_logger()
 
     def _initialize_grid(self):
         """
