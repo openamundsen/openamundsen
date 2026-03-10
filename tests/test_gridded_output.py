@@ -388,52 +388,51 @@ def test_compress(fmt, tmp_path):
                     assert ds.compression is None
 
 
-@pytest.mark.parametrize("fmt", ["netcdf", "memory"])
-def test_roi_pixel_layout(fmt, tmp_path):
+def test_roi_pixel_layout():
     config = base_config()
     config.start_date = "2020-01-15 00:00"
-    config.end_date = "2020-01-15 00:00"
-    config.results_dir = tmp_path
-    grid_cfg = config.output_data.grids
-    grid_cfg.format = fmt
-    grid_cfg.layout = "roi_pixel"
-    grid_cfg.variables = [{"var": "base.dem"}]
+    config.end_date = "2020-01-15 21:00"
+    config.output_data.grids.variables = [
+        {"var": "meteo.temp"},
+        {"var": "meteo.rel_hum"},
+        {"var": "meteo.sw_in"},
+    ]
 
+    config.output_data.grids.layout = "grid"
     model = oa.OpenAmundsen(config)
     model.initialize()
     model.run()
+    ds_grid = model.gridded_output.data
 
-    if fmt == "netcdf":
-        ds = xr.load_dataset(tmp_path / "output_grids.nc")
-    else:
-        ds = model.gridded_output.data
+    config.output_data.grids.layout = "roi_pixel"
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+    ds_pixel = model.gridded_output.data
 
-    assert ds.attrs["openamundsen_output_layout"] == "roi_pixel"
-    assert ds.attrs["nrows"] == model.grid.rows
-    assert ds.attrs["ncols"] == model.grid.cols
-    assert ds.attrs["resolution"] == model.grid.resolution
-    assert ds.attrs["xllcorner"] == model.grid.transform.xoff
-    assert ds.attrs["yllcorner"] == (
+    assert ds_pixel.attrs["openamundsen_output_layout"] == "roi_pixel"
+    assert ds_pixel.attrs["nrows"] == model.grid.rows
+    assert ds_pixel.attrs["ncols"] == model.grid.cols
+    assert ds_pixel.attrs["resolution"] == model.grid.resolution
+    assert ds_pixel.attrs["xllcorner"] == model.grid.transform.xoff
+    assert ds_pixel.attrs["yllcorner"] == (
         model.grid.transform.yoff - model.grid.rows * model.grid.resolution
     )
 
-    assert "pixel" in ds.coords
-    assert ds.sizes["pixel"] == model.grid.roi.sum()
-    assert ds.dem.dims[-1] == "pixel"
-    assert "x" not in ds.dem.dims
-    assert "y" not in ds.dem.dims
+    assert "pixel" in ds_pixel.coords
+    assert ds_pixel.sizes["pixel"] == model.grid.roi.sum()
+    assert ds_pixel.temp.dims[-1] == "pixel"
+    assert "x" not in ds_pixel.temp.dims
+    assert "y" not in ds_pixel.temp.dims
 
-    pixel_idxs = ds.pixel.values
-    dem_roi = ds.dem.values[0]
-    dem_full = np.full((model.grid.rows, model.grid.cols), np.nan)
-    dem_full.flat[pixel_idxs] = dem_roi
-
-    assert_allclose(model.state.base.dem[model.grid.roi], dem_full[model.grid.roi])
-
+    pixel_idxs = ds_pixel.pixel.values
     roi_reconstructed = np.zeros(model.grid.rows * model.grid.cols, dtype=bool)
     roi_reconstructed[pixel_idxs] = True
     roi_reconstructed = roi_reconstructed.reshape(model.grid.shape)
     assert np.array_equal(model.grid.roi, roi_reconstructed)
+
+    ds_pixel_reconstructed = oa.util.convert_roi_pixel_dataset_to_grid(ds_pixel)
+    xr.testing.assert_identical(ds_grid, ds_pixel_reconstructed)
 
 
 @pytest.mark.parametrize("fmt", ["ascii", "geotiff"])
