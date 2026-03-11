@@ -212,6 +212,8 @@ class OpenAmundsen:
         Start the model run. Before calling this method, the model must be
         properly initialized by calling `initialize()`.
         """
+        # Refresh logging for the current PID (in case the model has been initialized in another
+        # process, e.g. with multiprocessing)
         self._ensure_logger_configured()
 
         logger.info("Starting model run")
@@ -228,6 +230,8 @@ class OpenAmundsen:
         Process the next time step, i.e., increment the date counter and call the methods for
         preparing the meteorological fields and the interface to the submodules.
         """
+        # Refresh logging for the current PID (in case the model has been initialized in another
+        # process, e.g. with multiprocessing)
         self._ensure_logger_configured()
 
         # Set numba thread count for this timestep (and restore afterwards)
