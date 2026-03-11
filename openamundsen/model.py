@@ -810,8 +810,9 @@ class OpenAmundsen:
 
         m = self.state.meteo
         roi = self.grid.roi
+        roi_dem = self.state.base.dem[roi]
 
-        m.atmos_press[roi] = oameteo.atmospheric_pressure(self.state.base.dem[roi])
+        m.atmos_press[roi] = oameteo.atmospheric_pressure(roi_dem)
         m.sat_vap_press[roi] = oameteo.saturation_vapor_pressure(m.temp[roi])
         m.vap_press[roi] = oameteo.vapor_pressure(m.temp[roi], m.rel_hum[roi])
         m.spec_hum[roi] = oameteo.specific_humidity(m.atmos_press[roi], m.vap_press[roi])
@@ -847,6 +848,15 @@ class OpenAmundsen:
             threshold_temp=self.config.meteo.precipitation_phase.threshold_temp,
             temp_range=self.config.meteo.precipitation_phase.temp_range,
         )
+        if self.config.meteo.precipitation_phase.enforce_no_snow_below_rain:
+            # Ensure that there is no snow falling at elevations below the highest elevation where
+            # precipitation is 100% rain (might happen in inversion situations otherwise).
+            # Note: this is not fully consistent because in correct_station_precipitation() still
+            # the "wrong" snowfall fraction is used.
+            rain_pixels = snowfall_frac == 0
+            if np.any(rain_pixels):
+                max_rain_elev = np.max(roi_dem[rain_pixels])
+                snowfall_frac = np.where(roi_dem <= max_rain_elev, 0, snowfall_frac)
         m.snowfall[roi] = snowfall_frac * m.precip[roi]
         m.rainfall[roi] = (1 - snowfall_frac) * m.precip[roi]
 
