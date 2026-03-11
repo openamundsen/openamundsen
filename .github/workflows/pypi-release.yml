@@ -7,29 +7,31 @@ on:
     tags:
       - 'v*'
 
+env:
+  PYTHON_VERSION: "3.13"
+
 jobs:
   build-artifacts:
     runs-on: ubuntu-latest
     if: github.repository == 'openamundsen/openamundsen'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
         name: Install Python
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install setuptools setuptools-scm wheel twine build
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Build tarball and wheels
         run: |
-          python -m build --sdist --wheel .
+          uv build --sdist --wheel .
 
       - name: Check build artifacts
         run: |
-          python -m twine check dist/*
+          uv tool run twine check dist/*
           pwd
 
       - uses: actions/upload-artifact@v4
@@ -43,10 +45,12 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: actions/setup-python@v6
         name: Install Python
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -69,9 +73,9 @@ jobs:
         if: github.event_name == 'push'
         run: |
           sleep 3
-          python -m pip install --upgrade pip
-          python -m pip install --extra-index-url https://test.pypi.org/simple --upgrade openamundsen
-          python -c "import openamundsen as oa; print(f'openAMUNDSEN v{oa.__version__}')"
+          uv venv .venv-test --python ${{ env.PYTHON_VERSION }}
+          uv pip install --python .venv-test/bin/python --extra-index-url https://test.pypi.org/simple --upgrade openamundsen
+          .venv-test/bin/python -c "import openamundsen as oa; print(f'openAMUNDSEN v{oa.__version__}')"
 
   upload-to-pypi:
     needs: test-built-dist
