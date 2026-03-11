@@ -377,7 +377,6 @@ class OpenAmundsen:
         logging.
         """
         package_logger = logging.getLogger("openamundsen")
-        package_logger.setLevel(self.config.log_level)
 
         default_handlers = [
             handler
@@ -395,8 +394,12 @@ class OpenAmundsen:
         ]
         host_logging_configured = bool(package_handlers)
 
-        if self.config.enable_default_logging and not host_logging_configured:
-            package_logger.addHandler(logformat.create_default_stream_handler())
+        if not host_logging_configured:
+            if self.config.enable_default_logging:
+                package_logger.setLevel(self.config.log_level)
+                package_logger.addHandler(logformat.create_default_stream_handler())
+            else:
+                package_logger.setLevel(logging.NOTSET)
 
         self._logger_configured_pid = os.getpid()
 

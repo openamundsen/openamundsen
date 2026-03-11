@@ -79,6 +79,7 @@ def test_disabled_default_logging_keeps_propagation():
 
         assert _default_handlers(package_logger) == []
         assert package_logger.propagate
+        assert package_logger.level == logging.NOTSET
 
         stream = io.StringIO()
         handler = logging.StreamHandler(stream)
@@ -113,9 +114,44 @@ def test_package_logging_configuration_disables_default_logging():
 
         assert _default_handlers(package_logger) == []
         assert package_logger.propagate
+        assert package_logger.level == logging.INFO
 
         logging.getLogger("openamundsen.test").info("host-managed log message")
         assert "host-managed log message" in stream.getvalue()
         assert "\033[" not in stream.getvalue()
+    finally:
+        state.restore()
+
+
+def test_root_logging_configuration_keeps_root_log_level():
+    state = _LogStateRestorer()
+    try:
+        package_logger = logging.getLogger("openamundsen")
+        root_logger = logging.getLogger()
+        package_logger.handlers[:] = [
+            handler
+            for handler in package_logger.handlers
+            if isinstance(handler, logging.NullHandler)
+        ]
+        root_logger.handlers[:] = []
+
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream)
+        root_logger.addHandler(handler)
+        root_logger.setLevel(logging.WARNING)
+
+        config = base_config()
+        config.enable_default_logging = False
+        config.log_level = "INFO"
+        model = oa.OpenAmundsen(config)
+        model.configure_logger()
+
+        assert package_logger.level == logging.NOTSET
+
+        logging.getLogger("openamundsen.test").info("suppressed info message")
+        logging.getLogger("openamundsen.test").warning("visible warning message")
+
+        assert "suppressed info message" not in stream.getvalue()
+        assert "visible warning message" in stream.getvalue()
     finally:
         state.restore()
