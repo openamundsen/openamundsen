@@ -443,6 +443,11 @@ class OpenAmundsen:
 
         dem_file = util.raster_filename("dem", self.config)
         meta = fileio.read_raster_metadata(dem_file, crs=self.config.crs)
+        if not meta["resolution"] == self.config.resolution:
+            raise errors.RasterFileError(
+                f"DEM resolution ({meta['resolution']}) does not match config resolution "
+                f"({self.config.resolution})"
+            )
         logger.info(f"Grid has dimensions {meta['rows']}x{meta['cols']}")
 
         grid = util.ModelGrid(meta)
@@ -692,6 +697,11 @@ class OpenAmundsen:
 
         logger.info(f"Reading extended DEM ({extended_dem_file})")
         ext_meta = fileio.read_raster_metadata(extended_dem_file, crs=self.config.crs)
+        if not ext_meta["resolution"] == self.config.resolution:
+            raise errors.RasterFileError(
+                f"Extended DEM resolution ({ext_meta['resolution']}) does not match config "
+                f"resolution ({self.config.resolution})"
+            )
         ext_dem = fileio.read_raster_file(
             extended_dem_file,
             fill_value=np.nan,

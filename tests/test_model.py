@@ -1,3 +1,4 @@
+import textwrap
 from pathlib import Path
 
 import numpy as np
@@ -258,6 +259,34 @@ def test_simulation_timezone(tmp_path):
     ds2 = model2.point_output.data
     ds2["time"] = ds2["time"] + pd.Timedelta(hours=1)
     xr.testing.assert_identical(ds1, ds2)
+
+
+def test_dem_resolution_must_match_config(tmp_path):
+    RASTER_TEMPLATE = textwrap.dedent("""
+    ncols        6
+    nrows        5
+    xllcorner    630800
+    yllcorner    5180500
+    cellsize     {cellsize}
+    nodata_value -9999
+    1 1 1 1 1 1
+    1 1 1 1 1 1
+    1 1 1 1 1 1
+    1 1 1 1 1 1
+    1 1 1 1 1 1
+    """).strip()
+
+    grids_dir = tmp_path / "grids"
+    grids_dir.mkdir()
+    dem_file = grids_dir / "dem_rofental_1000.asc"
+
+    config = base_config()
+    config.input_data.grids.dir = str(grids_dir)
+
+    dem_file.write_text(RASTER_TEMPLATE.format(cellsize=500))
+    model = oa.OpenAmundsen(config)
+    with pytest.raises(oa.errors.RasterFileError):
+        model.initialize()
 
 
 def test_roi(tmp_path):
