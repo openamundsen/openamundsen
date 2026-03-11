@@ -149,6 +149,39 @@ def test_timestep_properties():
     )
 
 
+def test_run_cannot_be_called_multiple_times():
+    config = base_config()
+    config.start_date = "2020-01-15 12:00"
+    config.end_date = "2020-01-15 12:00"
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run()
+
+    with pytest.raises(
+        oa.errors.OpenAmundsenRuntimeError,
+        match=r"run\(\) cannot be called multiple times",
+    ):
+        model.run()
+
+
+def test_run_cannot_be_called_after_run_single():
+    config = base_config()
+    config.start_date = "2020-01-15 12:00"
+    config.end_date = "2020-01-15 13:00"
+    config.timestep = "h"
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.run_single()
+
+    with pytest.raises(
+        oa.errors.OpenAmundsenRuntimeError,
+        match=r"run\(\) cannot be called after run_single\(\) has been called",
+    ):
+        model.run()
+
+
 @pytest.mark.slow
 def test_state_variable_reset():
     config = base_config()
