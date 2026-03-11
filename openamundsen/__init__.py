@@ -1,6 +1,11 @@
+import logging
+
 from . import constants, errors, terrain
 from .conf import Configuration, parse_config, read_config
 from .model import Model, OpenAmundsen
+
+_logger = logging.getLogger("openamundsen")
+_logger.addHandler(logging.NullHandler())
 
 
 # Get version (method as used by matplotlib: https://github.com/matplotlib/matplotlib/blob/bcc1ce8461f5b6e874baaaa02ef776d0243a4abe/lib/matplotlib/__init__.py#L133-L151)

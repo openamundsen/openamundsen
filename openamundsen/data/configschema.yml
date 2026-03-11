@@ -41,9 +41,13 @@ simulation_timezone: # timezone of the input/output data
   nullable: true
   default:
 
-log_level:  # python logging-compatible log level (e.g. DEBUG or INFO)
+log_level:  # python logging-compatible log level (e.g. DEBUG or INFO) for when enable_default_logging is true
   type: string
   default: INFO
+
+enable_default_logging: # enable the built-in default logging handler if the application has not configured logging
+  type: boolean
+  default: true
 
 numba_threads:  # number of threads for numba parallel regions ("auto", integer, or null)
   nullable: true

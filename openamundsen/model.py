@@ -1,12 +1,11 @@
+import logging
 import os
-import sys
 import time
 
 import numba
 import numpy as np
 import pandas as pd
 import rasterio
-from loguru import logger
 
 from openamundsen import (
     conf,
@@ -14,6 +13,7 @@ from openamundsen import (
     errors,
     fileio,
     forcing,
+    logformat,
     modules,
     statevars,
     surface,
@@ -25,6 +25,8 @@ from openamundsen import (
 )
 
 from .landcover import LandCover
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAmundsen:
@@ -51,6 +53,7 @@ class OpenAmundsen:
         self.date = None
         self.date_idx = None
         self._numba_threads = None
+        self._logger_configured_pid = None
 
     def initialize(self, meteo=None, meteo_callback=None):
         """
@@ -73,7 +76,7 @@ class OpenAmundsen:
         )
         self._require_glaciers = config.glaciers.enabled
 
-        self.configure_logger()
+        self._ensure_logger_configured()
 
         self._prepare_time_steps()
         self._initialize_grid()
@@ -209,6 +212,10 @@ class OpenAmundsen:
         Start the model run. Before calling this method, the model must be
         properly initialized by calling `initialize()`.
         """
+        # Refresh logging for the current PID (in case the model has been initialized in another
+        # process, e.g. with multiprocessing)
+        self._ensure_logger_configured()
+
         logger.info("Starting model run")
         start_time = time.time()
 
@@ -216,13 +223,17 @@ class OpenAmundsen:
             self.run_single()
 
         time_diff = pd.Timedelta(seconds=(time.time() - start_time))
-        logger.success("Model run finished. Runtime: " + str(time_diff))
+        logger.info("Model run finished. Runtime: " + str(time_diff))
 
     def run_single(self):
         """
         Process the next time step, i.e., increment the date counter and call the methods for
         preparing the meteorological fields and the interface to the submodules.
         """
+        # Refresh logging for the current PID (in case the model has been initialized in another
+        # process, e.g. with multiprocessing)
+        self._ensure_logger_configured()
+
         # Set numba thread count for this timestep (and restore afterwards)
         if self._numba_threads is not None:
             prev_num_threads = numba.get_num_threads()
@@ -364,23 +375,50 @@ class OpenAmundsen:
 
     def configure_logger(self):
         """
-        Configure the logger.
-        """
-        # Remove all handlers and re-add default handler, filtering out openAMUNDSEN messages
-        logger.remove()
-        logger.add(sys.stderr, filter=lambda record: not record["name"].startswith("openamundsen."))
+        Configure logging for openAMUNDSEN.
 
-        # Add handler for openAMUNDSEN messages
-        log_format = (
-            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
-            + "<level>{message}</level>"
-        )
-        logger.add(
-            sys.stderr,
-            format=log_format,
-            filter="openamundsen",
-            level=self.config.log_level,
-        )
+        If ``enable_default_logging`` is true and the host application has not configured logging
+        yet, attach the built-in colored stderr handler to the ``openamundsen`` logger. Otherwise,
+        do not install a default handler and let log records propagate to application-managed
+        logging.
+        """
+        package_logger = logging.getLogger("openamundsen")
+
+        default_handlers = [
+            handler
+            for handler in package_logger.handlers
+            if getattr(handler, "_openamundsen_default_handler", False)
+        ]
+        for handler in default_handlers:
+            package_logger.removeHandler(handler)
+            handler.close()
+
+        package_handlers = [
+            handler
+            for handler in package_logger.handlers
+            if not isinstance(handler, logging.NullHandler)
+        ]
+        host_logging_configured = bool(package_handlers)
+
+        if not host_logging_configured:
+            if self.config.enable_default_logging:
+                package_logger.setLevel(self.config.log_level)
+                package_logger.addHandler(logformat.create_default_stream_handler())
+            else:
+                package_logger.setLevel(logging.NOTSET)
+
+        self._logger_configured_pid = os.getpid()
+
+    def _ensure_logger_configured(self):
+        """
+        Ensure logging has been configured for the current process.
+
+        Model instances can be passed to spawned worker processes where logger handlers are not
+        inherited, but the instance state is. Tracking the PID ensures that logging is configured
+        again in the child process without reconfiguring it on every time step.
+        """
+        if self._logger_configured_pid != os.getpid():
+            self.configure_logger()
 
     def _initialize_grid(self):
         """

@@ -1,3 +1,4 @@
+import logging
 import pprint
 from dataclasses import dataclass
 
@@ -5,9 +6,10 @@ import numpy as np
 import pandas as pd
 import rasterio
 import xarray as xr
-from loguru import logger
 
 from openamundsen import constants, errors, util
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

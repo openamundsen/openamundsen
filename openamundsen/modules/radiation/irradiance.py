@@ -1,6 +1,7 @@
+import logging
+
 import numpy as np
 import xarray as xr
-from loguru import logger
 
 from openamundsen import (
     constants,
@@ -10,6 +11,8 @@ from openamundsen import (
 )
 
 from .clearsky import _clear_sky_shortwave_irradiance
+
+logger = logging.getLogger(__name__)
 
 
 def clear_sky_shortwave_irradiance(model):

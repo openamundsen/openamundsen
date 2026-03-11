@@ -1,8 +1,11 @@
+import logging
+
 import numpy as np
-from loguru import logger
 
 from openamundsen import constants as c
 from openamundsen.modules.snow import CryoLayerID
+
+logger = logging.getLogger(__name__)
 
 MIN_ICE_THICKNESS = 10.0  # minimum required ice thickness for applying the delta h function (m)
 TERMINUS_MASS_BALANCE_ELEVATION_PERCENTAGE = 10.0  # (%)

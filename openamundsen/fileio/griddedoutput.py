@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 
 import netCDF4
@@ -5,9 +6,10 @@ import numpy as np
 import pandas as pd
 import pyproj
 import xarray as xr
-from loguru import logger
 
 from openamundsen import constants, errors, fileio, util
+
+logger = logging.getLogger(__name__)
 
 try:
     import dask.array
