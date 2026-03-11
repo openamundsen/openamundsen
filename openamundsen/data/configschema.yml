@@ -135,6 +135,10 @@ input_data:
           type: boolean
           default: false
 
+        enable_missing_data_checks: # raise an error if no meteo data is available for the requested period
+          type: boolean
+          default: true
+
         filters:
           type: list
           default:

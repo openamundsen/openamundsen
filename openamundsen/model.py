@@ -784,6 +784,7 @@ class OpenAmundsen:
             filters=self.config.input_data.meteo.filters,
             freq=self.config["timestep"],
             aggregate=self.config.input_data.meteo.aggregate_when_downsampling,
+            raise_on_missing_data=self.config.input_data.meteo.enable_missing_data_checks,
         )
 
         return ds

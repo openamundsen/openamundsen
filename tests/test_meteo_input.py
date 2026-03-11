@@ -219,6 +219,34 @@ def test_missing_records_start_end():
         model.initialize()
 
 
+def test_disable_missing_data_checks():
+    config = base_config()
+    config.start_date = "1900-01-01"
+    config.end_date = "2100-12-31"
+    config.input_data.meteo.enable_missing_data_checks = False
+
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    assert model.meteo.time.to_index().equals(model.dates)
+    assert np.isnan(model.meteo.temp.sel(time=config.start_date)).all()
+    assert np.isnan(model.meteo.temp.sel(time=config.end_date)).all()
+    assert np.isfinite(model.meteo.temp.sel(time="2020-01-15 00:00")).any()
+
+    config.end_date = "1900-12-31"
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    assert model.meteo.time.to_index().equals(model.dates)
+    assert model.meteo.sizes["station"] == 0
+    assert np.isnan(model.meteo.temp).all()
+
+    config.start_date = "2014-06-01"
+    config.end_date = "2014-06-01 21:00"
+    config.input_data.meteo.enable_missing_data_checks = False
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    assert_array_equal(model.meteo.station.values, ["latschbloder"])
+
+
 def test_station_selection(tmp_path):
     config = base_config()
     model = oa.OpenAmundsen(config)

@@ -25,6 +25,7 @@ def read_meteo_data(
     filters=None,
     freq="h",
     aggregate=False,
+    raise_on_missing_data=True,
 ):
     """
     Read all available stations in NetCDF or CSV format for a given period.
@@ -75,6 +76,9 @@ def read_meteo_data(
     aggregate : boolean, default False
         Aggregate data when downsampling to a lower frequency or take
         instantaneous values.
+
+    raise_on_missing_data : boolean, default True
+        Raise exception if no meteo data is available for the requested period.
 
     Returns
     -------
@@ -127,16 +131,35 @@ def read_meteo_data(
             datasets.append(ds)
 
     if len(datasets) == 0:
-        raise errors.MeteoDataError("No meteo data available for the specified period")
+        if not raise_on_missing_data:
+            dates = pd.date_range(start=start_date, end=end_date, freq=freq)
+            dummyds = forcing.make_empty_point_dataset(
+                dates,
+                "dummy",
+                "dummy",
+                np.nan,
+                np.nan,
+                np.nan,
+            )
+            ds_combined = forcing.combine_point_datasets([dummyds]).drop_isel(station=0)
+            return ds_combined
+        else:
+            raise errors.MeteoDataError("No meteo data available for the specified period")
 
     ds_combined = forcing.combine_point_datasets(datasets)
     dates_combined = ds_combined.time.to_index()
+
     if dates_combined[0] > start_date or dates_combined[-1] < end_date:
-        raise errors.MeteoDataError(
-            "Insufficient meteo data available.\n"
-            f"Requested period: {start_date}..{end_date}\n"
-            f"Available period: {dates_combined[0]}..{dates_combined[-1]}"
-        )
+        if not raise_on_missing_data:
+            ds_combined = ds_combined.reindex(
+                time=pd.date_range(start=start_date, end=end_date, freq=freq),
+            )
+        else:
+            raise errors.MeteoDataError(
+                "Insufficient meteo data available.\n"
+                + f"Requested period: {start_date}..{end_date}\n"
+                + f"Available period: {dates_combined[0]}..{dates_combined[-1]}"
+            )
 
     return ds_combined
 
