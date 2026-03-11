@@ -212,6 +212,8 @@ class OpenAmundsen:
         Start the model run. Before calling this method, the model must be
         properly initialized by calling `initialize()`.
         """
+        self._ensure_logger_configured()
+
         logger.info("Starting model run")
         start_time = time.time()
 
