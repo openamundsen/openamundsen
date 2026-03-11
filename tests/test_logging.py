@@ -1,5 +1,8 @@
 import io
 import logging
+import logging.handlers
+import multiprocessing
+import queue
 
 import openamundsen as oa
 
@@ -33,6 +36,18 @@ class _LogStateRestorer:
         self.package_logger.setLevel(self.package_level)
         self.root_logger.setLevel(self.root_level)
         self.package_logger.propagate = self.package_propagate
+
+
+def _run_model_with_log_capture(args):
+    model, log_queue = args
+
+    def create_queue_handler(stream=None):
+        handler = logging.handlers.QueueHandler(log_queue)
+        handler._openamundsen_default_handler = True
+        return handler
+
+    oa.logformat.create_default_stream_handler = create_queue_handler
+    model.run()
 
 
 def test_default_logging_adds_single_handler():
@@ -155,3 +170,32 @@ def test_root_logging_configuration_keeps_root_log_level():
         assert "visible warning message" in stream.getvalue()
     finally:
         state.restore()
+
+
+def test_multiprocessing_logging():
+    config = base_config()
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+
+    spawn_context = multiprocessing.get_context("spawn")
+    log_queue = spawn_context.Queue()
+    process = spawn_context.Process(target=_run_model_with_log_capture, args=((model, log_queue),))
+    process.start()
+    process.join()
+
+    assert process.exitcode == 0
+
+    messages = []
+    while True:
+        try:
+            record = log_queue.get_nowait()
+        except queue.Empty:
+            break
+        else:
+            messages.append(record.getMessage())
+
+    assert messages.count("Starting model run") == 1
+    assert sum(message.startswith("Processing time step ") for message in messages) == len(
+        model.dates
+    )
+    assert sum(message.startswith("Model run finished. Runtime: ") for message in messages) == 1
