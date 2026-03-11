@@ -573,7 +573,7 @@ meteo:
           type: number
           default: 1.
 
-        disallow_snow_below_rain:
+        enforce_no_snow_below_rain:
           type: boolean
           default: false
 
