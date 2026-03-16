@@ -41,6 +41,9 @@ def temp_change(
     dx_bottom : float
         Thickness of the bottom layer (m).
 
+    therm_cond_bottom : float
+        Thermal conductivity of the bottom layer (W m-1 K-1).
+
     top_heat_flux : float
         Heat flux from the top (W m-2).
 
