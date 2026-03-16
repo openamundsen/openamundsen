@@ -1,4 +1,5 @@
 import tempfile
+import warnings
 from copy import deepcopy
 from textwrap import dedent
 
@@ -231,3 +232,21 @@ def test_geographic_crs(minimal_config):
     minimal_config["crs"] = "epsg:4326"
     with pytest.raises(errors.ConfigurationError):
         oa.parse_config(minimal_config)
+
+
+def test_warnings(minimal_config):
+    mc = deepcopy(minimal_config)
+    mc["input_data"] = {
+        "meteo": {
+            "format": "netcdf",
+            "crs": "epsg:32632",
+        },
+    }
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        oa.parse_config(mc)
+
+    assert any(
+        "Ignoring CRS specification for meteo input data" in str(w.message) for w in caught_warnings
+    )

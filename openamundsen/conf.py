@@ -1,6 +1,7 @@
 import datetime
 import json
 import re
+import warnings
 from pathlib import Path
 
 import cerberus
@@ -246,9 +247,11 @@ def validate_config(config):
             raise ConfigurationError("write_freq must be a multiple of timestep") from err
 
     if config.input_data.meteo.format == "netcdf" and config.input_data.meteo.crs is not None:
-        print(
-            "Warning: Ignoring CRS specification for meteo input data "
-            "(CRS not required when using NetCDF format)"
+        warnings.warn(
+            "Ignoring CRS specification for meteo input data "
+            + "(CRS not required when using NetCDF format)",
+            UserWarning,
+            stacklevel=2,
         )
 
     if config.input_data.meteo.format == "memory":
@@ -257,15 +260,16 @@ def validate_config(config):
             or len(config.input_data.meteo.exclude) > 0
             or len(config.input_data.meteo.include) > 0
         ):
-            print(
-                'Warning: "bounds", "exclude" and "include" are currently ignored for '
-                'format "memory"'
+            warnings.warn(
+                '"bounds", "exclude" and "include" are currently ignored for format "memory"',
+                UserWarning,
+                stacklevel=2,
             )
 
     if config.snow.model == "multilayer" and config.snow.melt.method != "energy_balance":
         raise ConfigurationError(
             f'Melt method "{config.snow.melt.method}" not supported for the '
-            f'snow model "{config.snow.model}"'
+            + f'snow model "{config.snow.model}"'
         )
 
     if config.snow.melt.method == "temperature_index":
@@ -278,14 +282,20 @@ def validate_config(config):
             raise ConfigurationError("Missing field: snow.melt.albedo_factor")
 
     if abs(config.meteo.precipitation_phase.threshold_temp) < 20:
-        print(
-            "Warning: precipitation phase threshold temperature seems to be in °C, converting to K"
+        warnings.warn(
+            "Precipitation phase threshold temperature seems to be in °C, converting to K",
+            UserWarning,
+            stacklevel=2,
         )
         config.meteo.precipitation_phase.threshold_temp += constants.T0
 
     ac = config.snow.albedo
     if ac.method == "usaco":
-        print('Warning: albedo method "usaco" is deprecated, please use "snow_age"')
+        warnings.warn(
+            'Albedo method "usaco" is deprecated, please use "snow_age"',
+            UserWarning,
+            stacklevel=2,
+        )
         ac.method = "snow_age"
         ac.cold_snow_decay_timescale = 1 / ac.k_neg * constants.HOURS_PER_DAY
         ac.melting_snow_decay_timescale = 1 / ac.k_pos * constants.HOURS_PER_DAY
@@ -293,7 +303,11 @@ def validate_config(config):
         ac.refresh_snowfall = ac.significant_snowfall
         ac.refresh_method = "binary"
     elif ac.method == "fsm":
-        print('Warning: albedo method "fsm" is deprecated, please use "snow_age"')
+        warnings.warn(
+            'Albedo method "fsm" is deprecated, please use "snow_age"',
+            UserWarning,
+            stacklevel=2,
+        )
         ac.method = "snow_age"
         ac.decay_timescale_determination_temperature = "surface"
         ac.refresh_method = "continuous"
