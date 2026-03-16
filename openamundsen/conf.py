@@ -3,6 +3,7 @@ import json
 import re
 import warnings
 from pathlib import Path
+from typing import Any
 
 import cerberus
 import pandas as pd
@@ -27,16 +28,16 @@ class ConfigurationValidator(cerberus.Validator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _normalize_coerce_float(self, value):
+    def _normalize_coerce_float(self, value) -> float:
         return float(value)
 
-    def _normalize_coerce_datetime(self, date):
+    def _normalize_coerce_datetime(self, date: datetime.datetime) -> pd.Timestamp:
         return pd.to_datetime(date)
 
-    def _normalize_coerce_path(self, path):
+    def _normalize_coerce_path(self, path: str) -> Path:
         return Path(path)
 
-    def _normalize_coerce_timestep(self, timestep):
+    def _normalize_coerce_timestep(self, timestep: str) -> str:
         # As of pandas 2.2.0, some frequency aliases have been deprecated (see
         # https://pandas.pydata.org/docs/dev/whatsnew/v2.2.0.html). Since especially the "H" alias
         # (which is now deprecated in favor of "h") has been frequently used in earlier versions of
@@ -46,21 +47,21 @@ class ConfigurationValidator(cerberus.Validator):
             timestep = timestep[:-1] + "h"
         return timestep
 
-    def _normalize_coerce_snowmodel(self, model):
+    def _normalize_coerce_snowmodel(self, model: str) -> str:
         # Snow model name 'layers' is deprecated -> change to 'multilayer'
         if model == "layers":
             return "multilayer"
 
         return model
 
-    def _normalize_coerce_meteo_interpolation(self, d):
+    def _normalize_coerce_meteo_interpolation(self, d: dict[str, Any]) -> dict[str, Any]:
         # 'wind_speed' is deprecated -> change to 'wind'
         if "wind_speed" in d:
             d["wind"] = d.pop("wind_speed")
 
         return d
 
-    def _normalize_coerce_cloudiness(self, d):
+    def _normalize_coerce_cloudiness(self, d: dict[str, Any]) -> dict[str, Any]:
         # 'day_method' is deprecated -> change to 'method'
         if "day_method" in d:
             if "method" not in d:
