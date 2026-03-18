@@ -774,3 +774,17 @@ def test_one_station_ends_less_than_one_day_before_start_date(tmp_path):
     config.input_data.meteo.dir = str(tmp_path)
     model = oa.OpenAmundsen(config)
     model.initialize()
+
+
+def test_precip_fields_not_nan():
+    config = base_config()
+    model = oa.OpenAmundsen(config)
+    model.initialize()
+    model.meteo.temp[:] = np.nan
+    model.meteo.precip[:] = np.nan
+    model.run_single()
+
+    roi = model.grid.roi
+    assert np.all(model.state.meteo["precip"][roi] == 0)
+    assert np.all(model.state.meteo["rainfall"][roi] == 0)
+    assert np.all(model.state.meteo["snowfall"][roi] == 0)

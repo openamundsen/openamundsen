@@ -858,6 +858,7 @@ class OpenAmundsen:
             threshold_temp=self.config.meteo.precipitation_phase.threshold_temp,
             temp_range=self.config.meteo.precipitation_phase.temp_range,
         )
+        snowfall_frac = np.nan_to_num(snowfall_frac, nan=0.0)
         if self.config.meteo.precipitation_phase.enforce_no_snow_below_rain:
             # Ensure that there is no snow falling at elevations below the highest elevation where
             # precipitation is 100% rain (might happen in inversion situations otherwise).

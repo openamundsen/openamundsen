@@ -117,6 +117,7 @@ def correct_station_precipitation(model):
         threshold_temp=model.config.meteo.precipitation_phase.threshold_temp,
         temp_range=model.config.meteo.precipitation_phase.temp_range,
     )
+    snowfall_frac = np.nan_to_num(snowfall_frac, nan=0.0)
 
     pos_precip = precips > 0
     pos_snow = pos_precip & (snowfall_frac == 1)
