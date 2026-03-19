@@ -73,7 +73,7 @@ jobs:
         if: github.event_name == 'push'
         run: |
           sleep 3
-          uv venv .venv-test --python ${{ env.PYTHON_VERSION }}
+          uv venv .venv-test --python ${{ env.PYTHON_VERSION }} --seed
           # Use pip here instead of uv because uv prioritizes the first index
           # that contains a package, which can break resolution when TestPyPI
           # has incomplete or bogus packages that shadow the real PyPI ones.
