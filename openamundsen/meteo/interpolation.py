@@ -119,13 +119,17 @@ def _piecewise_linear_fit(
         rss = np.sum((ys - preds) ** 2)
         n = len(ys)
         k = 2 * num_segments
-        aic = n * np.log(rss / n) + 2 * k
+        aic = -np.inf if rss == 0 else n * np.log(rss / n) + 2 * k
 
         model_params = {
             "model": pw,
             "breaks": breaks,
             "aic": aic,
         }
+
+        # Return if we already have a perfect fit (e.g., a one-segment fit with two data points)
+        if rss == 0:
+            return model_params
 
         if best is None:
             best = model_params
