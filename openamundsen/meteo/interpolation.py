@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import logging
 from typing import Literal
 
@@ -110,7 +111,7 @@ def _piecewise_linear_fit(
         # single-segment case)
         if num_segments > 1 and any(
             np.sum((xs >= lo) & (xs <= hi)) < min_points_per_segment
-            for lo, hi in zip(breaks[:-1], breaks[1:])
+            for lo, hi in itertools.pairwise(breaks)
         ):
             break
 
