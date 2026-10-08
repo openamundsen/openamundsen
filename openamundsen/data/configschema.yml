@@ -241,6 +241,8 @@ output_data:
                 allowed:
                   - sum
                   - mean
+                  - max
+                  - min
 
               dates:  # write dates
                 type: list

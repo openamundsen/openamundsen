@@ -46,7 +46,7 @@ class OutputField:
 
     agg : str, optional
         Aggregation function. Can be either None (if instantaneous values
-        should be written), "sum" or "mean".
+        should be written), "sum", "mean", "max" or "min".
 
     write_dates : pd.DatetimeIndex
         Dates at which the field should be written.
@@ -206,30 +206,90 @@ class GriddedOutputManager:
                 if field.data is None:
                     meta = self.model.state.meta(field.var)
 
+                    # if meta.dim3 == 0:
+                    #     arr = np.full(self.model.grid.shape, fill_value, dtype=dtype)
+                    #     arr[roi] = 0
+                    # else:
+                    #     arr = np.full((meta.dim3, *self.model.grid.shape), fill_value, dtype=dtype)
+                    #     arr[:, roi] = 0
+                        
                     if meta.dim3 == 0:
                         arr = np.full(self.model.grid.shape, fill_value, dtype=dtype)
-                        arr[roi] = 0
+                    
+                        if field.agg in ("sum", "mean"):
+                            arr[roi] = 0
+                        elif field.agg == "min":
+                            arr[roi] = np.inf
+                        elif field.agg == "max":
+                            arr[roi] = -np.inf
+                    
                     else:
                         arr = np.full((meta.dim3, *self.model.grid.shape), fill_value, dtype=dtype)
-                        arr[:, roi] = 0
-
+                    
+                        if field.agg in ("sum", "mean"):
+                            arr[:, roi] = 0
+                        elif field.agg == "min":
+                            arr[:, roi] = np.inf
+                        elif field.agg == "max":
+                            arr[:, roi] = -np.inf
+        
                     field.data = arr
 
                 data_cur = self.model.state[field.var]
+
+                # if field.agg == "sum":
+                #     if field.data.ndim == 2:
+                #         field.data[roi] += data_cur[roi]
+                #     else:
+                #         field.data[:, roi] += data_cur[:, roi]
+                # elif field.agg == "mean":
+                #     if field.data.ndim == 2:
+                #         field.data[roi] += (data_cur[roi] - field.data[roi]) / (
+                #             field.num_aggregations + 1
+                #         )
+                #     else:
+                #         field.data[:, roi] += (data_cur[:, roi] - field.data[:, roi]) / (
+                #             field.num_aggregations + 1
+                #         )
 
                 if field.agg == "sum":
                     if field.data.ndim == 2:
                         field.data[roi] += data_cur[roi]
                     else:
                         field.data[:, roi] += data_cur[:, roi]
+                
                 elif field.agg == "mean":
                     if field.data.ndim == 2:
-                        field.data[roi] += (data_cur[roi] - field.data[roi]) / (
-                            field.num_aggregations + 1
+                        field.data[roi] += (
+                            data_cur[roi] - field.data[roi]
+                        ) / (field.num_aggregations + 1)
+                    else:
+                        field.data[:, roi] += (
+                            data_cur[:, roi] - field.data[:, roi]
+                        ) / (field.num_aggregations + 1)
+                                
+                elif field.agg == "max":
+                    if field.data.ndim == 2:
+                        field.data[roi] = np.maximum(
+                            field.data[roi],
+                            data_cur[roi]
                         )
                     else:
-                        field.data[:, roi] += (data_cur[:, roi] - field.data[:, roi]) / (
-                            field.num_aggregations + 1
+                        field.data[:, roi] = np.maximum(
+                            field.data[:, roi],
+                            data_cur[:, roi]
+                        )
+                    
+                elif field.agg == "min":
+                    if field.data.ndim == 2:
+                        field.data[roi] = np.minimum(
+                            field.data[roi],
+                            data_cur[roi]
+                        )
+                    else:
+                        field.data[:, roi] = np.minimum(
+                            field.data[:, roi],
+                            data_cur[:, roi]
                         )
 
                 field.num_aggregations += 1
