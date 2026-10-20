@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from pathlib import Path, PosixPath, WindowsPath
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -296,7 +295,7 @@ class ModelGrid(Munch):
         self.roi_idxs_flat = np.where(self.roi.flat)[0]
 
 
-def to_offset(offset: Union[str, pd.offsets.BaseOffset]) -> pd.offsets.BaseOffset:
+def to_offset(offset: str | pd.offsets.BaseOffset) -> pd.offsets.BaseOffset:
     """
     Convert a pandas-compatible offset (e.g. '3h') to a DateOffset object.
     """
@@ -332,7 +331,7 @@ def to_offset(offset: Union[str, pd.offsets.BaseOffset]) -> pd.offsets.BaseOffse
     return pandas.tseries.frequencies.to_offset(offset)
 
 
-def offset_to_timedelta(offset: Union[str, pd.offsets.BaseOffset]) -> pd.Timedelta:
+def offset_to_timedelta(offset: str | pd.offsets.BaseOffset) -> pd.Timedelta:
     """
     Convert a pandas-compatible offset (e.g. '3h') to a Timedelta object.
     """
