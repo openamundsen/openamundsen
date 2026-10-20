@@ -117,17 +117,11 @@ def convert_roi_pixel_dataset_to_grid(ds: xr.Dataset) -> xr.Dataset:
     resolution = ds.attrs["resolution"]
     xllcorner = ds.attrs["xllcorner"]
     yllcorner = ds.attrs["yllcorner"]
-    pixel_idxs = ds.pixel.values
 
     x_coords = xllcorner + resolution * (np.arange(ncols) + 0.5)
     y_coords = yllcorner + resolution * (nrows - np.arange(nrows) - 0.5)
 
     coords = {}
-    for name, coord in ds.coords.items():
-        if name == "pixel":
-            continue
-        coords[name] = (coord.dims, coord.values, coord.attrs)
-
     coords["x"] = (
         ["x"],
         x_coords,
@@ -147,35 +141,23 @@ def convert_roi_pixel_dataset_to_grid(ds: xr.Dataset) -> xr.Dataset:
         },
     )
 
-    data_vars = {}
-    for name, da in ds.data_vars.items():
-        if "pixel" not in da.dims:
-            data_vars[name] = (da.dims, da.values, da.attrs)
-            continue
-
-        pixel_axis = da.get_axis_num("pixel")
-        values = np.moveaxis(da.values, pixel_axis, -1)
-        fill_value = da.encoding.get("_FillValue", da.attrs.get("_FillValue", np.nan))
-        full_values = np.full((*values.shape[:-1], nrows, ncols), fill_value, dtype=da.dtype)
-        full_values.reshape(*values.shape[:-1], -1)[..., pixel_idxs] = values
-
-        target_order = (
-            *range(pixel_axis),
-            values.ndim - 1,
-            values.ndim,
-            *range(pixel_axis, values.ndim - 1),
-        )
-        full_values = np.transpose(full_values, axes=target_order)
-
-        dims = (*da.dims[:pixel_axis], "y", "x", *da.dims[pixel_axis + 1 :])
-        data_vars[name] = (dims, full_values, da.attrs)
+    fill_values = {
+        name: da.encoding.get("_FillValue", da.attrs.get("_FillValue", np.nan))
+        for name, da in ds.variables.items()
+        if "pixel" in da.dims and name != "pixel"
+    }
+    pixel_idxs = np.arange(nrows * ncols)
+    ds_grid = ds.reindex(pixel=pixel_idxs, fill_value=fill_values)
+    grid_idxs = xr.DataArray(pixel_idxs.reshape(nrows, ncols), dims=("y", "x"))
+    ds_grid = ds_grid.isel(pixel=grid_idxs).drop_vars("pixel").assign_coords(coords)
 
     attrs = dict(ds.attrs)
     attrs["openamundsen_output_layout"] = "grid"
     for attr in ("nrows", "ncols", "resolution", "xllcorner", "yllcorner"):
         del attrs[attr]
 
-    return xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
+    ds_grid.attrs = attrs
+    return ds_grid
 
 
 def transform_coords(x, y, src_crs, dst_crs):

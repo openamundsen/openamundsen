@@ -434,6 +434,13 @@ def test_roi_pixel_layout():
     ds_pixel_reconstructed = oa.util.convert_roi_pixel_dataset_to_grid(ds_pixel)
     xr.testing.assert_identical(ds_grid, ds_pixel_reconstructed)
 
+    # Check if a lazy dataset stays lazy during conversion
+    ds_pixel_lazy = ds_pixel.chunk()
+    ds_grid_lazy = oa.util.convert_roi_pixel_dataset_to_grid(ds_pixel_lazy)
+    for da in ds_grid_lazy.data_vars.values():
+        assert da.chunks is not None
+    xr.testing.assert_identical(ds_grid, ds_grid_lazy)
+
 
 @pytest.mark.parametrize("fmt", ["ascii", "geotiff"])
 def test_roi_pixel_invalid_format(fmt, tmp_path):
